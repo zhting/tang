@@ -1,0 +1,11 @@
+# Node dependencies & caches
+server/node_modules/
+server/npm-cache/
+
+# Sensitive server configuration & scripts
+info.md
+scratch/deploy_to_tencent.py
+scratch/deploy.sh
+
+# OS metadata
+.DS_Store
