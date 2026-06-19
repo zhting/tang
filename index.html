@@ -1250,7 +1250,7 @@
     </div>
 
     <canvas id="gameCanvas"></canvas>
-    <div id="minecraft3D" class="hidden" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 1; overflow: hidden; background: #80deea;"></div>
+    <div id="minecraft3D" class="hidden" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 10; overflow: hidden; background: #80deea;"></div>
 
         <!-- 开发者指令区 -->
         <div id="devConsole" class="dev-console hidden">
@@ -5625,7 +5625,10 @@
         function launchMinecraftWorld() {
             document.getElementById('mcSetupModal').classList.add('hidden');
             const startLevel = gameState.sessionLevels[3] || 1;
+            gameState.isPlaying = true;
+            gameState.lastTime = performance.now();
             startMode3Level(startLevel);
+            requestAnimationFrame(loop);
         }
 
         // 机缘事件触发器
@@ -5835,6 +5838,12 @@
         }
 
         function startMode3Level(n) {
+            if (typeof THREE === 'undefined') {
+                console.error('Three.js is not loaded; mode 3 cannot start.');
+                showToast('3D 引擎加载失败，请检查网络后刷新重试。');
+                backToHome();
+                return;
+            }
             gameState.level = n;
             gameState.levelId++;
             gameState.currentLevelCollected = 0;
