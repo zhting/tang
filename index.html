@@ -836,6 +836,944 @@
             border-left: 5px solid #55FF55 !important;
             box-shadow: inset -2px -2px #555, inset 2px 2px #FFF !important;
         }
+
+        /* ==========================================================================
+           模式六：Minecraft 原版画作生成器专属样式系统
+           ========================================================================== */
+        .minecraft-painting-studio {
+            background-color: #1a1a20;
+            background-image: 
+                radial-gradient(circle at 50% 20%, rgba(20, 20, 26, 0.75) 0%, rgba(10, 10, 14, 0.94) 100%),
+                url('assets/cobblestone.png');
+            background-repeat: repeat;
+            background-size: auto, 64px 64px;
+            image-rendering: pixelated;
+            color: #f1f2f6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+        }
+
+        .minecraft-painting-studio .mc-header {
+            background: #252630;
+            border-bottom: 4px solid #111215;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .minecraft-painting-studio .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .minecraft-painting-studio .logo-icon {
+            width: 40px;
+            height: 40px;
+            image-rendering: pixelated;
+            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
+        }
+
+        .minecraft-painting-studio .logo-text {
+            font-family: 'Minecraft', 'Courier New', monospace;
+            font-size: 18px;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 0px #000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .minecraft-painting-studio .logo-sub {
+            font-size: 11px;
+            color: #ffaa00;
+            text-shadow: 1px 1px 0px #000;
+            letter-spacing: 0.5px;
+        }
+
+        .minecraft-painting-studio .app-container {
+            flex: 1;
+            display: flex;
+            max-width: 1560px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 16px;
+            gap: 18px;
+        }
+
+        .minecraft-painting-studio .mc-panel {
+            background: #22232a;
+            border: 3px solid;
+            border-color: #585966 #111215 #111215 #585966;
+            box-shadow: inset 2px 2px 0px rgba(255,255,255,0.08), 0 8px 24px rgba(0, 0, 0, 0.5);
+            padding: 16px;
+            position: relative;
+        }
+
+        .minecraft-painting-studio .mc-panel-title {
+            font-family: 'Minecraft', 'Courier New', monospace;
+            font-size: 14px;
+            color: #ffaa00;
+            text-shadow: 1px 1px 0px #000;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 6px;
+        }
+
+        .minecraft-painting-studio .sidebar-controls {
+            width: 370px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            flex-shrink: 0;
+        }
+
+        .minecraft-painting-studio .upload-dropzone {
+            border: 3px dashed #5a5c6e;
+            background: #181920;
+            padding: 20px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+        }
+
+        .minecraft-painting-studio .upload-dropzone:hover,
+        .minecraft-painting-studio .upload-dropzone.dragover {
+            border-color: #55ff55;
+            background: #232530;
+            box-shadow: 0 0 16px rgba(85, 255, 85, 0.35);
+            transform: scale(1.01);
+        }
+
+        .minecraft-painting-studio .upload-dropzone input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .minecraft-painting-studio .upload-icon-wrapper {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .minecraft-painting-studio .hopper-icon {
+            width: 96px;
+            height: 96px;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            filter: drop-shadow(0 8px 18px rgba(0,0,0,0.75));
+            transition: transform 0.15s ease;
+            display: block;
+        }
+
+        .minecraft-painting-studio .upload-dropzone:hover .hopper-icon {
+            transform: scale(1.08) translateY(-3px);
+        }
+
+        .minecraft-painting-studio .upload-hint {
+            font-family: 'Minecraft', 'Courier New', monospace;
+            font-size: 13px;
+            color: #f1f2f6;
+            margin-bottom: 4px;
+            text-shadow: 1px 1px 0px #000;
+        }
+
+        .minecraft-painting-studio .upload-subhint {
+            font-size: 11px;
+            color: #a4b0be;
+        }
+
+        .minecraft-painting-studio .preset-samples-list {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .minecraft-painting-studio .preset-thumb-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            background: #181920;
+            padding: 4px;
+            border: 2px solid #353642;
+            transition: border-color 0.12s, transform 0.1s;
+        }
+
+        .minecraft-painting-studio .preset-thumb-card:hover {
+            border-color: #ffaa00;
+            transform: translateY(-2px);
+        }
+
+        .minecraft-painting-studio .preset-thumb {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        .minecraft-painting-studio .preset-name {
+            font-size: 10px;
+            color: #bbb;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            font-family: 'Minecraft', 'Courier New', monospace;
+        }
+
+        .minecraft-painting-studio .control-group {
+            margin-bottom: 12px;
+        }
+
+        .minecraft-painting-studio .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #f1f2f6;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .minecraft-painting-studio .control-val {
+            color: #55ff55;
+            font-family: 'Minecraft', 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .minecraft-painting-studio .mc-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #14151b;
+            border: 1px solid #3d3f4d;
+            outline: none;
+        }
+
+        .minecraft-painting-studio .mc-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #6a6c7d;
+            border: 2px solid;
+            border-color: #8c8e9f #343540 #343540 #8c8e9f;
+            cursor: pointer;
+        }
+
+        .minecraft-painting-studio .mc-select {
+            width: 100%;
+            background: #181920;
+            border: 2px solid #3c3d4a;
+            color: #fff;
+            padding: 7px 10px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .minecraft-painting-studio .size-presets-grid {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 8px !important;
+        }
+
+        .minecraft-painting-studio .size-btn {
+            background-color: #c7b99c !important;
+            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAFVBMVEXXy43XwYXIt3q4qHWun3allGeei2GOL9VAAAAAcElEQVR42g3CARXDIAwFwM/DAAk1kGQCVoKDDQeAA+JfQnvvwAV4XyD9CSk5hMS8yYUxR6wTG+WLjKQ3hFtvQgwX/RCbI9aIWHOjJMWrgonMzTqSuqt6RcwRZ+xALqkiJ0DJ7WZWWONO5o6zz3+ciAdixhUFVj2uwQAAAABJRU5ErkJggg==') !important;
+            background-repeat: repeat !important;
+            background-size: 32px 32px !important;
+            image-rendering: pixelated !important;
+            image-rendering: crisp-edges !important;
+            border: 3px solid !important;
+            border-color: #f5edd8 #73644f #73644f #f5edd8 !important;
+            box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.6), 0 3px 6px rgba(0, 0, 0, 0.5) !important;
+            color: #241a10 !important;
+            text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.7) !important;
+            font-size: 11px !important;
+            font-weight: bold !important;
+            padding: 8px 4px !important;
+            cursor: pointer !important;
+            text-align: center !important;
+            font-family: 'Minecraft', 'Courier New', monospace, sans-serif !important;
+            transition: transform 0.05s ease, filter 0.05s ease, box-shadow 0.05s ease !important;
+            position: relative !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+            outline: none !important;
+        }
+
+        .minecraft-painting-studio .size-btn:hover {
+            filter: brightness(1.1) !important;
+            transform: translateY(-1px) !important;
+            box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.8), 0 5px 10px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        .minecraft-painting-studio .size-btn.active {
+            background-color: #a07e4c !important;
+            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAFVBMVEXCnWK4lF+vj1WfhE2WdEF+YjdnUCyo+21oAAAAcElEQVR42g3CARXDIAwFwM/DAAk1kGQCVoKDDQeAA+JfQnvvwAV4XyD9CSk5hMS8yYUxR6wTG+WLjKQ3hFtvQgwX/RCbI9aIWHOjJMWrgonMzTqSuqt6RcwRZ+xALqkiJ0DJ7WZWWONO5o6zz3+ciAdixhUFVj2uwQAAAABJRU5ErkJggg==') !important;
+            background-repeat: repeat !important;
+            background-size: 32px 32px !important;
+            image-rendering: pixelated !important;
+            image-rendering: crisp-edges !important;
+            border: 3px solid !important;
+            border-color: #3b240e #dca96c #dca96c #3b240e !important;
+            box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.75), inset -1px -1px 0px rgba(255, 255, 255, 0.3), 0 0 0 2px #ffaa00 !important;
+            color: #ffffff !important;
+            text-shadow: 1px 1px 0px #241407, -1px -1px 0px #241407, 1px -1px 0px #241407, -1px 1px 0px #241407 !important;
+            transform: translateY(2px) !important;
+        }
+
+        .minecraft-painting-studio .size-btn.active:hover {
+            filter: brightness(1.06) !important;
+            transform: translateY(2px) !important;
+        }
+
+        .minecraft-painting-studio .main-view-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .minecraft-painting-studio .view-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .minecraft-painting-studio .view-title-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .minecraft-painting-studio .art-badge {
+            background: #191a22;
+            border: 2px solid #3e404f;
+            color: #ffaa00;
+            font-family: 'Minecraft', 'Courier New', monospace;
+            font-size: 13px;
+            padding: 4px 10px;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        .minecraft-painting-studio .art-info {
+            font-size: 13px;
+            color: #a4b0be;
+        }
+
+        .minecraft-painting-studio .painting-stage {
+            background-color: #4a3622 !important;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.75) 100%),
+                url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAElBMVEWYeEmRcUJ0WjZfSitMPSY4Kxj0FtFUAAAAaklEQVR42hXGQRHDMAwEQI1VBJINwLoTgLgEaiHohD+YOPtaoaXl3BBqas6C5DeVPBkgkOXSkVDQxKpT+8kqX2ZvbrvCYcJ/XHA3iV8sdLslJhI84UnLVvIJH5qxpJXRGSG2Y5D7TXXGxgPEiBE7ybf/RAAAAABJRU5ErkJggg==') !important;
+            background-repeat: repeat !important;
+            background-size: auto, 64px 64px !important;
+            image-rendering: pixelated !important;
+            image-rendering: crisp-edges !important;
+            border: 3px solid #2d1d0e !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            position: relative !important;
+            overflow: auto !important;
+            padding: 24px 20px 36px !important;
+            min-height: 580px !important;
+            box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.85), 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+            gap: 20px !important;
+        }
+
+        .minecraft-painting-studio .rendered-art-canvas {
+            max-width: 100%;
+            max-height: 68vh;
+            image-rendering: pixelated;
+            filter: drop-shadow(0 16px 36px rgba(0, 0, 0, 0.8));
+            transition: transform 0.15s ease-out;
+        }
+
+        .minecraft-painting-studio .original-preview-img {
+            max-width: 90%;
+            max-height: 65vh;
+            object-fit: contain;
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.8);
+            border: 4px solid #fff;
+        }
+
+        .minecraft-painting-studio .view-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 2px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .minecraft-painting-studio .hint-text {
+            font-size: 12px;
+            color: #8f92a1;
+        }
+
+        .minecraft-painting-studio .mc-btn {
+            background: #4a4b57;
+            border: 2px solid;
+            border-color: #656778 #2b2c36 #2b2c36 #656778;
+            color: #f1f2f6;
+            padding: 9px 16px;
+            font-family: 'Minecraft', 'Courier New', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-shadow: 1px 1px 0px #000;
+            transition: background 0.1s;
+        }
+
+        .minecraft-painting-studio .mc-btn:hover {
+            background: #5d5f70;
+        }
+
+        .minecraft-painting-studio .mc-btn:active {
+            background: #3a3b47;
+            border-color: #2b2c36 #656778 #656778 #2b2c36;
+        }
+
+        .minecraft-painting-studio .mc-btn-primary {
+            background: #2b7a3a;
+            border-color: #4cd164 #174b21 #174b21 #4cd164;
+            color: #fff;
+        }
+
+        .minecraft-painting-studio .mc-btn-primary:hover {
+            background: #359648;
+        }
+
+        .minecraft-painting-studio .mc-btn-sm {
+            padding: 6px 12px !important;
+            font-size: 12px !important;
+        }
+
+        .minecraft-painting-studio .bgm-pill-toggle {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            background: #ffffff;
+            border: 2px solid #222226;
+            border-radius: 20px;
+            padding: 4px 10px 4px 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+            z-index: 30;
+            transition: all 0.12s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            user-select: none;
+            outline: none;
+        }
+
+        .minecraft-painting-studio .bgm-pill-toggle:hover {
+            transform: scale(1.08) translateY(-1px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7);
+        }
+
+        .minecraft-painting-studio .bgm-pill-toggle:active {
+            transform: scale(0.96) translateY(1px);
+        }
+
+        .minecraft-painting-studio .bgm-pill-toggle.is-muted {
+            background: #dedee6;
+            border-color: #666677;
+        }
+
+        .minecraft-painting-studio .speaker-icon-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .minecraft-painting-studio .speaker-svg {
+            display: block;
+        }
+
+        .minecraft-painting-studio .bgm-status-text {
+            font-family: 'Minecraft', 'Courier New', monospace, sans-serif;
+            font-size: 10px;
+            font-weight: bold;
+            color: #222226;
+            letter-spacing: 0.5px;
+        }
+
+        .minecraft-painting-studio .bgm-pill-toggle.is-muted .bgm-status-text {
+            color: #666677;
+            text-decoration: line-through;
+        }
+
+        .minecraft-painting-studio .painting-viewport-badge {
+            position: absolute;
+            bottom: -10px;
+            right: -10px;
+            background: rgba(24, 25, 33, 0.95);
+            border: 2px solid #5a3d24;
+            border-top-color: #8c6239;
+            border-left-color: #8c6239;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.85), inset 0 0 10px rgba(0,0,0,0.6);
+            padding: 6px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            z-index: 25;
+            transition: transform 0.12s ease, border-color 0.12s ease;
+            backdrop-filter: blur(4px);
+        }
+
+        .minecraft-painting-studio .painting-viewport-badge:hover {
+            transform: scale(1.06);
+            border-color: #ffaa00;
+        }
+
+        .minecraft-painting-studio .viewport-header {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .minecraft-painting-studio .viewport-pulse-dot {
+            width: 6px;
+            height: 6px;
+            background-color: #55ff55;
+            border-radius: 50%;
+            box-shadow: 0 0 6px #55ff55;
+            animation: pulseDot 1s infinite alternate;
+        }
+
+        @keyframes pulseDot {
+            0% { opacity: 0.4; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .minecraft-painting-studio .viewport-label {
+            font-family: 'Minecraft', monospace;
+            font-size: 10px;
+            color: #ffaa00;
+            text-shadow: 1px 1px 0 #000;
+            white-space: nowrap;
+        }
+
+        .minecraft-painting-studio .viewport-frame-box {
+            background-color: #855325;
+            border: 2px solid #4a280e;
+            box-shadow: inset 0 0 0 1px #bb8242, 0 2px 6px rgba(0,0,0,0.6);
+            padding: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            transition: all 0.15s ease;
+        }
+
+        .minecraft-painting-studio .viewport-frame-box canvas {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            display: block;
+        }
+
+        .minecraft-painting-studio .viewport-link-guide {
+            font-family: 'Minecraft', monospace;
+            font-size: 9px;
+            color: #a0a0b0;
+            text-shadow: 1px 1px 0 #000;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .minecraft-painting-studio .guide-arrow {
+            color: #55ff55;
+            font-weight: bold;
+            animation: bounceDown 1.2s infinite ease-in-out;
+        }
+
+        @keyframes bounceDown {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(2px); }
+        }
+
+        .minecraft-painting-studio .active-linked-frame {
+            box-shadow: inset 0 0 0 2px #ffaa00, 0 0 14px rgba(255, 170, 0, 0.8) !important;
+            border-color: #ffd700 !important;
+        }
+
+        .minecraft-painting-studio .mc-stage-gallery {
+            width: 100%;
+            max-width: 620px;
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            padding: 18px 24px;
+            background: rgba(14, 15, 20, 0.65);
+            border: 3px solid #3c2918;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 6px 16px rgba(0,0,0,0.6);
+            border-radius: 4px;
+        }
+
+        .minecraft-painting-studio .gallery-title-bar {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 2px;
+        }
+
+        .minecraft-painting-studio .gallery-title {
+            font-family: 'Minecraft', monospace;
+            font-size: 13px;
+            color: #ffaa00;
+            text-shadow: 1px 1px 0 #000;
+            letter-spacing: 0.5px;
+        }
+
+        .minecraft-painting-studio .gallery-grid-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 0 16px;
+            gap: 12px;
+        }
+
+        .minecraft-painting-studio .showcase-slot {
+            width: 64px;
+            height: 96px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            position: relative;
+            transition: transform 0.15s ease;
+        }
+
+        .minecraft-painting-studio .showcase-slot.slot-empty {
+            visibility: hidden;
+        }
+
+        .minecraft-painting-studio .slot-cobblestone-block {
+            width: 52px;
+            height: 44px;
+            background-image: url('assets/cobblestone.png');
+            background-size: 52px 52px;
+            background-repeat: no-repeat;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            border: 2px solid #2a2b34;
+            border-top: 3px solid #6b6c78;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.7);
+        }
+
+        .minecraft-painting-studio .slot-item-frame {
+            width: 44px;
+            height: 44px;
+            background-color: #855325;
+            border: 3px solid #4a280e;
+            box-shadow: inset 0 0 0 2px #bb8242, 0 3px 6px rgba(0,0,0,0.6);
+            image-rendering: pixelated;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transform: translateY(2px);
+        }
+
+        .minecraft-painting-studio .inner-art-preview {
+            width: 28px;
+            height: 28px;
+            background-color: #2b1f14;
+            background-size: cover;
+            image-rendering: pixelated;
+            box-shadow: inset 0 0 3px rgba(0,0,0,0.8);
+        }
+
+        .minecraft-painting-studio .slot-item-frame .frame-canvas {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            display: block;
+        }
+
+        .minecraft-painting-studio .sample-art-1 { background-image: radial-gradient(#d35400, #2c3e50); }
+        .minecraft-painting-studio .sample-art-2 { background-image: radial-gradient(#27ae60, #2980b9); }
+        .minecraft-painting-studio .sample-art-3 { background-image: radial-gradient(#f39c12, #8e44ad); }
+        .minecraft-painting-studio .sample-art-4 { background-image: radial-gradient(#16a085, #d35400); }
+        .minecraft-painting-studio .sample-art-5 { background-image: radial-gradient(#3498db, #e74c3c); }
+        .minecraft-painting-studio .sample-art-secret-reward { background-image: radial-gradient(#f1c40f, #2c3e50); }
+
+        .minecraft-painting-studio .slot-secret-box {
+            width: 52px;
+            height: 52px;
+            background-image: url('assets/command_block_front.png');
+            background-size: 52px auto;
+            background-position: 0 0;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            border: 2px solid #8e44ad;
+            cursor: pointer;
+            animation: secretBoxPulse 1.4s infinite alternate;
+            box-shadow: 0 0 16px rgba(155, 89, 182, 0.8), 0 4px 10px rgba(0,0,0,0.8);
+            position: relative;
+        }
+
+        @keyframes secretBoxPulse {
+            0% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 4px #9b59b6); }
+            100% { transform: scale(1.08) translateY(-3px); filter: brightness(1.25) drop-shadow(0 0 12px #e056fd); }
+        }
+
+        .minecraft-painting-studio .slot-active-secret {
+            cursor: pointer;
+        }
+
+        .minecraft-painting-studio .slot-active-secret:hover .slot-secret-box {
+            transform: scale(1.12) translateY(-4px);
+        }
+
+        .secret-box-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.82);
+            backdrop-filter: blur(5px);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .secret-box-modal-card {
+            width: 100%;
+            max-width: 520px;
+            background-color: #2b2c3a;
+            background-image: radial-gradient(circle at 50% 10%, #3a3b4e 0%, #1c1d27 100%);
+            border: 4px solid #5a5c72;
+            border-top-color: #8c8eab;
+            border-left-color: #8c8eab;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.9), 0 0 0 2px #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 20px;
+            text-align: center;
+            animation: modalPop 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+
+        @keyframes modalPop {
+            0% { transform: scale(0.85); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .secret-modal-title {
+            font-family: 'Minecraft', monospace;
+            font-size: 17px;
+            color: #ffaa00;
+            text-shadow: 2px 2px 0 #000;
+            margin-bottom: 12px;
+        }
+
+        .secret-announce-badge {
+            display: inline-block;
+            background: #8e44ad;
+            color: #fff;
+            font-family: 'Minecraft', monospace;
+            font-size: 12px;
+            padding: 4px 10px;
+            border: 2px solid #d2b4de;
+            margin-bottom: 14px;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        .secret-desc-text {
+            font-size: 15px;
+            color: #ffffff;
+            font-weight: bold;
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .secret-author-text {
+            font-size: 13px;
+            color: #bdc3c7;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
+        .secret-website-card {
+            width: 100%;
+            background: #14151b;
+            border: 2px solid #4a4b5d;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .website-label {
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .website-link {
+            font-family: 'Minecraft', monospace;
+            font-size: 18px;
+            color: #55ff55;
+            text-shadow: 1px 1px 0 #000;
+            letter-spacing: 0.8px;
+            text-decoration: none;
+            word-break: break-all;
+            transition: color 0.1s;
+        }
+
+        .website-link:hover {
+            color: #ffff55;
+            text-decoration: underline;
+        }
+
+        .website-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .grass-pedestal-btn {
+            position: relative;
+            background: transparent;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.08s ease;
+            outline: none;
+        }
+
+        .grass-pedestal-btn:hover {
+            transform: scale(1.05) translateY(-2px);
+        }
+
+        .grass-pedestal-btn:active {
+            transform: scale(0.98) translateY(2px);
+        }
+
+        .grass-pedestal-blocks {
+            display: flex;
+            border: 2px solid #1a1a1a;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.7);
+        }
+
+        .grass-block-tile {
+            width: 38px;
+            height: 38px;
+            background-image: url('assets/grass_block_side.png');
+            background-size: 38px 38px;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        .grass-btn-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Minecraft', 'Courier New', monospace, sans-serif;
+            font-size: 16px;
+            font-weight: 900;
+            color: #000000 !important;
+            text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.85), -1px -1px 0px rgba(255, 255, 255, 0.85), 1px -1px 0px rgba(255, 255, 255, 0.85), -1px 1px 0px rgba(255, 255, 255, 0.85);
+            white-space: nowrap;
+            pointer-events: none;
+            letter-spacing: 1px;
+        }
+
+        .achievement-toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            background: #181920;
+            border: 3px solid;
+            border-color: #555 #111 #111 #555;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            z-index: 100000;
+            transform: translateX(130%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .achievement-toast.show {
+            transform: translateX(0);
+        }
+
+        .achievement-toast .toast-icon {
+            width: 36px;
+            height: 36px;
+            image-rendering: pixelated;
+        }
+
+        .achievement-toast .toast-title {
+            font-family: 'Minecraft', monospace;
+            font-size: 11px;
+            color: #ffaa00;
+            margin-bottom: 2px;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        .achievement-toast .toast-desc {
+            font-family: 'Minecraft', monospace;
+            font-size: 13px;
+            color: #fff;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        @media (max-width: 960px) {
+            .minecraft-painting-studio .app-container {
+                flex-direction: column;
+            }
+            .minecraft-painting-studio .sidebar-controls {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 
@@ -1268,6 +2206,336 @@
     <canvas id="gameCanvas"></canvas>
     <div id="minecraft3D" class="hidden" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 10; overflow: hidden; background: #80deea;"></div>
 
+    <!-- 模式六：我的世界照片画作生成器独立工作区 -->
+    <div id="minecraftPaintingStudio" class="minecraft-painting-studio hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 400; overflow-y: auto; display: none; flex-direction: column;">
+      
+      <!-- 顶部标题栏 -->
+      <header class="mc-header">
+        <div class="logo-area">
+          <canvas id="mc-studio-logo-icon" class="logo-icon" width="36" height="36"></canvas>
+          <div class="logo-text">
+            <span>MINECRAFT 原版画作生成器</span>
+            <span class="logo-sub">PHOTO TO AUTHENTIC MINECRAFT PAINTING (模式六)</span>
+          </div>
+        </div>
+        
+        <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
+          <button class="mc-btn" id="mcStudioBackHomeBtn" style="background: #c0392b; border-color: #e74c3c #962d22 #962d22 #e74c3c; color: white;">
+            <span>🏠</span> 返回首页
+          </button>
+          <button class="mc-btn mc-btn-primary" id="header-export-btn">
+            <span>💾</span> 导出高清画作图片
+          </button>
+        </div>
+      </header>
+
+      <!-- 主体工作区 -->
+      <main class="app-container">
+
+        <!-- 左侧控制面板 -->
+        <aside class="sidebar-controls">
+          
+          <!-- 1. 照片上传卡片 -->
+          <section class="mc-panel">
+            <h2 class="mc-panel-title"><span>📷</span> 上传照片</h2>
+            <div class="upload-dropzone" id="upload-dropzone">
+              <input type="file" id="image-file-input" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif, image/bmp, image/svg+xml, image/*">
+              <div class="upload-icon-wrapper">
+                <img id="upload-hopper-img" src="assets/user_hopper.png" class="hopper-icon" alt="Minecraft 原版漏斗 2D 材质">
+              </div>
+              <div class="upload-hint">点击或拖拽照片到这里</div>
+              <div class="upload-subhint">支持手机照片、游戏截图、JPG、PNG、WebP 等 (支持 Ctrl+V 粘贴)</div>
+            </div>
+
+            <!-- 真实 MC 原版实拍示例 -->
+            <div style="margin-top:14px;">
+              <div style="font-size:12px; color:#ffaa00; font-family:'Minecraft', monospace; margin-bottom:8px;">
+                🌲 原版《我的世界》实拍示例:
+              </div>
+              <div class="preset-samples-list" id="preset-samples-list"></div>
+            </div>
+          </section>
+
+          <!-- 2. 原版画作尺寸与参数设置 -->
+          <section class="mc-panel">
+            <h2 class="mc-panel-title"><span>🖼️</span> 原版画幅规格</h2>
+
+            <!-- 原版画框尺寸 -->
+            <div class="control-group">
+              <div class="size-presets-grid">
+                <button class="size-btn" onclick="selectSizeBtn(this, 16, 16)" data-w="16" data-h="16" title="经典 1x1 方块画 (16x16 像素)">1×1 (16×16)</button>
+                <button class="size-btn" onclick="selectSizeBtn(this, 16, 32)" data-w="16" data-h="32" title="竖幅 1x2 方块画 (16x32 像素)">1×2 (16×32)</button>
+                <button class="size-btn" onclick="selectSizeBtn(this, 32, 16)" data-w="32" data-h="16" title="横幅 2x1 方块画 (32x16 像素)">2×1 (32×16)</button>
+                <button class="size-btn active" onclick="selectSizeBtn(this, 32, 32)" data-w="32" data-h="32" title="经典中幅 2x2 方块画 (32x32 像素)">2×2 (32×32)</button>
+                <button class="size-btn" onclick="selectSizeBtn(this, 64, 32)" data-w="64" data-h="32" title="宽屏 4x2 方块画 (64x32 像素)">4×2 (64×32)</button>
+                <button class="size-btn" onclick="selectSizeBtn(this, 64, 48)" data-w="64" data-h="48" title="大壁画 4x3 方块画 (64x48 像素)">4×3 (64×48)</button>
+                <button class="size-btn" onclick="selectSizeBtn(this, 64, 64)" data-w="64" data-h="64" title="巨幅 4x4 方块画 (64x64 像素)">4×4 (64×64)</button>
+              </div>
+            </div>
+
+            <h2 class="mc-panel-title" style="margin-top:14px;"><span>🎨</span> 色彩与效果设置</h2>
+
+            <!-- 色彩模式 -->
+            <div class="control-group">
+              <label class="control-label"><span>色彩渲染模式</span></label>
+              <select class="mc-select" id="mode-select">
+                <option value="true_color" selected>原版真彩油画 (推荐 / 100% 精准还原原图色彩)</option>
+                <option value="adaptive">自适应 64 色油画 (基于原图提取调色板)</option>
+                <option value="block">Minecraft 原版方块画 (羊毛/混凝土/水材质)</option>
+              </select>
+            </div>
+
+            <!-- 抖动算法 -->
+            <div class="control-group">
+              <label class="control-label"><span>像素抖动 (Dithering)</span></label>
+              <select class="mc-select" id="dither-select">
+                <option value="none" selected>无抖动 (纯净清晰，无杂色斑点)</option>
+                <option value="subtle">自然微抖动 (柔和油画感)</option>
+                <option value="floyd">经典扩散抖动</option>
+              </select>
+            </div>
+
+            <!-- 选项开关 -->
+            <div class="control-group" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+              <label style="font-size:12px; display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" id="show-frame-toggle" checked>
+                <span>原版物品展示框 (Item Frame)</span>
+              </label>
+              <label style="font-size:12px; display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" id="show-wall-toggle" checked>
+                <span>原版橡木木板背景 (Oak Planks)</span>
+              </label>
+            </div>
+
+            <!-- 色彩微调 -->
+            <div class="control-group" style="margin-top:10px;">
+              <label class="control-label">
+                <span>对比度</span>
+                <span class="control-val" id="contrast-val">0</span>
+              </label>
+              <input type="range" class="mc-slider" id="contrast-slider" min="-40" max="40" step="2" value="0">
+            </div>
+
+            <div class="control-group">
+              <label class="control-label">
+                <span>饱和度</span>
+                <span class="control-val" id="satur-val">0</span>
+              </label>
+              <input type="range" class="mc-slider" id="satur-slider" min="-40" max="40" step="2" value="0">
+            </div>
+
+          </section>
+
+        </aside>
+
+        <!-- 右侧画作主视窗 -->
+        <section class="main-view-area">
+          <div class="mc-panel" style="flex:1; display:flex; flex-direction:column; justify-content:space-between;">
+            
+            <!-- 视窗顶部状态栏 -->
+            <div class="view-header">
+              <div class="view-title-group">
+                <span class="art-badge" id="art-size-badge">32×32 (2x2 方块)</span>
+                <span class="art-info" id="art-info-text">原版真彩油画已就绪</span>
+              </div>
+              <div style="display:flex; gap:10px;">
+                <button class="mc-btn" id="toggle-view-original-btn">
+                  <span>👁️</span> 按住查看原图
+                </button>
+                <button class="mc-btn mc-btn-primary" id="main-export-btn">
+                  <span>💾</span> 保存画作
+                </button>
+              </div>
+            </div>
+
+            <!-- 画作居中展示舞台 -->
+            <div class="painting-stage" id="painting-stage">
+              
+              <!-- 大画容器与右下角视窗、左上角静音按钮 -->
+              <div class="painting-main-wrapper" id="painting-main-wrapper" style="position:relative; display:inline-flex; align-items:center; justify-content:center;">
+                <div id="painting-render-container"></div>
+                <img id="original-image-preview" class="original-preview-img" style="display:none;" alt="原图预览">
+
+                <!-- 大画左上角：白底胶囊静音/播放按钮 -->
+                <button class="bgm-pill-toggle" id="bgm-toggle-btn" onclick="toggleBgmMusic()" title="点击播放/静音 C418 背景音乐">
+                  <div class="speaker-icon-wrapper" id="speaker-icon-wrapper">
+                    <svg id="icon-sound-on" class="speaker-svg" viewBox="0 0 24 24" width="20" height="20">
+                      <path fill="#2c2d30" d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77zm-2.5 0L6.71 8H3v8h3.71L11.5 20.77c.66.52 1.5.05 1.5-.77V4c0-.82-.84-1.29-1.5-.77zM14 8.83v6.34c1.24-.65 2-1.92 2-3.17s-.76-2.52-2-3.17z"/>
+                    </svg>
+                    <svg id="icon-sound-off" class="speaker-svg" style="display:none;" viewBox="0 0 24 24" width="20" height="20">
+                      <path fill="#777777" d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27l4.73 4.73H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09l2.09 2.09V4z"/>
+                    </svg>
+                  </div>
+                  <span class="bgm-status-text" id="bgm-status-text">Wet Hands 钢琴</span>
+                </button>
+
+                <!-- 大画右下角视窗 -->
+                <div class="painting-viewport-badge" id="painting-viewport-badge" onclick="document.getElementById('mc-stage-gallery').scrollIntoView({behavior:'smooth'})" title="联动视窗：点击联动定位到底部展示框">
+                  <div class="viewport-header">
+                    <span class="viewport-pulse-dot"></span>
+                    <span class="viewport-label">展示框视窗</span>
+                  </div>
+                  <div class="viewport-frame-box" id="viewport-frame-box">
+                    <canvas id="viewport-mini-canvas" width="32" height="32"></canvas>
+                  </div>
+                  <div class="viewport-link-guide">
+                    <span class="guide-arrow">⇣</span> 实时联动下方展示框
+                  </div>
+                </div>
+              </div>
+
+              <!-- 5格原石展示框展台 + 官方正版暗号盒子阵列 -->
+              <div class="mc-stage-gallery" id="mc-stage-gallery">
+                <div class="gallery-title-bar">
+                  <span class="gallery-title">🏛️ 《我的世界》原石与展示框展台（原版展示框等比实装）</span>
+                </div>
+
+                <!-- 第 1 行：一行 5 个展示框，原石上面放展示框 -->
+                <div class="gallery-grid-row" id="gallery-row-1">
+                  <!-- 第 1 格：主画作联动展示框 -->
+                  <div class="showcase-slot" data-row="1" data-col="1" id="slot-r1-c1">
+                    <div class="slot-item-frame active-linked-frame" id="gallery-active-frame" title="当前画作原版展示框实装 (同比例缩小)">
+                      <canvas id="gallery-active-canvas" width="32" height="32" class="frame-canvas"></canvas>
+                    </div>
+                    <div class="slot-cobblestone-block"></div>
+                  </div>
+
+                  <!-- 第 2 格：原版经典画作展台 2 (1x1 方形) -->
+                  <div class="showcase-slot" data-row="1" data-col="2" id="slot-r1-c2">
+                    <div class="slot-item-frame" id="gallery-frame-2" style="width:42px; height:42px;">
+                      <canvas id="gallery-canvas-2" width="16" height="16" class="frame-canvas"></canvas>
+                    </div>
+                    <div class="slot-cobblestone-block"></div>
+                  </div>
+
+                  <!-- 第 3 格：原版经典画作展台 3 (2x1 横版) -->
+                  <div class="showcase-slot" data-row="1" data-col="3" id="slot-r1-c3">
+                    <div class="slot-item-frame" id="gallery-frame-3" style="width:46px; height:24px;">
+                      <canvas id="gallery-canvas-3" width="32" height="16" class="frame-canvas"></canvas>
+                    </div>
+                    <div class="slot-cobblestone-block"></div>
+                  </div>
+
+                  <!-- 第 4 格：原版经典画作展台 4 (1x2 竖版) -->
+                  <div class="showcase-slot" data-row="1" data-col="4" id="slot-r1-c4">
+                    <div class="slot-item-frame" id="gallery-frame-4" style="width:24px; height:46px;">
+                      <canvas id="gallery-canvas-4" width="16" height="32" class="frame-canvas"></canvas>
+                    </div>
+                    <div class="slot-cobblestone-block"></div>
+                  </div>
+
+                  <!-- 第 5 格：原版经典画作展台 5 (4x3 比例) -->
+                  <div class="showcase-slot" data-row="1" data-col="5" id="slot-r1-c5">
+                    <div class="slot-item-frame" id="gallery-frame-5" style="width:46px; height:35px;">
+                      <canvas id="gallery-canvas-5" width="64" height="48" class="frame-canvas"></canvas>
+                    </div>
+                    <div class="slot-cobblestone-block"></div>
+                  </div>
+                </div>
+
+                <!-- 第 2 行：最左边下面放一个暗号盒子 -->
+                <div class="gallery-grid-row" id="gallery-row-2">
+                  <div class="showcase-slot slot-active-secret" id="slot-r2-c1" onclick="handleSecretBoxClick(1)" title="点击开启《我的世界》官方正版暗号盒子！">
+                    <div class="slot-secret-box" id="secret-box-elem-1"></div>
+                  </div>
+                  <div class="showcase-slot slot-empty"></div>
+                  <div class="showcase-slot slot-empty"></div>
+                  <div class="showcase-slot slot-empty"></div>
+                  <div class="showcase-slot slot-empty"></div>
+                </div>
+
+                <!-- 第 3 行：第 2 个暗号盒子 -->
+                <div class="gallery-grid-row" id="gallery-row-3">
+                  <div class="showcase-slot slot-empty"></div>
+                  <div class="showcase-slot slot-locked-secret" id="slot-r3-c2" onclick="handleSecretBoxClick(2)" title="《我的世界》暗号盒子">
+                    <div class="slot-secret-box" id="secret-box-elem-2" style="display:none;"></div>
+                  </div>
+                  <div class="showcase-slot slot-empty"></div>
+                  <div class="showcase-slot slot-empty"></div>
+                  <div class="showcase-slot slot-empty"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 视窗底部提示 -->
+            <div class="view-footer">
+              <div class="hint-text">
+                💡 提示：色彩算法已全面校准！蓝天、绿草、清澈河流与阳光均 100% 精准对应原图色彩。
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+
+      <!-- C418 背景音乐独立硬件播放节点 -->
+      <audio id="c418-bgm-audio-player" loop preload="auto" playsinline style="display:none;"></audio>
+
+      <!-- 官方正版暗号盒子游戏宣传与解密弹窗 -->
+      <div class="secret-box-modal-overlay" id="secret-box-modal" style="display:none;" onclick="if(event.target===this)closeSecretBoxModal()">
+        <div class="secret-box-modal-card">
+          <div class="secret-modal-top">
+            <div class="secret-modal-title">
+              <span>📦 《我的世界》暗号盒子已开启！</span>
+            </div>
+          </div>
+
+          <div class="secret-modal-content">
+            <div class="secret-announce-badge">🎮 精彩游戏特别推荐</div>
+            
+            <p class="secret-desc-text">
+              向您推荐浏览器上的另一个超好玩的游戏！
+            </p>
+            <p class="secret-author-text">
+              这也是制作《我的世界照片画作生成器》的同一个作者倾心打造的网页游戏哦！
+            </p>
+
+            <!-- 游戏专属网址卡片 -->
+            <div class="secret-website-card">
+              <div class="website-label">🌐 游戏官方网址：</div>
+              <a href="https://game.tangletang.top" target="_blank" rel="noopener noreferrer" class="website-link" id="game-site-link">
+                game.tangletang.top
+              </a>
+              <div class="website-actions">
+                <a href="https://game.tangletang.top" target="_blank" rel="noopener noreferrer" class="mc-btn mc-btn-primary mc-btn-sm" style="text-decoration:none;">
+                  🚀 立即前往游玩
+                </a>
+                <button class="mc-btn mc-btn-sm" onclick="copyGameWebsiteUrl()">
+                  📋 复制网址
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 弹窗底部：草方块垫底，“我记住了”按钮 -->
+          <div class="secret-modal-footer">
+            <button class="grass-pedestal-btn" id="grass-remember-btn" onclick="closeSecretBoxModal()">
+              <div class="grass-pedestal-blocks">
+                <div class="grass-block-tile"></div>
+                <div class="grass-block-tile"></div>
+                <div class="grass-block-tile"></div>
+                <div class="grass-block-tile"></div>
+                <div class="grass-block-tile"></div>
+                <div class="grass-block-tile"></div>
+              </div>
+              <span class="grass-btn-text">我记住了</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 成就达成通知弹窗 -->
+      <div class="achievement-toast" id="achievement-toast">
+        <canvas id="toast-icon-canvas" class="toast-icon" width="36" height="36"></canvas>
+        <div>
+          <div class="toast-title" id="toast-title">画作已生成！</div>
+          <div class="toast-desc" id="toast-desc">已成功转为《我的世界》原版画作</div>
+        </div>
+      </div>
+
+    </div>
+
         <!-- 开发者指令区 -->
         <div id="devConsole" class="dev-console hidden">
             <form id="devForm">
@@ -1279,6 +2547,11 @@
 
     <!-- 引入 Socket.IO 客户端 -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="assets/mc_textures.js"></script>
+    <script src="assets/c418_bgm.js"></script>
+    <script src="assets/bamboo_door_open.js"></script>
+    <script src="js/presetSamples_river.js"></script>
+    <script src="js/mcPaintingStudio.js"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -2301,6 +3574,7 @@
                 else if (gameState.mode === 2) startMode2Level(num);
                 else if (gameState.mode === 3) startMode3Level(num);
                 else if (gameState.mode === 4) startMode4Level(num);
+                else if (gameState.mode === 5) startMode5Level(num);
                 devLog(`⏩ 已跳到第 ${num} 关`);
                 return;
             }
@@ -2404,7 +3678,7 @@
         const PROGRESS_KEY = 'brick_game_mode_progress';
 
         function getUnlockedMode() {
-            return 5; // 默认解锁全部五个模式，方便立即体验！
+            return 6; // 默认解锁全部六个模式，方便立即体验！
         }
 
         function unlockNextMode(currentMode) {
@@ -2499,7 +3773,8 @@
                 { id: 2, name: '模式二：逮地鼠', color: 'linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%)', text: '#d81b60' },
                 { id: 3, name: '模式三：我的世界', color: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', text: 'white' },
                 { id: 4, name: '模式四：俄罗斯方块', color: 'linear-gradient(135deg, #FF5722 0%, #FF9800 100%)', text: 'white' },
-                { id: 5, name: '模式五：走下天梯', color: 'linear-gradient(135deg, #4A148C 0%, #8E24AA 100%)', text: 'white' }
+                { id: 5, name: '模式五：走下天梯', color: 'linear-gradient(135deg, #4A148C 0%, #8E24AA 100%)', text: 'white' },
+                { id: 6, name: '模式六：我的世界图画', color: 'linear-gradient(135deg, #795548 0%, #8D6E63 100%)', text: 'white' }
             ];
 
             modes.forEach(m => {
@@ -2509,7 +3784,7 @@
                 btn.style.color = m.text;
                 
                 // 使用最严谨的数值比较
-                        const currentUnlocked = getUnlockedMode();
+                const currentUnlocked = getUnlockedMode();
                 const isUnlocked = (Number(currentUnlocked) >= m.id);
                 
                 if (isUnlocked) {
@@ -2545,7 +3820,7 @@
                 return;
             }
             gameState.mode = mode; updateHomeTheme();
-            const modeNames = ["一", "二", "三", "四"];
+            const modeNames = ["一", "二", "三", "四", "五", "六"];
             document.getElementById('modeDisplayBtn').textContent = modeNames[mode - 1] || mode;
 
             closeModeModal();
@@ -2608,6 +3883,19 @@
                     <p style="margin-bottom: 8px; color: #FFF;"><b>【通关目标】</b></p>
                     <p style="margin-bottom: 0;">安全走完 1000 阶楼梯到达终点！</p>
                 `;
+            } else if (mode === 6) {
+                content.innerHTML = `
+                    <p style="margin-bottom: 8px; color: #FFF;"><b>【玩法：我的世界图画 (照片画作生成器)】</b></p>
+                    <p style="margin-bottom: 12px;">上传或粘贴你的任意照片、游戏截图，一键转换为纯正《我的世界》原版油画画作与像素画，色彩 100% 精准还原！</p>
+                    <p style="margin-bottom: 8px; color: #FFF;"><b>【功能亮点】</b></p>
+                    <p style="margin-bottom: 12px;">
+                        🖼️ <b>原版 7 大规格：</b> 自由切换 1×1、1×2、2×1、2×2、4×2、4×3、4×4 原版画幅！<br>
+                        🎨 <b>3 大色彩渲染：</b> 原版真彩油画、自适应 64 色油画与羊毛/混凝土原版方块画！<br>
+                        🎵 <b>C418 纯钢琴原声：</b> 内置 C418 传世名曲《Wet Hands》，点击大画左上角胶囊自由开启/静音。<br>
+                        🏛️ <b>原石与展示框展台：</b> 实时等比联动展示框，更有官方正版暗号彩蛋盒子等待探索！<br>
+                        💾 <b>一键导出：</b> 支持导出超高清原版画作 PNG 图片。
+                    </p>
+                `;
             } else {
                 content.innerHTML = `
                     <p style="margin-bottom: 8px; color: #FFF;"><b>【玩法：神秘领域】</b></p>
@@ -2644,6 +3932,11 @@
             const stairControls = document.getElementById('mcStairControls');
             if (stairControls) stairControls.classList.add('hidden');
 
+            // 隐藏并停止模式六：我的世界图画生成器
+            if (typeof window.stopMinecraftPaintingStudio === 'function') {
+                window.stopMinecraftPaintingStudio();
+            }
+
             gameState.mcWorld = null;
             mc3D.scene = null;
 
@@ -2652,12 +3945,21 @@
             gameState.hidingSpots = [];
             gameState.shapes = [];
             
-            // 重置所有模式的会话进度为 1（满足“退出后记录不继续”的需求）
+            // 重置所有模式的会话进度为 1
             gameState.sessionLevels[1] = 1;
             gameState.sessionLevels[2] = 1;
             gameState.sessionLevels[3] = 1;
             gameState.sessionLevels[4] = 1;
             gameState.sessionLevels[5] = 1;
+            gameState.sessionLevels[6] = 1;
+
+            // 如果是通过 /001 路径进入的，返回首页时平滑更新 URL 为首页路径
+            if (window.location.pathname.endsWith('/001') || window.location.pathname.endsWith('/001/')) {
+                const basePath = window.location.pathname.replace(/\/001\/?$/, '') || '/';
+                try {
+                    window.history.pushState(null, '', basePath + window.location.search);
+                } catch (e) {}
+            }
         }
 
 
@@ -8646,7 +9948,7 @@
                 mpBtn.style.color = "";
             }
             
-            const mText = (mode === 1 ? '一' : (mode === 2 ? '二' : (mode === 3 ? '三' : (mode === 4 ? '四' : '五'))));
+            const mText = (mode === 1 ? '一' : (mode === 2 ? '二' : (mode === 3 ? '三' : (mode === 4 ? '四' : (mode === 5 ? '五' : '六')))));
             
             // 恢复原始图标
             startBtn.innerHTML = "▶ 开始游戏";
@@ -8693,6 +9995,13 @@
                 startBtn.style.background = "linear-gradient(135deg, #FF2E93 0%, #FF8F00 100%)";
                 startBtn.style.color = "white";
                 startBtn.innerHTML = "▶ 走下天梯";
+            } else if (mode === 6) {
+                // 进入“我的世界图画”主题
+                title.textContent = "我的世界图画";
+                screen.style.background = "linear-gradient(135deg, #2b1f14 0%, #4a3622 50%, #1e140d 100%)";
+                startBtn.style.background = "linear-gradient(135deg, #8f6739 0%, #5c3a1d 100%)";
+                startBtn.style.color = "#ffffff";
+                startBtn.innerHTML = "▶ 开启画室";
             } else {
                 // 默认“积木小院”主题
                 title.textContent = "积木小院";
@@ -8744,6 +10053,11 @@
                 startMode4Level(startLevel);
             } else if (mode === 5) {
                 startMode5Level(startLevel);
+            } else if (mode === 6) {
+                if (typeof window.startMinecraftPaintingStudio === 'function') {
+                    window.startMinecraftPaintingStudio();
+                }
+                return;
             }
 
             requestAnimationFrame(loop);
@@ -8858,8 +10172,8 @@
         }
 
         // ===== 胜利庆祝界面 =====
-        const modeNames = ['第一模式', '第二模式', '第三模式', '第四模式'];
-        const modeNextNames = ['第二模式', '第三模式', '第四模式', '全新模式'];
+        const modeNames = ['第一模式', '第二模式', '第三模式', '第四模式', '第五模式', '第六模式'];
+        const modeNextNames = ['第二模式', '第三模式', '第四模式', '第五模式', '第六模式', '全新模式'];
 
         function showVictoryScreen() {
             const mode = gameState.mode;
@@ -9264,6 +10578,22 @@
             connectSocket();
         } else {
             document.getElementById('usernameModal').classList.remove('hidden');
+        }
+
+        // 🟢 模式六快捷访问入口路径检测：支持 /001、/001/、#001、?mode=6、?route=001
+        const isPath001 = window.location.pathname.endsWith('/001') || 
+                          window.location.pathname.endsWith('/001/') || 
+                          window.location.hash === '#001' || 
+                          new URLSearchParams(window.location.search).get('mode') === '6' ||
+                          new URLSearchParams(window.location.search).get('route') === '001';
+
+        if (isPath001) {
+            gameState.mode = 6;
+            updateHomeTheme();
+            document.getElementById('usernameModal').classList.add('hidden');
+            if (typeof window.startMinecraftPaintingStudio === 'function') {
+                window.startMinecraftPaintingStudio();
+            }
         }
     </script>
 </body>

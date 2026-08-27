@@ -11,8 +11,14 @@ const io = require('socket.io')(http, {
 
 // Serve static files from the parent directory
 app.use(express.static(path.join(__dirname, '../')));
+app.use('/001', express.static(path.join(__dirname, '../')));
 
 app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../index.html'));
+});
+
+// 模式六专属快捷访问入口 /001
+app.get(['/001', '/001/', '*/001', '*/001/'], (req, res) => {
   res.sendFile(path.join(__dirname, '../index.html'));
 });
 

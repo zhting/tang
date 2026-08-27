@@ -1,0 +1,845 @@
+/* ==========================================================================
+   Minecraft 原版画作生成器 - 专属样式系统
+   ========================================================================== */
+
+:root {
+  --mc-bg-dark: #121317;
+  --mc-panel-bg: #22232a;
+  --mc-panel-border-light: #585966;
+  --mc-panel-border-dark: #111215;
+  --mc-btn-bg: #4a4b57;
+  --mc-btn-top: #656778;
+  --mc-btn-bottom: #2b2c36;
+  --mc-btn-hover: #5d5f70;
+  --mc-btn-active: #3a3b47;
+  
+  --mc-green: #55ff55;
+  --mc-green-dark: #2a802a;
+  --mc-gold: #ffaa00;
+  --mc-text-light: #f1f2f6;
+  --mc-text-dim: #a4b0be;
+  
+  --font-pixel: 'Minecraftia', 'Mojangles', 'Courier New', monospace;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+@font-face {
+  font-family: 'Minecraftia';
+  src: local('Minecraftia'), local('Minecraft'), local('Monaco');
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  background-color: #1a1a20;
+  /* 原版 Minecraft 原石 (Cobblestone) 像素平铺背景 */
+  background-image: 
+    radial-gradient(circle at 50% 20%, rgba(20, 20, 26, 0.75) 0%, rgba(10, 10, 14, 0.94) 100%),
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.15), rgba(0,0,0,0.15) 2px, transparent 2px, transparent 64px),
+    url('assets/mc_textures.js'); /* 配合JS动态注入或SVG/CSS原石点阵 */
+  color: var(--mc-text-light);
+  font-family: var(--font-ui);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* 原版原石平铺纹理类 */
+.mc-cobblestone-bg {
+  background-repeat: repeat;
+  background-size: 64px 64px;
+  image-rendering: pixelated;
+}
+
+/* 顶部导航栏 */
+.mc-header {
+  background: #252630;
+  border-bottom: 4px solid #111215;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+}
+
+.logo-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
+}
+
+.logo-text {
+  font-family: var(--font-pixel);
+  font-size: 19px;
+  color: #fff;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 0px #000;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo-sub {
+  font-size: 11px;
+  color: var(--mc-gold);
+  text-shadow: 1px 1px 0px #000;
+  letter-spacing: 0.5px;
+}
+
+/* 主内容布局 */
+.app-container {
+  flex: 1;
+  display: flex;
+  max-width: 1560px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px;
+  gap: 18px;
+}
+
+/* 面板通用样式 (原石边框与浮雕) */
+.mc-panel {
+  background: var(--mc-panel-bg);
+  border: 3px solid;
+  border-color: var(--mc-panel-border-light) var(--mc-panel-border-dark) var(--mc-panel-border-dark) var(--mc-panel-border-light);
+  box-shadow: inset 2px 2px 0px rgba(255,255,255,0.08), 0 8px 24px rgba(0, 0, 0, 0.5);
+  padding: 16px;
+  position: relative;
+}
+
+.mc-panel-title {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  color: var(--mc-gold);
+  text-shadow: 1px 1px 0px #000;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 6px;
+}
+
+/* 左侧控制栏 */
+.sidebar-controls {
+  width: 370px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+/* 上传拖拽区域 */
+.upload-dropzone {
+  border: 3px dashed #5a5c6e;
+  background: #181920;
+  padding: 20px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.dragover {
+  border-color: var(--mc-green);
+  background: #232530;
+  box-shadow: 0 0 16px rgba(85, 255, 85, 0.35);
+  transform: scale(1.01);
+}
+
+.upload-dropzone input[type="file"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.upload-icon-wrapper {
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.crafting-table-icon {
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+  transition: transform 0.15s ease;
+}
+
+.hopper-icon {
+  width: 96px;
+  height: 96px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.75));
+  transition: transform 0.15s ease;
+  display: block;
+}
+
+.upload-dropzone:hover .hopper-icon {
+  transform: scale(1.08) translateY(-3px);
+}
+
+.upload-hint {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  color: var(--mc-text-light);
+  margin-bottom: 4px;
+  text-shadow: 1px 1px 0px #000;
+}
+
+.upload-subhint {
+  font-size: 11px;
+  color: var(--mc-text-dim);
+}
+
+.preset-samples-list {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.preset-thumb-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  background: #181920;
+  padding: 4px;
+  border: 2px solid #353642;
+  transition: border-color 0.12s, transform 0.1s;
+}
+
+.preset-thumb-card:hover {
+  border-color: var(--mc-gold);
+  transform: translateY(-2px);
+}
+
+.preset-thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  display: block;
+  image-rendering: pixelated;
+}
+
+.preset-name {
+  font-size: 10px;
+  color: #bbb;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  font-family: var(--font-pixel);
+}
+
+/* 参数调节项 */
+.control-group {
+  margin-bottom: 12px;
+}
+
+.control-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--mc-text-light);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.control-val {
+  color: var(--mc-green);
+  font-family: var(--font-pixel);
+  font-size: 12px;
+}
+
+/* 滑块样式 */
+.mc-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 8px;
+  background: #14151b;
+  border: 1px solid #3d3f4d;
+  outline: none;
+}
+
+.mc-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #6a6c7d;
+  border: 2px solid;
+  border-color: #8c8e9f #343540 #343540 #8c8e9f;
+  cursor: pointer;
+}
+
+/* 下拉选择框 */
+.mc-select {
+  width: 100%;
+  background: #181920;
+  border: 2px solid #3c3d4a;
+  color: #fff;
+  padding: 7px 10px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  outline: none;
+}
+
+/* 规格按钮网格 (Minecraft 原版告示牌造型) */
+.size-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+/* 默认状态：原版白桦木告示牌 (Birch Sign) */
+.size-btn {
+  background-color: #c7b99c !important;
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAFVBMVEXXy43XwYXIt3q4qHWun3allGeei2GOL9VAAAAAcElEQVR42g3CARXDIAwFwM/DAAk1kGQCVoKDDQeAA+JfQnvvwAV4XyD9CSk5hMS8yYUxR6wTG+WLjKQ3hFtvQgwX/RCbI9aIWHOjJMWrgonMzTqSuqt6RcwRZ+xALqkiJ0DJ7WZWWONO5o6zz3+ciAdixhUFVj2uwQAAAABJRU5ErkJggg==') !important;
+  background-repeat: repeat !important;
+  background-size: 32px 32px !important;
+  image-rendering: pixelated !important;
+  image-rendering: crisp-edges !important;
+  border: 2px solid !important;
+  border-color: #f2e8d3 #7e715b #7e715b #f2e8d3 !important;
+  box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.45), 0 2px 5px rgba(0, 0, 0, 0.4) !important;
+  color: #241a10 !important;
+  text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.6) !important;
+  font-size: 11px !important;
+  font-weight: bold !important;
+  padding: 8px 4px !important;
+  cursor: pointer !important;
+  text-align: center !important;
+  font-family: var(--font-pixel) !important;
+  transition: transform 0.08s ease, filter 0.08s ease !important;
+  position: relative !important;
+}
+
+.size-btn:hover {
+  filter: brightness(1.08) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.65), 0 4px 8px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* 选中激活状态：原版橡木告示牌 (Oak Sign) */
+.size-btn.active {
+  background-color: #a07e4c !important;
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAFVBMVEXCnWK4lF+vj1WfhE2WdEF+YjdnUCyo+21oAAAAcElEQVR42g3CARXDIAwFwM/DAAk1kGQCVoKDDQeAA+JfQnvvwAV4XyD9CSk5hMS8yYUxR6wTG+WLjKQ3hFtvQgwX/RCbI9aIWHOjJMWrgonMzTqSuqt6RcwRZ+xALqkiJ0DJ7WZWWONO5o6zz3+ciAdixhUFVj2uwQAAAABJRU5ErkJggg==') !important;
+  background-repeat: repeat !important;
+  background-size: 32px 32px !important;
+  image-rendering: pixelated !important;
+  image-rendering: crisp-edges !important;
+  border: 2px solid !important;
+  border-color: #4e3419 #d4a76c #d4a76c #4e3419 !important;
+  box-shadow: 0 0 0 2px #ffaa00, inset 0 0 0 1px rgba(255, 255, 255, 0.25), 0 3px 6px rgba(0, 0, 0, 0.6) !important;
+  color: #ffffff !important;
+  text-shadow: 1px 1px 0px #241407, -1px -1px 0px #241407, 1px -1px 0px #241407, -1px 1px 0px #241407 !important;
+  transform: translateY(1px) !important;
+}
+
+.size-btn.active:hover {
+  filter: brightness(1.05) !important;
+  transform: translateY(1px) !important;
+}
+
+/* 右侧主视窗 */
+.main-view-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+}
+
+.view-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.art-badge {
+  background: #191a22;
+  border: 2px solid #3e404f;
+  color: var(--mc-gold);
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  padding: 4px 10px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.art-info {
+  font-size: 13px;
+  color: var(--mc-text-dim);
+}
+
+/* 画作居中展示大背景板舞台 (原版橡木原木 Oak Log 材质) */
+.painting-stage {
+  flex: 1;
+  background-color: #4a3622 !important;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.75) 100%),
+    url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAElBMVEWYeEmRcUJ0WjZfSitMPSY4Kxj0FtFUAAAAaklEQVR42hXGQRHDMAwEQI1VBJINwLoTgLgEaiHohD+YOPtaoaXl3BBqas6C5DeVPBkgkOXSkVDQxKpT+8kqX2ZvbrvCYcJ/XHA3iV8sdLslJhI84UnLVvIJH5qxpJXRGSG2Y5D7TXXGxgPEiBE7ybf/RAAAAABJRU5ErkJggg==') !important;
+  background-repeat: repeat !important;
+  background-size: auto, 64px 64px !important;
+  image-rendering: pixelated !important;
+  image-rendering: crisp-edges !important;
+  border: 3px solid #2d1d0e !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: auto;
+  padding: 30px;
+  min-height: 520px;
+  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.85), 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+}
+
+.rendered-art-canvas {
+  max-width: 100%;
+  max-height: 68vh;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 16px 36px rgba(0, 0, 0, 0.8));
+  transition: transform 0.15s ease-out;
+}
+
+.original-preview-img {
+  max-width: 90%;
+  max-height: 65vh;
+  object-fit: contain;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.8);
+  border: 4px solid #fff;
+}
+
+/* 视窗底部操作 */
+.view-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 2px solid rgba(255, 255, 255, 0.08);
+}
+
+.hint-text {
+  font-size: 12px;
+  color: #8f92a1;
+}
+
+/* 通用 Minecraft 风格按钮 */
+.mc-btn {
+  background: var(--mc-btn-bg);
+  border: 2px solid;
+  border-color: var(--mc-btn-top) var(--mc-btn-bottom) var(--mc-btn-bottom) var(--mc-btn-top);
+  color: var(--mc-text-light);
+  padding: 9px 16px;
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-shadow: 1px 1px 0px #000;
+  transition: background 0.1s;
+}
+
+.mc-btn:hover {
+  background: var(--mc-btn-hover);
+}
+
+.mc-btn:active {
+  background: var(--mc-btn-active);
+  border-color: var(--mc-btn-bottom) var(--mc-btn-top) var(--mc-btn-top) var(--mc-btn-bottom);
+}
+
+.mc-btn-primary {
+  background: #2b7a3a;
+  border-color: #4cd164 #174b21 #174b21 #4cd164;
+  color: #fff;
+}
+
+.mc-btn-primary:hover {
+  background: #359648;
+}
+
+/* 成就弹窗 */
+.achievement-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  background: #181920;
+  border: 3px solid;
+  border-color: #555 #111 #111 #555;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  z-index: 1000;
+  transform: translateX(130%);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.achievement-toast.show {
+  transform: translateX(0);
+}
+
+.toast-icon {
+  width: 36px;
+  height: 36px;
+  image-rendering: pixelated;
+}
+
+.toast-title {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: var(--mc-gold);
+  margin-bottom: 2px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.toast-desc {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* 响应式适配 */
+@media (max-width: 960px) {
+  .app-container {
+    flex-direction: column;
+  }
+  .sidebar-controls {
+    width: 100%;
+  }
+}
+
+/* 原石与展示框展台区域 */
+.mc-stage-gallery {
+  width: 100%;
+  max-width: 620px;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 24px;
+  background: rgba(14, 15, 20, 0.65);
+  border: 3px solid #3c2918;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 6px 16px rgba(0,0,0,0.6);
+  border-radius: 4px;
+}
+
+.gallery-title-bar {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 2px;
+}
+
+.gallery-title {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  color: #ffaa00;
+  text-shadow: 1px 1px 0 #000;
+  letter-spacing: 0.5px;
+}
+
+.gallery-grid-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.showcase-slot {
+  width: 64px;
+  height: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  position: relative;
+  transition: transform 0.15s ease;
+}
+
+.showcase-slot.slot-empty {
+  visibility: hidden;
+}
+
+/* 原石方块 (Cobblestone Block) */
+.slot-cobblestone-block {
+  width: 52px;
+  height: 44px;
+  background-image: url('../assets/cobblestone.png');
+  background-size: 52px 52px;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border: 2px solid #2a2b34;
+  border-top: 3px solid #6b6c78;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.7);
+}
+
+/* 展示框 (Item Frame) */
+.slot-item-frame {
+  width: 44px;
+  height: 44px;
+  background-color: #855325;
+  border: 3px solid #4a280e;
+  box-shadow: inset 0 0 0 2px #bb8242, 0 3px 6px rgba(0,0,0,0.6);
+  image-rendering: pixelated;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transform: translateY(2px);
+}
+
+.inner-art-preview {
+  width: 28px;
+  height: 28px;
+  background-color: #2b1f14;
+  background-size: cover;
+  image-rendering: pixelated;
+  box-shadow: inset 0 0 3px rgba(0,0,0,0.8);
+}
+
+.sample-art-1 { background-image: radial-gradient(#d35400, #2c3e50); }
+.sample-art-2 { background-image: radial-gradient(#27ae60, #2980b9); }
+.sample-art-3 { background-image: radial-gradient(#f39c12, #8e44ad); }
+.sample-art-4 { background-image: radial-gradient(#16a085, #d35400); }
+.sample-art-5 { background-image: radial-gradient(#3498db, #e74c3c); }
+.sample-art-secret-reward { background-image: radial-gradient(#f1c40f, #2c3e50); }
+
+/* 《我的世界》官方正版暗号盒子 (Secret / Command Box) */
+.slot-secret-box {
+  width: 52px;
+  height: 52px;
+  background-image: url('../assets/command_block_front.png');
+  background-size: 52px auto;
+  background-position: 0 0;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border: 2px solid #8e44ad;
+  cursor: pointer;
+  animation: secretBoxPulse 1.4s infinite alternate;
+  box-shadow: 0 0 16px rgba(155, 89, 182, 0.8), 0 4px 10px rgba(0,0,0,0.8);
+  position: relative;
+}
+
+@keyframes secretBoxPulse {
+  0% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 4px #9b59b6); }
+  100% { transform: scale(1.08) translateY(-3px); filter: brightness(1.25) drop-shadow(0 0 12px #e056fd); }
+}
+
+.slot-active-secret {
+  cursor: pointer;
+}
+
+.slot-active-secret:hover .slot-secret-box {
+  transform: scale(1.12) translateY(-4px);
+}
+
+/* 暗号盒子宣传弹窗 */
+.secret-box-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(5px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.secret-box-modal-card {
+  width: 100%;
+  max-width: 520px;
+  background-color: #2b2c3a;
+  background-image: radial-gradient(circle at 50% 10%, #3a3b4e 0%, #1c1d27 100%);
+  border: 4px solid #5a5c72;
+  border-top-color: #8c8eab;
+  border-left-color: #8c8eab;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.9), 0 0 0 2px #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 20px;
+  text-align: center;
+  animation: modalPop 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+@keyframes modalPop {
+  0% { transform: scale(0.85); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.secret-modal-title {
+  font-family: var(--font-pixel);
+  font-size: 17px;
+  color: #ffaa00;
+  text-shadow: 2px 2px 0 #000;
+  margin-bottom: 12px;
+}
+
+.secret-announce-badge {
+  display: inline-block;
+  background: #8e44ad;
+  color: #fff;
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 2px solid #d2b4de;
+  margin-bottom: 14px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.secret-desc-text {
+  font-size: 15px;
+  color: #ffffff;
+  font-weight: bold;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.secret-author-text {
+  font-size: 13px;
+  color: #bdc3c7;
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.secret-website-card {
+  width: 100%;
+  background: #14151b;
+  border: 2px solid #4a4b5d;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.website-label {
+  font-size: 12px;
+  color: #aaa;
+}
+
+.website-link {
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  color: #55ff55;
+  text-shadow: 1px 1px 0 #000;
+  letter-spacing: 0.8px;
+  text-decoration: none;
+  word-break: break-all;
+  transition: color 0.1s;
+}
+
+.website-link:hover {
+  color: #ffff55;
+  text-decoration: underline;
+}
+
+.website-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.mc-btn-sm {
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+}
+
+/* 底部按钮：下方用几个2d草方块垫底，上面用黑色像素写：我记住了 */
+.grass-pedestal-btn {
+  position: relative;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.08s ease;
+  outline: none;
+}
+
+.grass-pedestal-btn:hover {
+  transform: scale(1.05) translateY(-2px);
+}
+
+.grass-pedestal-btn:active {
+  transform: scale(0.98) translateY(2px);
+}
+
+.grass-pedestal-blocks {
+  display: flex;
+  border: 2px solid #1a1a1a;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.7);
+}
+
+.grass-block-tile {
+  width: 38px;
+  height: 38px;
+  background-image: url('../assets/grass_block_side.png');
+  background-size: 38px 38px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.grass-btn-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-pixel);
+  font-size: 16px;
+  font-weight: 900;
+  color: #000000 !important;
+  text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.85), -1px -1px 0px rgba(255, 255, 255, 0.85), 1px -1px 0px rgba(255, 255, 255, 0.85), -1px 1px 0px rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  pointer-events: none;
+  letter-spacing: 1px;
+}
