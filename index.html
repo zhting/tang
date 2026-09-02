@@ -223,6 +223,137 @@
             animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
+        /* 模式选择弹窗滚动与双列卡片响应式布局 */
+        #modeModal {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: rgba(0, 0, 0, 0.65) !important;
+            backdrop-filter: blur(8px) !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            z-index: 9999 !important;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            padding: 16px 10px !important;
+            box-sizing: border-box !important;
+        }
+
+        #modeModal .modal-content {
+            max-width: 520px;
+            width: 94vw;
+            max-height: 88vh;
+            display: flex;
+            flex-direction: column;
+            padding: 18px 16px 12px 16px;
+            box-sizing: border-box;
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+            margin: auto;
+        }
+
+        #modeModal h2 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-size: 20px;
+            flex-shrink: 0;
+            color: #222;
+            text-align: center;
+        }
+
+        #modeScrollWrapper {
+            position: relative;
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #modeButtonsContainer {
+            flex: 1;
+            overflow-y: scroll !important;
+            overflow-x: hidden !important;
+            max-height: 58vh;
+            padding: 4px 6px 12px 6px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            -webkit-overflow-scrolling: touch !important;
+            overscroll-behavior-y: contain;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+            touch-action: pan-y !important;
+            will-change: transform;
+        }
+
+        @media (max-width: 460px) {
+            #modeButtonsContainer {
+                grid-template-columns: 1fr;
+                gap: 10px;
+                max-height: 52vh;
+            }
+        }
+
+        #modeButtonsContainer::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #modeButtonsContainer::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+        }
+
+        #modeButtonsContainer::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+
+        #modeButtonsContainer .btn-primary {
+            border-radius: 14px;
+            margin-bottom: 0;
+            padding: 12px 14px;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+            flex-shrink: 0;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            cursor: pointer;
+            user-select: none;
+            min-height: 48px;
+            box-sizing: border-box;
+        }
+
+        #modeButtonsContainer .btn-primary:active {
+            transform: scale(0.96);
+        }
+
+        #modeModal .btn-secondary {
+            flex-shrink: 0;
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            color: #666;
+            background: #f0f0f0;
+            border-radius: 12px;
+            cursor: pointer;
+            border: none;
+            width: 100%;
+        }
+
+        #modeModal .btn-secondary:active {
+            background: #e0e0e0;
+        }
+
         @keyframes popIn {
             from {
                 transform: scale(0.8);
@@ -2070,9 +2201,16 @@
     <!-- 选择模式弹窗 -->
     <div id="modeModal" class="modal-overlay hidden">
         <div class="modal-content">
-            <h2>选择游戏模式</h2>
-            <div id="modeButtonsContainer">
-                <!-- 动态生成的模式按钮会放在这里 -->
+            <h2 style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <span>🎮</span> 选择游戏模式
+            </h2>
+            <div id="modeScrollWrapper" style="position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">
+                <div id="modeButtonsContainer">
+                    <!-- 动态生成的模式按钮会放在这里 -->
+                </div>
+                <div id="modeScrollHint" style="font-size: 12px; color: #888; padding: 4px 0 2px 0; text-align: center; pointer-events: none; opacity: 0.85;">
+                    ↕ 上下滑动可选择更多模式 (模式七、模式八)
+                </div>
             </div>
             <button class="btn-secondary" onclick="closeModeModal()">关闭</button>
         </div>
@@ -2552,6 +2690,8 @@
     <script src="assets/bamboo_door_open.js?v=1.0.1"></script>
     <script src="js/presetSamples_river.js?v=1.0.1"></script>
     <script src="js/mcPaintingStudio.js?v=1.0.1"></script>
+    <script src="js/mode7.js?v=1.0.0"></script>
+    <script src="js/mode8.js?v=1.0.0"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -3575,6 +3715,8 @@
                 else if (gameState.mode === 3) startMode3Level(num);
                 else if (gameState.mode === 4) startMode4Level(num);
                 else if (gameState.mode === 5) startMode5Level(num);
+                else if (gameState.mode === 7 && typeof startMode7Level === 'function') startMode7Level(num);
+                else if (gameState.mode === 8 && typeof startMode8Level === 'function') startMode8Level(num);
                 devLog(`⏩ 已跳到第 ${num} 关`);
                 return;
             }
@@ -3678,7 +3820,7 @@
         const PROGRESS_KEY = 'brick_game_mode_progress';
 
         function getUnlockedMode() {
-            return 6; // 默认解锁全部六个模式，方便立即体验！
+            return 8; // 默认解锁全部模式，方便立即体验！
         }
 
         function unlockNextMode(currentMode) {
@@ -3761,7 +3903,92 @@
             }
         }
 
-        // ===== 模式选择菜单 =====
+        // ===== 模式选择菜单与弹性回弹交互 =====
+        function initModeModalBounce() {
+            const container = document.getElementById('modeButtonsContainer');
+            if (!container || container._bounceInitialized) return;
+            container._bounceInitialized = true;
+
+            let startY = 0;
+            let startScrollTop = 0;
+            let currentTranslateY = 0;
+            let isDragging = false;
+            let hasMoved = false;
+
+            function onStart(e) {
+                const touch = e.touches ? e.touches[0] : e;
+                startY = touch.clientY;
+                startScrollTop = container.scrollTop;
+                isDragging = true;
+                hasMoved = false;
+                container.style.transition = 'none';
+            }
+
+            function onMove(e) {
+                if (!isDragging) return;
+                const touch = e.touches ? e.touches[0] : e;
+                const deltaY = touch.clientY - startY;
+
+                if (Math.abs(deltaY) > 4) {
+                    hasMoved = true;
+                }
+
+                // 直接操控 scrollTop 实现 100% 顺畅滑动
+                const targetScrollTop = startScrollTop - deltaY;
+                const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+
+                if (targetScrollTop < 0) {
+                    container.scrollTop = 0;
+                    const overDistance = -targetScrollTop;
+                    currentTranslateY = Math.min(65, Math.pow(overDistance, 0.72) * 2.2);
+                    container.style.transform = `translateY(${currentTranslateY}px)`;
+                } else if (targetScrollTop > maxScroll && maxScroll >= 0) {
+                    container.scrollTop = maxScroll;
+                    const overDistance = targetScrollTop - maxScroll;
+                    currentTranslateY = -Math.min(65, Math.pow(overDistance, 0.72) * 2.2);
+                    container.style.transform = `translateY(${currentTranslateY}px)`;
+                } else {
+                    container.scrollTop = targetScrollTop;
+                    currentTranslateY = 0;
+                    container.style.transform = 'translateY(0px)';
+                }
+            }
+
+            function onEnd() {
+                if (!isDragging) return;
+                isDragging = false;
+                if (currentTranslateY !== 0) {
+                    currentTranslateY = 0;
+                    container.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                    container.style.transform = 'translateY(0px)';
+                }
+            }
+
+            container.addEventListener('touchstart', onStart, { passive: true });
+            container.addEventListener('touchmove', onMove, { passive: true });
+            container.addEventListener('touchend', onEnd, { passive: true });
+            container.addEventListener('touchcancel', onEnd, { passive: true });
+
+            container.addEventListener('mousedown', onStart);
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onEnd);
+
+            // 滚轮边界回弹
+            container.addEventListener('wheel', (e) => {
+                const atTop = container.scrollTop <= 0 && e.deltaY < 0;
+                const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 1 && e.deltaY > 0;
+                if (atTop || atBottom) {
+                    const bounceY = (atTop ? 20 : -20);
+                    container.style.transition = 'transform 0.12s ease-out';
+                    container.style.transform = `translateY(${bounceY}px)`;
+                    setTimeout(() => {
+                        container.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                        container.style.transform = 'translateY(0px)';
+                    }, 120);
+                }
+            }, { passive: true });
+        }
+
         function openModeModal() {
             const container = document.getElementById('modeButtonsContainer');
             container.innerHTML = '';
@@ -3769,12 +3996,14 @@
             const currentUnlocked = getUnlockedMode();
 
             const modes = [
-                { id: 1, name: '模式一：捉迷藏', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', text: 'white' },
-                { id: 2, name: '模式二：逮地鼠', color: 'linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%)', text: '#d81b60' },
-                { id: 3, name: '模式三：我的世界', color: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', text: 'white' },
-                { id: 4, name: '模式四：俄罗斯方块', color: 'linear-gradient(135deg, #FF5722 0%, #FF9800 100%)', text: 'white' },
-                { id: 5, name: '模式五：走下天梯', color: 'linear-gradient(135deg, #4A148C 0%, #8E24AA 100%)', text: 'white' },
-                { id: 6, name: '模式六：我的世界图画', color: 'linear-gradient(135deg, #795548 0%, #8D6E63 100%)', text: 'white' }
+                { id: 1, name: '模式一：捉迷藏', icon: '🔍', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', text: 'white' },
+                { id: 2, name: '模式二：逮地鼠', icon: '🐹', color: 'linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%)', text: '#d81b60' },
+                { id: 3, name: '模式三：我的世界', icon: '⛏️', color: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', text: 'white' },
+                { id: 4, name: '模式四：俄罗斯方块', icon: '🧱', color: 'linear-gradient(135deg, #FF5722 0%, #FF9800 100%)', text: 'white' },
+                { id: 5, name: '模式五：走下天梯', icon: '🪜', color: 'linear-gradient(135deg, #4A148C 0%, #8E24AA 100%)', text: 'white' },
+                { id: 6, name: '模式六：我的世界图画', icon: '🖼️', color: 'linear-gradient(135deg, #795548 0%, #8D6E63 100%)', text: 'white' },
+                { id: 7, name: '模式七：第七音 (简单模式)', icon: '🎵', color: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)', text: 'white' },
+                { id: 8, name: '模式八：坚果保龄球 (种植版)', icon: '🌰', color: 'linear-gradient(135deg, #5D4037 0%, #388E3C 100%)', text: 'white' }
             ];
 
             modes.forEach(m => {
@@ -3788,7 +4017,7 @@
                 const isUnlocked = (Number(currentUnlocked) >= m.id);
                 
                 if (isUnlocked) {
-                    btn.innerHTML = `▶ ${m.name}`;
+                    btn.innerHTML = `${m.icon} ${m.name}`;
                     btn.onclick = () => selectMode(m.id);
                     btn.style.opacity = '1';
                     btn.style.filter = 'none';
@@ -3807,6 +4036,7 @@
                 container.appendChild(btn);
             });
 
+            initModeModalBounce();
             document.getElementById('modeModal').classList.remove('hidden');
         }
 
@@ -3820,7 +4050,7 @@
                 return;
             }
             gameState.mode = mode; updateHomeTheme();
-            const modeNames = ["一", "二", "三", "四", "五", "六"];
+            const modeNames = ["一", "二", "三", "四", "五", "六", "七", "八"];
             document.getElementById('modeDisplayBtn').textContent = modeNames[mode - 1] || mode;
 
             closeModeModal();
@@ -3896,12 +4126,48 @@
                         💾 <b>一键导出：</b> 支持导出超高清原版画作 PNG 图片。
                     </p>
                 `;
+            } else if (mode === 7) {
+                content.innerHTML = `
+                    <p style="margin-bottom: 8px; color: #FFF;"><b>【玩法：第七音 · 简单模式】</b></p>
+                    <p style="margin-bottom: 12px;">让玩家初步感受第七模式的操作与方块平台跳跃机制。背景颜色为清新自然绿色，以方块为核心场景元素。</p>
+                    <p style="margin-bottom: 8px; color: #FFF;"><b>【按键与操作】</b></p>
+                    <p style="margin-bottom: 12px;">
+                        ◀ / ▶ (或 A / D)：向左 / 向右移动<br>
+                        ▲ (或 W / 空格)：起跳<br>
+                        ▼ (或 S)：趴下 / 低矮通道爬行<br>
+                        空格键：在拉杆旁拉动机关
+                    </p>
+                    <p style="margin-bottom: 8px; color: #FFF;"><b>【关卡与特殊机制】</b></p>
+                    <p style="margin-bottom: 12px;">
+                        ⏳ <b>关卡不限时：</b> 全程无倒计时，共 25 关，难度逐级递增（第 1 关平路教学）。<br>
+                        🕹️ <b>第 20 关拉杆开门：</b> 在拉杆旁按空格，拉杆从左拉到右，右侧大门升起打开！<br>
+                        ⚡ <b>第 24 关高压电流：</b> 触碰高压电流立即触电失败，需躲避电网通关！<br>
+                        🏆 <b>第 25 关终极通关：</b> 简单模式巅峰挑战！
+                    </p>
+                `;
+            } else if (mode === 8) {
+                content.innerHTML = `
+                    <p style="margin-bottom: 8px; color: #FFF;"><b>【玩法：坚果保龄球 · 种植版】</b></p>
+                    <p style="margin-bottom: 12px;">原版 5×9 草坪战场！红线位于第 3 列右侧，红线左侧为种植区，右侧为僵尸交战区。右侧更有 1x / 2x / 3x 倍速自由切换！</p>
+                    <p style="margin-bottom: 8px; color: #FFF;"><b>【核心植物与特性】</b></p>
+                    <p style="margin-bottom: 12px;">
+                        🌸 <b>大嘴花坚果 (200☀️)：</b> 种植后每隔 1.5 秒跳跃前进 1 格，可吃普通/路障僵尸、巨人僵尸、僵王博士及植物！<br>
+                        &nbsp;&nbsp;• <b>20% 概率秒吞：</b> 直接吞下无需咀嚼继续走！<br>
+                        &nbsp;&nbsp;• <b>80% 概率咀嚼：</b> 咀嚼 20 秒后继续往前走。<br>
+                        &nbsp;&nbsp;• <b>50% 增长一圈：</b> 食量容量+1、跳跃间隔+1秒、生命值+200！<br>
+                        &nbsp;&nbsp;• <b>折返巡逻：</b> 走到尽头 50% 概率掉头往回走，回到种植起点后再次掉头往前，无限循环！<br>
+                        🌀 <b>魅惑坚果 (125☀️)：</b> 滚向僵尸，命中后爆发 <b>3×3 范围魅惑</b>，无直接伤害，被魅惑僵尸向右反攻！<br>
+                        🎳 <b>普通坚果 (50☀️)：</b> 原版坚果保龄球！撞击造成 400 强力伤害并 <b>45° 斜向折射弹跳</b>，边界反弹击溃大群僵尸！
+                    </p>
+                    <p style="margin-bottom: 8px; color: #FFF;"><b>【防线守护】</b></p>
+                    <p style="margin-bottom: 0;">5 条车道均配备除草机小推车，僵尸突破防线时将自动启动横扫整行！</p>
+                `;
             } else {
                 content.innerHTML = `
                     <p style="margin-bottom: 8px; color: #FFF;"><b>【玩法：神秘领域】</b></p>
                     <p style="margin-bottom: 12px;">全新的挑战正在开发中，这里将会有更加复杂的物理效果和互动机制。</p>
                     <p style="margin-bottom: 8px; color: #FFF;"><b>【敬请期待】</b></p>
-                    <p style="margin-bottom: 0;">目前仅开放至第 50 关的通关逻辑验证。</p>
+                    <p style="margin-bottom: 0;">目前开放至第 8 模式（坚果保龄球·种植版）。</p>
                 `;
             }
             document.getElementById('instructionsModal').classList.remove('hidden'); 
@@ -3935,6 +4201,16 @@
             // 隐藏并停止模式六：我的世界图画生成器
             if (typeof window.stopMinecraftPaintingStudio === 'function') {
                 window.stopMinecraftPaintingStudio();
+            }
+
+            // 隐藏并停止模式七：第七音
+            if (typeof window.stopMode7 === 'function') {
+                window.stopMode7();
+            }
+
+            // 隐藏并停止模式八：坚果保龄球
+            if (typeof window.stopMode8 === 'function') {
+                window.stopMode8();
             }
 
             gameState.mcWorld = null;
@@ -6838,7 +7114,7 @@
             if (index !== -1) {
                 const b = mc3D.blocks[index];
                 mc3D.scene.remove(b.mesh);
-                b.mesh.geometry.dispose();
+                if (b.mesh.geometry && b.mesh.geometry !== mc3D.blockGeometry) b.mesh.geometry.dispose();
                 mc3D.blocks.splice(index, 1);
             }
         }
@@ -6850,7 +7126,7 @@
             const index = mc3D.blocks.indexOf(b);
             if (index !== -1) {
                 mc3D.scene.remove(b.mesh);
-                if (b.mesh.geometry) b.mesh.geometry.dispose();
+                if (b.mesh.geometry && b.mesh.geometry !== mc3D.blockGeometry) b.mesh.geometry.dispose();
                 mc3D.blocks.splice(index, 1);
             }
         }
@@ -8486,21 +8762,15 @@
                 
                 showToast("📦 已开启单方块生存！挖掉脚下的中心方块将生成新惊喜！");
             } else {
-                // 普通生存模式：极致扩大地图并生成自然村庄与繁茂生物群系
-                const mapRadius = 120;
+                // 普通生存模式：自然村庄与繁茂生物群系
+                const mapRadius = 20;
                 const heights = {};
                 const biomes = {};
                 
-                // 确定 8 个分布式村庄中心及其高度
+                // 确定自然村庄中心及其高度
                 const villageCenters = [
-                    {cx: 35, cz: 35, r: 12},
-                    {cx: -45, cz: -40, r: 12},
-                    {cx: 60, cz: -65, r: 12},
-                    {cx: -65, cz: 60, r: 12},
-                    {cx: 0, cz: 80, r: 12},
-                    {cx: -10, cz: -90, r: 12},
-                    {cx: 90, cz: 10, r: 12},
-                    {cx: -90, cz: -10, r: 12}
+                    {cx: 8, cz: 8, r: 7},
+                    {cx: -9, cz: -9, r: 7}
                 ];
                 
                 villageCenters.forEach(vc => {
@@ -8827,7 +9097,7 @@
             }
             
             // 3. 生成下界地形
-            const netherRadius = 80;
+            const netherRadius = 16;
             const floorHeights = {};
             
             for (let x = -netherRadius; x <= netherRadius; x++) {
@@ -8879,13 +9149,13 @@
             
             // 5. 放置下界怪物
             for (let i = 0; i < 4; i++) {
-                const rx = (Math.random() - 0.5) * 40;
-                const rz = (Math.random() - 0.5) * 40 + 5;
+                const rx = (Math.random() - 0.5) * 20;
+                const rz = (Math.random() - 0.5) * 20 + 5;
                 spawnMob(rx, 11, rz, 'ghast');
             }
             for (let i = 0; i < 6; i++) {
-                const rx = (Math.random() - 0.5) * 30;
-                const rz = (Math.random() - 0.5) * 30 + 5;
+                const rx = (Math.random() - 0.5) * 20;
+                const rz = (Math.random() - 0.5) * 20 + 5;
                 spawnMob(rx, 3, rz, 'pigman');
             }
             
@@ -8903,7 +9173,7 @@
             
             mc3D.blocks.forEach(b => {
                 mc3D.scene.remove(b.mesh);
-                if (b.mesh.geometry) b.mesh.geometry.dispose();
+                if (b.mesh.geometry && b.mesh.geometry !== mc3D.blockGeometry) b.mesh.geometry.dispose();
             });
             mc3D.blocks = [];
             mc3D.blockSet.clear();
@@ -8925,18 +9195,12 @@
                 mc3D.ambientLight.color.setHex(0xffffff);
             }
             
-            const mapRadius = 120;
+            const mapRadius = 20;
             const heights = {};
             const biomes = {};
             const villageCenters = [
-                {cx: 35, cz: 35, r: 12},
-                {cx: -45, cz: -40, r: 12},
-                {cx: 60, cz: -65, r: 12},
-                {cx: -65, cz: 60, r: 12},
-                {cx: 0, cz: 80, r: 12},
-                {cx: -10, cz: -90, r: 12},
-                {cx: 90, cz: 10, r: 12},
-                {cx: -90, cz: -10, r: 12}
+                {cx: 8, cz: 8, r: 7},
+                {cx: -9, cz: -9, r: 7}
             ];
             
             villageCenters.forEach(vc => {
@@ -9948,7 +10212,7 @@
                 mpBtn.style.color = "";
             }
             
-            const mText = (mode === 1 ? '一' : (mode === 2 ? '二' : (mode === 3 ? '三' : (mode === 4 ? '四' : (mode === 5 ? '五' : '六')))));
+            const mText = (mode === 1 ? '一' : (mode === 2 ? '二' : (mode === 3 ? '三' : (mode === 4 ? '四' : (mode === 5 ? '五' : (mode === 6 ? '六' : (mode === 7 ? '七' : '八')))))));
             
             // 恢复原始图标
             startBtn.innerHTML = "▶ 开始游戏";
@@ -10002,6 +10266,20 @@
                 startBtn.style.background = "linear-gradient(135deg, #8f6739 0%, #5c3a1d 100%)";
                 startBtn.style.color = "#ffffff";
                 startBtn.innerHTML = "▶ 开启画室";
+            } else if (mode === 7) {
+                // 进入“第七音 · 简单模式”主题
+                title.textContent = "第七音 · 简单模式";
+                screen.style.background = "linear-gradient(135deg, #1b5e20 0%, #2e7d32 50%, #43a047 100%)";
+                startBtn.style.background = "linear-gradient(135deg, #2e7d32 0%, #66bb6a 100%)";
+                startBtn.style.color = "#ffffff";
+                startBtn.innerHTML = "▶ 开始闯关 (第七音)";
+            } else if (mode === 8) {
+                // 进入“坚果保龄球 · 种植版”主题
+                title.textContent = "坚果保龄球 · 种植版";
+                screen.style.background = "linear-gradient(135deg, #1b5e20 0%, #33691e 50%, #4e342e 100%)";
+                startBtn.style.background = "linear-gradient(135deg, #2e7d32 0%, #8d6e63 100%)";
+                startBtn.style.color = "#ffffff";
+                startBtn.innerHTML = "▶ 开启保龄球 (模式八)";
             } else {
                 // 默认“积木小院”主题
                 title.textContent = "积木小院";
@@ -10058,6 +10336,14 @@
                     window.startMinecraftPaintingStudio();
                 }
                 return;
+            } else if (mode === 7) {
+                if (typeof window.startMode7Level === 'function') {
+                    startMode7Level(startLevel);
+                }
+            } else if (mode === 8) {
+                if (typeof window.startMode8Level === 'function') {
+                    startMode8Level(startLevel);
+                }
             }
 
             requestAnimationFrame(loop);
@@ -10096,8 +10382,8 @@
                 document.getElementById('scoreDisplay').textContent = `${gameState.currentLevelCollected} / ${gameState.targetCount}`;
             }
 
-            const isMode4 = gameState.mode === 4 || (gameState.mode === 'mp_pvp' && gameState.mpGameMode === 4);
-            if (isMode4) {
+            const isNoTimerMode = gameState.mode === 4 || gameState.mode === 6 || gameState.mode === 7 || gameState.mode === 8 || (gameState.mode === 'mp_pvp' && gameState.mpGameMode === 4);
+            if (isNoTimerMode) {
                 document.getElementById('timerBox').classList.add('hidden');
                 document.getElementById('basket').classList.add('hidden');
             } else {
@@ -10172,8 +10458,8 @@
         }
 
         // ===== 胜利庆祝界面 =====
-        const modeNames = ['第一模式', '第二模式', '第三模式', '第四模式', '第五模式', '第六模式'];
-        const modeNextNames = ['第二模式', '第三模式', '第四模式', '第五模式', '第六模式', '全新模式'];
+        const modeNames = ['第一模式', '第二模式', '第三模式', '第四模式', '第五模式', '第六模式', '第七模式'];
+        const modeNextNames = ['第二模式', '第三模式', '第四模式', '第五模式', '第六模式', '第七模式', '全新模式'];
 
         function showVictoryScreen() {
             const mode = gameState.mode;
@@ -10373,7 +10659,7 @@
             }
 
             if (gameState.mode !== 'mp_pvp') {
-                if (gameState.mode !== 4) {
+                if (gameState.mode !== 4 && gameState.mode !== 7 && gameState.mode !== 8) {
                     gameState.timeLeft -= dt / 1000;
                     if (gameState.timeLeft <= 0) { 
                         gameOver(); 
@@ -10389,6 +10675,8 @@
                 else if (activeMode === 3) loopMode3(t, dt);
                 else if (activeMode === 4) loopMode4(t, dt);
                 else if (activeMode === 5) loopMode5(t, dt);
+                else if (activeMode === 7 && typeof loopMode7 === 'function') loopMode7(t, dt);
+                else if (activeMode === 8 && typeof loopMode8 === 'function') loopMode8(t, dt);
 
                 for (let i = gameState.effects.length - 1; i >= 0; i--) {
                     if (gameState.effects[i].update()) gameState.effects.splice(i, 1); else gameState.effects[i].draw(ctx);
@@ -10518,6 +10806,9 @@
         gameState.sessionLevels[3] = 1;
         gameState.sessionLevels[4] = 1;
         gameState.sessionLevels[5] = 1;
+        gameState.sessionLevels[6] = 1;
+        gameState.sessionLevels[7] = 1;
+        gameState.sessionLevels[8] = 1;
         initTetrisInputListeners();
         initStairInputListeners();
 
@@ -10529,6 +10820,9 @@
         gameState.sessionLevels[3] = 1;
         gameState.sessionLevels[4] = 1;
         gameState.sessionLevels[5] = 1;
+        gameState.sessionLevels[6] = 1;
+        gameState.sessionLevels[7] = 1;
+        gameState.sessionLevels[8] = 1;
 
         function makeIconsTransparent() {
             const img = new Image();
