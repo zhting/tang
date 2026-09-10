@@ -66,6 +66,12 @@
             pointer-events: auto;
         }
 
+        /* 当处于第八模式(坚果保龄球)时，将左侧退出与排行榜按钮整体下移，避免遮挡顶部阳光槽 */
+        .mode-8-active .header-left {
+            margin-top: 80px;
+            transition: margin-top 0.3s ease;
+        }
+
                 .status-box {
             background: rgba(255, 255, 255, 0.95);
             padding: 8px 16px;
@@ -4212,6 +4218,8 @@
             if (typeof window.stopMode8 === 'function') {
                 window.stopMode8();
             }
+            document.body.classList.remove('mode-8-active');
+            document.getElementById("uiLayer").classList.remove('mode-8-active');
 
             gameState.mcWorld = null;
             mc3D.scene = null;
@@ -10205,6 +10213,8 @@
             
             // 默认重置所有状态
             screen.classList.remove('mc-theme', 'tetris-theme'); uiLayer.classList.remove('mc-theme');
+            uiLayer.classList.toggle('mode-8-active', mode === 8);
+            document.body.classList.toggle('mode-8-active', mode === 8);
             startBtn.style.background = ""; 
             startBtn.style.color = "";
             if (mpBtn) {

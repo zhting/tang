@@ -2162,6 +2162,10 @@
         if (timerBox) timerBox.classList.add('hidden');
         const basket = document.getElementById('basket');
         if (basket) basket.classList.add('hidden');
+
+        document.body.classList.add('mode-8-active');
+        const uiLayer = document.getElementById('uiLayer');
+        if (uiLayer) uiLayer.classList.add('mode-8-active');
     };
 
     window.loopMode8 = function (t, rawDt) {
@@ -2223,6 +2227,10 @@
         m8.suns = [];
         m8.mowers = [];
         m8.effects = [];
+
+        document.body.classList.remove('mode-8-active');
+        const uiLayer = document.getElementById('uiLayer');
+        if (uiLayer) uiLayer.classList.remove('mode-8-active');
     };
 
 })();
