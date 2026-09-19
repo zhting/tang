@@ -819,7 +819,7 @@
             // 右侧平台：740 往后
             addGround(740, endX - 740 + 300, groundY, 'grass');
 
-            // 初始化第 10 关专属往复陷阱状态机
+            // 初始化第 10 关专属往复陷阱状态机（右侧高速推挤，左侧升墙拦截，5秒休眠重置）
             m7.level10Trap = {
                 pit1: { x: 320, w: 140 },
                 midPlatform: { x: 460, w: 130 },
@@ -837,21 +837,29 @@
                 wall: {
                     initialX: 740,
                     x: 740,
-                    targetX: 530,
-                    y: groundY - 140, // 高达 140px (3.5 格高！阻挡直接起跳)
+                    targetX: 486, // 一直推到中间方块左边缘 (x=460)
+                    y: groundY - 140, // 高达 140px (3.5 格高)
                     w: 52,
                     h: 140,
                     solid: false,
                     active: false,
                     visible: false
                 },
-                state: 'idle', // 'idle' | 'triggered' | 'holding' | 'reversing'
+                leftWall: {
+                    x: 434,
+                    targetY: groundY - 140, // 340
+                    currentY: groundY,
+                    w: 28,
+                    h: 140,
+                    solid: false,
+                    visible: false
+                },
+                state: 'idle', // 'idle' | 'triggered' | 'holding' | 'waiting5s'
                 timer: 0,
-                triggerRangeX: 540
+                triggerRangeX: 535
             };
 
-            m7.signs.push({ x: 180, y: groundY - 60, text: '⭐ 第 10 关：双坑试炼', subText: '一坑必坠，二坑暗藏多重推挤方块！' });
-            m7.signs.push({ x: 475, y: groundY - 60, text: '后撤避险可倒转机关', subText: '亦可踩上推挤方块顶端翻越！' });
+            m7.signs.push({ x: 200, y: groundY - 60, text: '⭐ 第 10 关：双壁合围陷阱', subText: '极速推挤与左侧升墙！双墙消失有5秒空窗！' });
 
             m7.goal.x = endX;
             m7.goal.y = groundY - 80;
@@ -1078,11 +1086,14 @@
                     x: 590, y: groundY, currentY: groundY, w: 140, h: 160, solid: true, color: '#795548', topColor: '#8D6E63'
                 },
                 wall: {
-                    initialX: 740, x: 740, targetX: 530, y: groundY - 140, w: 52, h: 140, solid: false, active: false, visible: false
+                    initialX: 740, x: 740, targetX: 486, y: groundY - 140, w: 52, h: 140, solid: false, active: false, visible: false
+                },
+                leftWall: {
+                    x: 434, targetY: groundY - 140, currentY: groundY, w: 28, h: 140, solid: false, visible: false
                 },
                 state: 'idle',
                 timer: 0,
-                triggerRangeX: 540
+                triggerRangeX: 535
             };
 
             m7.electrics.push({ x: 980, y: groundY - 30, w: 260, h: 30, animTimer: 0 });
@@ -1312,8 +1323,13 @@
             tr.wall.solid = false;
             tr.wall.active = false;
             tr.wall.visible = false;
+            if (tr.leftWall) {
+                tr.leftWall.currentY = groundY;
+                tr.leftWall.solid = false;
+                tr.leftWall.visible = false;
+            }
 
-            // 触发条件：玩家到达中间浮岛并接近第2个坑 (x >= 540)
+            // 触发条件：玩家到达中间浮岛并接近第2个坑 (x >= 535)
             if (!p.isDead && p.x >= tr.triggerRangeX && p.x < 740) {
                 tr.state = 'triggered';
                 tr.wall.solid = true;
@@ -1323,19 +1339,32 @@
                 playSound('lever');
                 playSound('slide');
                 if (typeof showMessage === 'function') {
-                    showMessage('⚠️ 前方方块高墙升起并向左推来！', window.innerWidth / 2, window.innerHeight * 0.3);
+                    showMessage('⚠️ 前方方块高墙急速推挤而来！', window.innerWidth / 2, window.innerHeight * 0.3);
                 }
             }
         } else if (tr.state === 'triggered') {
-            const moveStep = 3.0 * (dt / 16.67);
+            // 加快推挤速度：大幅提升至 6.8，极速推挤迅猛逼近
+            const moveStep = 6.8 * (dt / 16.67);
             tr.wall.x -= moveStep;
 
             // 第 2 坑覆盖地面迅速下坠开裂打开
-            tr.pitCover.currentY += 4.5 * (dt / 16.67);
+            tr.pitCover.currentY += 8.0 * (dt / 16.67);
             if (tr.pitCover.currentY > groundY + 20) {
                 tr.pitCover.solid = false;
             }
 
+            // ⭐ 核心逻辑：在马上要推到边缘的时候 (右墙到达 540 以内，即将把玩家逼到边缘 460)，左边迅速升起一道墙把玩家挡下去
+            if (tr.wall.x <= 540 && tr.leftWall) {
+                tr.leftWall.visible = true;
+                tr.leftWall.solid = true;
+                // 极速升起 (每帧 18px)
+                tr.leftWall.currentY -= 18.0 * (dt / 16.67);
+                if (tr.leftWall.currentY <= tr.leftWall.targetY) {
+                    tr.leftWall.currentY = tr.leftWall.targetY;
+                }
+            }
+
+            // 推挤到中间方块左侧边缘 (targetX = 486，玩家刚好被推至 x=460 悬空边缘)
             if (tr.wall.x <= tr.wall.targetX) {
                 tr.wall.x = tr.wall.targetX;
                 tr.state = 'holding';
@@ -1343,41 +1372,52 @@
             }
 
             handleWallPlayerCollision(tr.wall, -moveStep);
+            if (tr.leftWall) handleLeftWallPlayerCollision(tr.leftWall);
 
         } else if (tr.state === 'holding') {
             tr.timer += dt;
             tr.pitCover.solid = false;
 
+            // 保持左墙升起到位
+            if (tr.leftWall && tr.leftWall.currentY > tr.leftWall.targetY) {
+                tr.leftWall.currentY -= 18.0 * (dt / 16.67);
+                if (tr.leftWall.currentY <= tr.leftWall.targetY) tr.leftWall.currentY = tr.leftWall.targetY;
+            }
+
             handleWallPlayerCollision(tr.wall, 0);
+            if (tr.leftWall) handleLeftWallPlayerCollision(tr.leftWall);
 
-            // 闪避判定：玩家存活未掉进坑，且成功后撤避险 (x < 540)
-            if (!p.isDead && p.x < 540 && tr.timer >= 600) {
-                tr.state = 'reversing';
+            // 挡下玩家后持续约 0.8 秒，然后双墙消失，等待 5 秒后再出现
+            if (tr.timer >= 800) {
+                tr.state = 'waiting5s';
                 tr.timer = 0;
-                playSound('slide');
-            }
-        } else if (tr.state === 'reversing') {
-            // 倒过来：坑回填上，方块也从左边回到右边
-            const moveStep = 2.6 * (dt / 16.67);
-            tr.wall.x += moveStep;
-
-            tr.pitCover.currentY -= 4.0 * (dt / 16.67);
-            if (tr.pitCover.currentY <= groundY) {
-                tr.pitCover.currentY = groundY;
-                tr.pitCover.solid = true; // 坑回填上，恢复支撑！
-            }
-
-            handleWallPlayerCollision(tr.wall, moveStep);
-
-            if (tr.wall.x >= tr.wall.initialX) {
-                tr.wall.x = tr.wall.initialX;
-                tr.pitCover.currentY = groundY;
-                tr.pitCover.solid = true;
+                // 墙消失！
+                tr.wall.visible = false;
                 tr.wall.solid = false;
                 tr.wall.active = false;
-                tr.wall.visible = false;
-                tr.state = 'idle'; // 再次靠近还会重新触发！
+                if (tr.leftWall) {
+                    tr.leftWall.visible = false;
+                    tr.leftWall.solid = false;
+                    tr.leftWall.currentY = groundY;
+                }
+                // 坑道回填恢复，为玩家创造 5 秒绝佳穿越通道！
+                tr.pitCover.currentY = groundY;
+                tr.pitCover.solid = true;
+                playSound('slide');
+            }
+
+        } else if (tr.state === 'waiting5s') {
+            // ⭐ 核心逻辑：等待 5 秒 (5000ms) 后再出现
+            tr.timer += dt;
+            tr.pitCover.currentY = groundY;
+            tr.pitCover.solid = true;
+
+            // 5 秒后重置为 idle，可再次触发出现
+            if (tr.timer >= 5000) {
+                tr.state = 'idle';
                 tr.timer = 0;
+                tr.wall.x = tr.wall.initialX;
+                if (tr.leftWall) tr.leftWall.currentY = groundY;
             }
         }
     }
@@ -1389,27 +1429,28 @@
         const wallBox = { x: wall.x, y: wall.y, w: wall.w, h: wall.h };
         if (isColliding(p, wallBox)) {
             // 站在墙顶部
-            if (p.vy >= 0 && (p.y + p.h - wall.y) < 14) {
+            if (p.vy >= 0 && (p.y + p.h - wall.y) <= 14) {
                 p.y = wall.y - p.h;
                 p.vy = 0;
                 p.isGrounded = true;
                 p.x += moveX;
             } else {
-                // 水平推挤
-                if (moveX < 0) {
-                    p.x = wall.x - p.w;
-                    if (p.vx > 0) p.vx = 0;
-                } else if (moveX > 0) {
-                    p.x = wall.x + wall.w;
-                    if (p.vx < 0) p.vx = 0;
-                } else {
-                    if (p.x + p.w / 2 < wall.x + wall.w / 2) {
-                        p.x = wall.x - p.w;
-                    } else {
-                        p.x = wall.x + wall.w;
-                    }
-                }
+                // 水平推挤：将玩家持续向左推移
+                p.x = wall.x - p.w;
+                if (p.vx > 0) p.vx = 0;
             }
+        }
+    }
+
+    function handleLeftWallPlayerCollision(leftWall) {
+        const p = m7.player;
+        if (!leftWall.solid || p.isDead || leftWall.currentY >= 480) return;
+        const lwBox = { x: leftWall.x, y: leftWall.currentY, w: leftWall.w, h: leftWall.h };
+        if (isColliding(p, lwBox)) {
+            // ⭐ 核心机制：左边迅速升起一道墙，把玩家挡下去（击退并推落入深渊坑中）
+            p.x = Math.min(p.x, leftWall.x - p.w);
+            if (p.vx > -3.5) p.vx = -3.5;
+            p.isGrounded = false;
         }
     }
 
@@ -1680,6 +1721,34 @@
                     p.vx = 0;
                 } else if (p.vx < 0) {
                     p.x = pc.x + pc.w;
+                    p.vx = 0;
+                }
+            }
+        }
+        // 与第10关左升降拦截高墙检测
+        if (m7.level10Trap && m7.level10Trap.leftWall && m7.level10Trap.leftWall.solid && m7.level10Trap.leftWall.currentY < 480) {
+            const lw = m7.level10Trap.leftWall;
+            const lwBox = { x: lw.x, y: lw.currentY, w: lw.w, h: lw.h };
+            if (isColliding(p, lwBox)) {
+                if (p.vx > 0) {
+                    p.x = lw.x - p.w;
+                    p.vx = 0;
+                } else if (p.vx < 0) {
+                    p.x = lw.x + lw.w;
+                    p.vx = 0;
+                }
+            }
+        }
+        // 与第10关推挤方块高墙检测
+        if (m7.level10Trap && m7.level10Trap.wall && m7.level10Trap.wall.solid) {
+            const wl = m7.level10Trap.wall;
+            const wlBox = { x: wl.x, y: wl.y, w: wl.w, h: wl.h };
+            if (isColliding(p, wlBox)) {
+                if (p.vx > 0) {
+                    p.x = wl.x - p.w;
+                    p.vx = 0;
+                } else if (p.vx < 0) {
+                    p.x = wl.x + wl.w;
                     p.vx = 0;
                 }
             }
@@ -2118,6 +2187,65 @@
                 const arrow = tr.state === 'triggered' ? '◀' : '▶';
                 ctx.fillText(arrow, wx + ww / 2, wy + wh / 2);
 
+                ctx.restore();
+            }
+
+            // 3. 左侧极速升起拦截高墙（迅速升起把玩家挡下去）
+            if (tr.leftWall && (tr.leftWall.visible || tr.leftWall.solid) && tr.leftWall.currentY < groundY) {
+                ctx.save();
+                const lx = tr.leftWall.x;
+                const ly = tr.leftWall.currentY;
+                const lw = tr.leftWall.w;
+                const lh = groundY - ly;
+
+                // 深蓝黑曜石墙体
+                ctx.fillStyle = '#1A237E';
+                ctx.fillRect(lx, ly, lw, lh);
+
+                // 顶端合金包边
+                ctx.fillStyle = '#7986CB';
+                ctx.fillRect(lx, ly, lw, 6);
+
+                // 侧边警示光带
+                ctx.fillStyle = '#FF1744';
+                ctx.fillRect(lx + 4, ly + 10, lw - 8, 4);
+                ctx.fillRect(lx + 4, ly + 22, lw - 8, 4);
+
+                // 上升警示箭头
+                ctx.fillStyle = '#FFEB3B';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('▲', lx + lw / 2, ly + 40);
+
+                ctx.restore();
+            }
+
+            // 4. 机关休眠 5 秒倒计时浮标
+            if (tr.state === 'waiting5s') {
+                ctx.save();
+                const remainSec = Math.max(0, (5000 - tr.timer) / 1000).toFixed(1);
+                const bannerX = 590;
+                const bannerY = groundY - 110;
+
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+                if (typeof ctx.roundRect === 'function') {
+                    ctx.beginPath();
+                    ctx.roundRect(bannerX - 85, bannerY - 18, 170, 28, 6);
+                    ctx.fill();
+                    ctx.strokeStyle = '#00E676';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                } else {
+                    ctx.fillRect(bannerX - 85, bannerY - 18, 170, 28);
+                    ctx.strokeStyle = '#00E676';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(bannerX - 85, bannerY - 18, 170, 28);
+                }
+
+                ctx.fillStyle = '#00E676';
+                ctx.font = 'bold 13px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`⏱️ 机关休眠中: ${remainSec}s`, bannerX, bannerY);
                 ctx.restore();
             }
         }
