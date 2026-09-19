@@ -1510,8 +1510,9 @@
         p.isGrounded = false;
         handleVerticalCollisions();
 
-        // 简单模式第 11 关在空气中爬行时生成微弱空气微尘反馈
-        if (m7.difficulty === 'easy' && m7.level === 11 && p.isCrouching && p.isGrounded && p.x > 240 && p.x < 1020) {
+        // 简单模式在空气中潜行漫步时生成微弱空气微尘反馈
+        const isAirWalkActive = (m7.difficulty === 'easy' && (m7.level === 11 || m7.level === 10));
+        if (isAirWalkActive && (p.isCrouching || m7.keys.down) && p.isGrounded && p.x > 240 && p.x < (m7.mapWidth - 280)) {
             if (Math.random() < 0.25) {
                 m7.particles.push({
                     x: p.x + p.w / 2 + (Math.random() - 0.5) * 12,
@@ -1519,7 +1520,7 @@
                     vx: (Math.random() - 0.5) * 0.4,
                     vy: -0.2 - Math.random() * 0.3,
                     life: 0.5,
-                    color: 'rgba(255, 255, 255, 0.4)',
+                    color: 'rgba(255, 255, 255, 0.45)',
                     size: 2 + Math.random() * 2
                 });
             }
@@ -1691,14 +1692,16 @@
             }
         }
 
-        // 【简单模式第 11 关专属特性】：只有趴下（一直摁着趴下）才能直接走在空气上面，其他关没有
-        const isLevel11AirWalk = (m7.difficulty === 'easy' && m7.level === 11);
-        if (isLevel11AirWalk && p.isCrouching && m7.keys.down) {
+        // 【简单模式第 10、11 关专属特性】：空中漫步（只有按住潜行/趴下才能走在空气上，其他关没有）
+        // 规则：当玩家潜行/趴下时，往右会直接走在空气上面。松开潜行会掉下去。不做告示牌提醒。
+        const isAirWalkLevel = (m7.difficulty === 'easy' && (m7.level === 11 || m7.level === 10));
+        if (isAirWalkLevel && (p.isCrouching || m7.keys.down)) {
             const airGroundY = 480; // 与起点和终点地面高度一致
-            // 玩家处于深渊空中悬浮范围 (从左平台边缘 220 开始，到终点平台前)
-            if (p.x + p.w > 220 && p.x < m7.mapWidth) {
+            // 玩家处于深渊空中悬浮范围 (从左平台边缘 200 开始，到终点平台前)
+            if (p.x + p.w > 200 && p.x < m7.mapWidth) {
+                const feetY = p.y + p.h;
                 // 当玩家脚底位于空气地面高度附近，且不是在向上跃起
-                if (p.y + p.h >= airGroundY && p.y + p.h <= airGroundY + 28 && p.vy >= 0) {
+                if (feetY >= airGroundY - 8 && (feetY <= airGroundY + 36 || (feetY - p.vy <= airGroundY + 8)) && p.vy >= 0) {
                     p.y = airGroundY - p.h;
                     p.vy = 0;
                     p.isGrounded = true;
@@ -2304,10 +2307,10 @@
                 <button id="m7BtnRight" class="m7-btn" style="width: 58px; height: 58px; border-radius: 50%; background: rgba(46, 125, 50, 0.8); border: 2px solid #81C784; color: white; font-size: 22px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">▶</button>
             </div>
 
-            <!-- 右侧动作键组 (跳跃、趴下、互动) -->
+            <!-- 右侧动作键组 (跳跃、潜行/趴下、互动) -->
             <div style="display: flex; gap: 14px; align-items: flex-end; pointer-events: auto;">
                 <button id="m7BtnInteract" class="m7-btn" style="width: 52px; height: 52px; border-radius: 50%; background: rgba(255, 179, 0, 0.85); border: 2px solid #FFE082; color: white; font-size: 13px; font-weight: bold; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">🕹️拉杆</button>
-                <button id="m7BtnDown" class="m7-btn" style="width: 56px; height: 56px; border-radius: 50%; background: rgba(56, 142, 60, 0.8); border: 2px solid #A5D6A7; color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">▼趴下</button>
+                <button id="m7BtnDown" class="m7-btn" style="width: 62px; height: 62px; border-radius: 50%; background: rgba(56, 142, 60, 0.88); border: 2px solid #C8E6C9; color: white; font-size: 16px; font-weight: bold; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.35);">▼潜行</button>
                 <button id="m7BtnUp" class="m7-btn" style="width: 66px; height: 66px; border-radius: 50%; background: rgba(27, 94, 32, 0.85); border: 2px solid #81C784; color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">▲跳跃</button>
             </div>
         `;
@@ -2319,7 +2322,7 @@
             const btn = document.getElementById(id);
             if (!btn) return;
 
-            btn.addEventListener('pointerdown', (e) => {
+            const onStart = (e) => {
                 e.preventDefault();
                 getAudioContext();
                 if (isAction) {
@@ -2328,19 +2331,20 @@
                     m7.keys[keyName] = true;
                 }
                 btn.style.transform = 'scale(0.92)';
-            });
+            };
 
-            btn.addEventListener('pointerup', (e) => {
+            const onEnd = (e) => {
                 e.preventDefault();
                 if (!isAction) m7.keys[keyName] = false;
                 btn.style.transform = 'scale(1)';
-            });
+            };
 
-            btn.addEventListener('pointercancel', (e) => {
-                e.preventDefault();
-                if (!isAction) m7.keys[keyName] = false;
-                btn.style.transform = 'scale(1)';
-            });
+            btn.addEventListener('pointerdown', onStart);
+            btn.addEventListener('pointerup', onEnd);
+            btn.addEventListener('pointercancel', onEnd);
+            btn.addEventListener('touchstart', onStart, { passive: false });
+            btn.addEventListener('touchend', onEnd, { passive: false });
+            btn.addEventListener('touchcancel', onEnd, { passive: false });
         }
 
         bindTouch('m7BtnLeft', 'left');
@@ -2379,7 +2383,7 @@
                 m7.keys.right = true;
             } else if (e.code === 'ArrowUp' || e.code === 'KeyW') {
                 m7.keys.up = true;
-            } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+            } else if (e.code === 'ArrowDown' || e.code === 'KeyS' || e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyC' || e.code === 'ControlLeft' || e.code === 'ControlRight') {
                 m7.keys.down = true;
             } else if (e.code === 'Space') {
                 // 空格键在拉杆旁时优先拉动拉杆，否则也可用于跳跃
@@ -2400,7 +2404,7 @@
                 m7.keys.right = false;
             } else if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
                 m7.keys.up = false;
-            } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+            } else if (e.code === 'ArrowDown' || e.code === 'KeyS' || e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyC' || e.code === 'ControlLeft' || e.code === 'ControlRight') {
                 m7.keys.down = false;
             }
         });
