@@ -191,6 +191,7 @@
             right: false,
             up: false,
             down: false,
+            sprint: false,
             interact: false
         },
 
@@ -698,13 +699,14 @@
             // 【第 3 关：低矮通道暗坑】
             endX = 1500;
             addGround(0, 340, groundY, 'grass');
-            addGround(340, 100, groundY, 'stone');
-            addCollapseTrap(440, groundY, 100, 160, 140, 'dirt');
-            addGround(540, 120, groundY, 'stone');
-            addBlock(340, groundY - 78, 320, 42, 'brick');
+            addGround(340, 120, groundY, 'stone');
+            // 暗坑做短（宽度 60px）：按 Shift 加速爬行冲刺可直接跨越；不加速则掉入坑中
+            addGround(520, 140, groundY, 'stone');
+            // 上方的杠子大幅向上抬高加厚（从 y=60 延伸至 groundY-38，厚度达 382px），防止从上方跳过去，底部保持 38px 爬行空间
+            addBlock(340, 60, 320, (groundY - 38) - 60, 'brick');
 
             addGround(660, 900, groundY, 'grass');
-            m7.signs.push({ x: 220, y: groundY - 60, text: '低矮暗道有险情！', subText: '趴下爬行时快速越过暗坑' });
+            m7.signs.push({ x: 220, y: groundY - 60, text: '低矮暗道有险情！', subText: '按住【Shift】加速爬行冲过暗坑' });
             m7.goal.x = endX;
             m7.goal.y = groundY - 80;
 
@@ -1422,31 +1424,36 @@
         // 1. 趴下状态控制（下键触发）
         const wantCrouch = m7.keys.down;
 
-        // 如果想站起来，必须检查头顶是否有方块阻挡
+        // 如果想站起来，必须在地面上且头顶无方块阻挡
         if (!wantCrouch && p.isCrouching) {
             let canStand = true;
-            const headBox = {
-                x: p.x + 2,
-                y: p.y - (p.standH - p.crouchH),
-                w: p.w - 4,
-                h: p.standH - p.crouchH
-            };
-            for (const b of m7.blocks) {
-                if (b.solid && isColliding(headBox, b)) {
-                    canStand = false;
-                    break;
+            // ⭐ 核心修复：在空中时绝对不要自动直立！保持趴下爬行姿势，避免撞到暗道低矮梁柱
+            if (!p.isGrounded) {
+                canStand = false;
+            } else {
+                const headBox = {
+                    x: p.x + 2,
+                    y: p.y - (p.standH - p.crouchH),
+                    w: p.w - 4,
+                    h: p.standH - p.crouchH
+                };
+                for (const b of m7.blocks) {
+                    if (b.solid && isColliding(headBox, b)) {
+                        canStand = false;
+                        break;
+                    }
                 }
-            }
-            for (const tr of m7.collapseTraps) {
-                if (tr.solid && isColliding(headBox, tr)) {
-                    canStand = false;
-                    break;
+                for (const tr of m7.collapseTraps) {
+                    if (tr.solid && isColliding(headBox, tr)) {
+                        canStand = false;
+                        break;
+                    }
                 }
-            }
-            for (const d of m7.doors) {
-                if (!d.isOpen && isColliding(headBox, d)) {
-                    canStand = false;
-                    break;
+                for (const d of m7.doors) {
+                    if (!d.isOpen && isColliding(headBox, d)) {
+                        canStand = false;
+                        break;
+                    }
                 }
             }
             if (canStand) {
@@ -1461,8 +1468,16 @@
             playSound('crouch');
         }
 
-        // 2. 水平速度计算
-        const currentSpeed = p.isCrouching ? CRAWL_SPEED : MOVE_SPEED;
+        // 2. 水平速度计算（Shift 加速：无论是站立走还是爬行都能加速）
+        const isSprinting = !!m7.keys.sprint;
+        let currentSpeed = MOVE_SPEED;
+        if (p.isCrouching) {
+            // 爬行基础速度 2.2，加速后达到 5.1（足够直接冲过暗坑）
+            currentSpeed = isSprinting ? (CRAWL_SPEED * 2.32) : CRAWL_SPEED;
+        } else {
+            // 站立基础速度 4.5，加速后达到 7.2（疾跑冲刺）
+            currentSpeed = isSprinting ? (MOVE_SPEED * 1.6) : MOVE_SPEED;
+        }
         let targetVx = 0;
         if (m7.keys.left) {
             targetVx -= currentSpeed;
@@ -1473,9 +1488,23 @@
             p.facing = 1;
         }
 
-        p.vx += (targetVx - p.vx) * 0.35;
+        const lerpFactor = isSprinting ? 0.45 : 0.35;
+        p.vx += (targetVx - p.vx) * lerpFactor;
         if (Math.abs(p.vx) > 0.1) {
-            p.walkAnim += dt * (p.isCrouching ? 0.01 : 0.015);
+            p.walkAnim += dt * (p.isCrouching ? 0.012 : 0.016);
+        }
+
+        // 冲刺加速粒子轨迹特效
+        if (isSprinting && Math.abs(p.vx) > 1.2 && Math.random() < 0.45) {
+            m7.particles.push({
+                x: p.facing === 1 ? p.x : p.x + p.w,
+                y: p.y + p.h - 4 + (Math.random() - 0.5) * 6,
+                vx: -p.facing * (1.5 + Math.random() * 2),
+                vy: -0.3 - Math.random() * 0.8,
+                life: 0.35,
+                color: p.isCrouching ? '#FFB300' : '#81C784',
+                size: 3 + Math.random() * 3
+            });
         }
 
         // 3. 跳跃（上键 / 空格，在未趴下且着地时）
@@ -1566,10 +1595,31 @@
 
     function handleHorizontalCollisions() {
         const p = m7.player;
+        const STEP_UP_MAX = 16; // 冲刺跨越暗坑时允许平滑踏上平台的微小高差容差 (Step-Up)
+
         // 与所有固体方块检测
         for (const b of m7.blocks) {
             if (!b.solid) continue;
             if (isColliding(p, b)) {
+                // 检查是否属于允许平滑踏上平台的微小高差 (如冲刺跨过暗坑时轻微下落)
+                const footOverlap = (p.y + p.h) - b.y;
+                if (footOverlap > 0 && footOverlap <= STEP_UP_MAX && p.vy >= 0) {
+                    const testBox = { x: p.x, y: b.y - p.h, w: p.w, h: p.h };
+                    let headBlocked = false;
+                    for (const ob of m7.blocks) {
+                        if (ob !== b && ob.solid && isColliding(testBox, ob)) {
+                            headBlocked = true;
+                            break;
+                        }
+                    }
+                    if (!headBlocked) {
+                        p.y = b.y - p.h;
+                        p.vy = 0;
+                        p.isGrounded = true;
+                        continue;
+                    }
+                }
+
                 if (p.vx > 0) {
                     p.x = b.x - p.w;
                     p.vx = 0;
@@ -2319,11 +2369,12 @@
                 <button id="m7BtnRight" class="m7-btn" style="width: 58px; height: 58px; border-radius: 50%; background: rgba(46, 125, 50, 0.8); border: 2px solid #81C784; color: white; font-size: 22px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">▶</button>
             </div>
 
-            <!-- 右侧动作键组 (跳跃、潜行/趴下、互动) -->
-            <div style="display: flex; gap: 14px; align-items: flex-end; pointer-events: auto;">
-                <button id="m7BtnInteract" class="m7-btn" style="width: 52px; height: 52px; border-radius: 50%; background: rgba(255, 179, 0, 0.85); border: 2px solid #FFE082; color: white; font-size: 13px; font-weight: bold; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">🕹️拉杆</button>
-                <button id="m7BtnDown" class="m7-btn" style="width: 62px; height: 62px; border-radius: 50%; background: rgba(56, 142, 60, 0.88); border: 2px solid #C8E6C9; color: white; font-size: 16px; font-weight: bold; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.35);">▼潜行</button>
-                <button id="m7BtnUp" class="m7-btn" style="width: 66px; height: 66px; border-radius: 50%; background: rgba(27, 94, 32, 0.85); border: 2px solid #81C784; color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">▲跳跃</button>
+            <!-- 右侧动作键组 (跳跃、趴下/潜行、⚡加速、互动) -->
+            <div style="display: flex; gap: 10px; align-items: flex-end; pointer-events: auto;">
+                <button id="m7BtnInteract" class="m7-btn" style="width: 50px; height: 50px; border-radius: 50%; background: rgba(255, 179, 0, 0.85); border: 2px solid #FFE082; color: white; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">🕹️拉杆</button>
+                <button id="m7BtnSprint" class="m7-btn" style="width: 58px; height: 58px; border-radius: 50%; background: rgba(230, 81, 0, 0.88); border: 2px solid #FFE082; color: white; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.35);">⚡加速</button>
+                <button id="m7BtnDown" class="m7-btn" style="width: 58px; height: 58px; border-radius: 50%; background: rgba(56, 142, 60, 0.88); border: 2px solid #C8E6C9; color: white; font-size: 15px; font-weight: bold; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.35);">▼趴下</button>
+                <button id="m7BtnUp" class="m7-btn" style="width: 64px; height: 64px; border-radius: 50%; background: rgba(27, 94, 32, 0.85); border: 2px solid #81C784; color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">▲跳跃</button>
             </div>
         `;
 
@@ -2363,6 +2414,7 @@
         bindTouch('m7BtnRight', 'right');
         bindTouch('m7BtnUp', 'up');
         bindTouch('m7BtnDown', 'down');
+        bindTouch('m7BtnSprint', 'sprint');
         bindTouch('m7BtnInteract', 'interact', true);
     }
 
@@ -2395,7 +2447,10 @@
                 m7.keys.right = true;
             } else if (e.code === 'ArrowUp' || e.code === 'KeyW') {
                 m7.keys.up = true;
-            } else if (e.code === 'ArrowDown' || e.code === 'KeyS' || e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyC' || e.code === 'ControlLeft' || e.code === 'ControlRight') {
+            } else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+                // ⭐ Shift 键触发冲刺加速（站着走和爬行均支持加速）
+                m7.keys.sprint = true;
+            } else if (e.code === 'ArrowDown' || e.code === 'KeyS' || e.code === 'KeyC' || e.code === 'ControlLeft' || e.code === 'ControlRight') {
                 m7.keys.down = true;
             } else if (e.code === 'Space') {
                 // 空格键在拉杆旁时优先拉动拉杆，否则也可用于跳跃
@@ -2416,7 +2471,9 @@
                 m7.keys.right = false;
             } else if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
                 m7.keys.up = false;
-            } else if (e.code === 'ArrowDown' || e.code === 'KeyS' || e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyC' || e.code === 'ControlLeft' || e.code === 'ControlRight') {
+            } else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+                m7.keys.sprint = false;
+            } else if (e.code === 'ArrowDown' || e.code === 'KeyS' || e.code === 'KeyC' || e.code === 'ControlLeft' || e.code === 'ControlRight') {
                 m7.keys.down = false;
             }
         });
@@ -2510,6 +2567,7 @@
         m7.keys.right = false;
         m7.keys.up = false;
         m7.keys.down = false;
+        m7.keys.sprint = false;
     };
 
 })();
