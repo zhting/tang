@@ -850,6 +850,76 @@
         .mc-theme .btn-home::after {
             display: none !important;
         }
+        /* 首页村民 NPC 交互与动画样式 */
+        .home-villager-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation: villagerFloat 2.6s ease-in-out infinite alternate;
+            z-index: 20;
+            margin-bottom: 5px;
+        }
+        .home-villager-wrapper:hover {
+            transform: scale(1.1) translateY(-6px);
+        }
+        .home-villager-wrapper:active {
+            transform: scale(0.95);
+        }
+        @keyframes villagerFloat {
+            0% { transform: translateY(0px); }
+            100% { transform: translateY(-8px); }
+        }
+        .villager-speech-bubble {
+            position: relative;
+            background: #FFFFFF;
+            color: #3E2723;
+            font-size: 13px;
+            font-weight: bold;
+            padding: 6px 14px;
+            border-radius: 12px;
+            border: 2px solid #5D4037;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            margin-bottom: 8px;
+            white-space: nowrap;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .villager-speech-bubble .bubble-arrow {
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #5D4037;
+        }
+        .btn-mc-trade {
+            transition: all 0.15s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
+        .btn-mc-trade:hover {
+            filter: brightness(1.12);
+            transform: translateY(-1px);
+        }
+        .btn-mc-trade:active {
+            transform: translateY(1px);
+            box-shadow: none;
+        }
+        .potion-trade-card {
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .potion-trade-card:hover {
+            box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+            transform: translateY(-1px);
+        }
+
         /* 1:1 像素图标样式 */
         .mc-icon {
             display: inline-block;
@@ -1966,11 +2036,49 @@
     <!-- 首页 -->
     <div id="homeScreen" class="home-screen">
         <h1 id="homeTitle">积木小院</h1>
-        <div class="home-buttons">
-            <button class="btn-home" id="startBtn" onclick="startGame(gameState.mode)">▶ 开始游戏</button>
-            <button class="btn-home" onclick="openLeaderboard()">🏆 排行榜</button>
-            <button class="btn-home" onclick="openModeModal()">⚙️ 选择模式 (<span id="modeDisplayBtn">一</span>)</button>
-            <button class="btn-home" onclick="openInstructionsModal()">📖 游戏说明</button>
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px;">
+            <!-- 首页可交互村民 NPC -->
+            <div id="homeVillagerNpc" class="home-villager-wrapper" onclick="openVillagerModal()" title="点击与村民交易药水">
+                <div class="villager-speech-bubble">
+                    <span>🧑‍🌾 Hrrr~ 点击找我交易药水！</span>
+                    <div class="bubble-arrow"></div>
+                </div>
+                <div class="villager-avatar">
+                    <svg viewBox="0 0 48 64" width="70" height="92" style="filter: drop-shadow(0 6px 12px rgba(0,0,0,0.45));">
+                        <!-- 头部 -->
+                        <rect x="14" y="6" width="20" height="24" fill="#C8966E"/>
+                        <rect x="16" y="12" width="16" height="3" fill="#4E342E"/>
+                        <rect x="16" y="16" width="4" height="4" fill="#FFFFFF"/>
+                        <rect x="18" y="16" width="2" height="4" fill="#2E7D32"/>
+                        <rect x="28" y="16" width="4" height="4" fill="#FFFFFF"/>
+                        <rect x="28" y="16" width="2" height="4" fill="#2E7D32"/>
+                        <!-- 大长鼻子 -->
+                        <rect x="21" y="18" width="6" height="12" fill="#B27B50"/>
+                        <rect x="22" y="28" width="4" height="2" fill="#8D5B36"/>
+                        <!-- 嘴唇与下巴 -->
+                        <rect x="20" y="30" width="8" height="2" fill="#9E6B43"/>
+                        <!-- 棕色长袍身体 -->
+                        <rect x="10" y="30" width="28" height="26" fill="#5D4037"/>
+                        <rect x="22" y="30" width="4" height="26" fill="#4E342E"/>
+                        <rect x="10" y="52" width="28" height="4" fill="#3E2723"/>
+                        <!-- 经典合抱交叉双臂 -->
+                        <rect x="8" y="34" width="32" height="12" rx="2" fill="#6D4C41"/>
+                        <rect x="16" y="36" width="16" height="8" fill="#5D4037"/>
+                        <!-- 手中的绿宝石 -->
+                        <polygon points="24,37 27,40 24,43 21,40" fill="#00E676"/>
+                        <!-- 双脚 -->
+                        <rect x="15" y="56" width="7" height="6" fill="#3E2723"/>
+                        <rect x="26" y="56" width="7" height="6" fill="#3E2723"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="home-buttons">
+                <button class="btn-home" id="startBtn" onclick="startGame(gameState.mode)">▶ 开始游戏</button>
+                <button class="btn-home" onclick="openLeaderboard()">🏆 排行榜</button>
+                <button class="btn-home" onclick="openModeModal()">⚙️ 选择模式 (<span id="modeDisplayBtn">一</span>)</button>
+                <button class="btn-home" onclick="openInstructionsModal()">📖 游戏说明</button>
+                <button class="btn-home" id="villagerHomeBtn" onclick="openVillagerModal()">🧑‍🌾 村民交易</button>
+            </div>
         </div>
     </div>
 
@@ -2233,6 +2341,117 @@
                 <!-- 动态注入内容 -->
             </div>
             <button class="btn-primary" onclick="closeInstructionsModal()">我知道了</button>
+        </div>
+    </div>
+
+    <!-- 🧑‍🌾 村民交易商铺弹窗 -->
+    <div id="villagerModal" class="modal-overlay hidden" style="z-index: 600;">
+        <div class="modal-content mc-trade-content" style="max-width: 480px; width: 92%; padding: 20px; border-radius: 12px; background: #C6C6C6; border: 4px solid #373737; box-shadow: inset 3px 3px #FFF, inset -3px -3px #555, 0 12px 30px rgba(0,0,0,0.65); text-align: left; color: #212121;">
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #8D8D8D; padding-bottom: 10px; margin-bottom: 12px;">
+                <h2 style="margin: 0; font-size: 18px; color: #212121; display: flex; align-items: center; gap: 8px;">
+                    <span>🧑‍🌾</span> 村民交易所
+                </h2>
+                <button onclick="closeVillagerModal()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; color: #555; padding: 0 4px; line-height: 1;">&times;</button>
+            </div>
+
+            <!-- 资产看板 -->
+            <div style="background: rgba(255,255,255,0.7); border: 2px solid #9E9E9E; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-around;">
+                <div style="display: flex; align-items: center; gap: 6px; font-weight: bold;">
+                    <span style="font-size: 24px;">🏆</span>
+                    <div>
+                        <div style="font-size: 11px; color: #666;">通关奖杯</div>
+                        <div id="vmTrophies" style="font-size: 18px; color: #E65100;">0</div>
+                    </div>
+                </div>
+                <div style="width: 1px; height: 32px; background: #BDBDBD;"></div>
+                <div style="display: flex; align-items: center; gap: 6px; font-weight: bold;">
+                    <span style="font-size: 24px;">🟢</span>
+                    <div>
+                        <div style="font-size: 11px; color: #666;">绿宝石余额</div>
+                        <div id="vmEmeralds" style="font-size: 18px; color: #2E7D32;">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="vmDevBadge" style="display: none; background: #FFF3E0; border: 1.5px solid #FF9800; color: #E65100; border-radius: 6px; padding: 6px 10px; font-weight: bold; font-size: 12px; margin-bottom: 12px; text-align: center;">
+                👑 开发者模式生效中：药水无限次使用，兑换免费！
+            </div>
+
+            <!-- 第一栏：奖杯兑换绿宝石 (1:1) -->
+            <div style="background: #E0E0E0; border: 2px solid #9E9E9E; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px;">
+                <div style="font-size: 13px; font-weight: bold; color: #37474F; margin-bottom: 8px; display: flex; justify-content: space-between;">
+                    <span>🪙 货币兑换（1 奖杯 ➔ 1 绿宝石）</span>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <div style="font-size: 13px; color: #555;">
+                        <span>🏆 × 1</span> ➔ <span style="font-weight: bold; color: #2E7D32;">🟢 × 1</span>
+                    </div>
+                    <div style="display: flex; gap: 6px;">
+                        <button onclick="tradeTrophy(1)" class="btn-mc-trade" style="padding: 6px 12px; background: #4CAF50; color: white; border: 2px solid #2E7D32; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">兑换 1 个</button>
+                        <button onclick="tradeTrophy('all')" class="btn-mc-trade" style="padding: 6px 12px; background: #2E7D32; color: white; border: 2px solid #1B5E20; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">全部兑换</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第二栏：药水专区 (2 绿宝石一瓶) -->
+            <div style="font-size: 13px; font-weight: bold; color: #37474F; margin-bottom: 8px;">
+                🧪 魔法药水专区（全部 2 颗绿宝石 / 瓶）
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                <!-- 1. 加速药水 -->
+                <div class="potion-trade-card" style="display: flex; align-items: center; justify-content: space-between; background: #FFF; border: 2px solid #BDBDBD; border-radius: 8px; padding: 8px 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 38px; height: 38px; border-radius: 50%; background: #FFF3E0; border: 2px solid #FFA000; display: flex; align-items: center; justify-content: center; font-size: 20px;">⚡</div>
+                        <div>
+                            <div style="font-weight: bold; font-size: 13px; color: #E65100;">加速药水 <span style="font-size: 11px; color: #888; font-weight: normal;">(拥有: <span id="vmCount_speed" style="color:#E65100; font-weight:bold;">0</span> 瓶)</span></div>
+                            <div style="font-size: 11px; color: #666;">极速冲刺奔跑与爬行 10 秒</div>
+                        </div>
+                    </div>
+                    <button onclick="buyPotionItem('speed')" class="btn-mc-trade" style="padding: 6px 12px; background: #FF9800; color: white; border: 2px solid #E65100; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; white-space: nowrap;">🟢 2 购买</button>
+                </div>
+
+                <!-- 2. 跳跃提升药水 -->
+                <div class="potion-trade-card" style="display: flex; align-items: center; justify-content: space-between; background: #FFF; border: 2px solid #BDBDBD; border-radius: 8px; padding: 8px 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 38px; height: 38px; border-radius: 50%; background: #E8F5E9; border: 2px solid #43A047; display: flex; align-items: center; justify-content: center; font-size: 20px;">🦘</div>
+                        <div>
+                            <div style="font-weight: bold; font-size: 13px; color: #2E7D32;">跳跃提升药水 <span style="font-size: 11px; color: #888; font-weight: normal;">(拥有: <span id="vmCount_jump" style="color:#2E7D32; font-weight:bold;">0</span> 瓶)</span></div>
+                            <div style="font-size: 11px; color: #666;">跳跃高度达到自身两倍，持续 10 秒</div>
+                        </div>
+                    </div>
+                    <button onclick="buyPotionItem('jump')" class="btn-mc-trade" style="padding: 6px 12px; background: #4CAF50; color: white; border: 2px solid #2E7D32; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; white-space: nowrap;">🟢 2 购买</button>
+                </div>
+
+                <!-- 3. 悬浮药水 -->
+                <div class="potion-trade-card" style="display: flex; align-items: center; justify-content: space-between; background: #FFF; border: 2px solid #BDBDBD; border-radius: 8px; padding: 8px 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 38px; height: 38px; border-radius: 50%; background: #E0F7FA; border: 2px solid #00ACC1; display: flex; align-items: center; justify-content: center; font-size: 20px;">🪶</div>
+                        <div>
+                            <div style="font-weight: bold; font-size: 13px; color: #00838F;">悬浮药水 <span style="font-size: 11px; color: #888; font-weight: normal;">(拥有: <span id="vmCount_levitation" style="color:#00838F; font-weight:bold;">0</span> 瓶)</span></div>
+                            <div style="font-size: 11px; color: #666;">在空中自由悬浮漫步 10 秒，免疫重力</div>
+                        </div>
+                    </div>
+                    <button onclick="buyPotionItem('levitation')" class="btn-mc-trade" style="padding: 6px 12px; background: #00BCD4; color: white; border: 2px solid #00838F; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; white-space: nowrap;">🟢 2 购买</button>
+                </div>
+
+                <!-- 4. 瞬移药水 -->
+                <div class="potion-trade-card" style="display: flex; align-items: center; justify-content: space-between; background: #FFF; border: 2px solid #BDBDBD; border-radius: 8px; padding: 8px 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 38px; height: 38px; border-radius: 50%; background: #F3E5F5; border: 2px solid #8E24AA; display: flex; align-items: center; justify-content: center; font-size: 20px;">🔮</div>
+                        <div>
+                            <div style="font-weight: bold; font-size: 13px; color: #6A1B9A;">瞬移药水 <span style="font-size: 11px; color: #888; font-weight: normal;">(拥有: <span id="vmCount_teleport" style="color:#6A1B9A; font-weight:bold;">0</span> 瓶)</span></div>
+                            <div style="font-size: 11px; color: #666;">一次性效果，点击屏幕任意位置瞬移</div>
+                        </div>
+                    </div>
+                    <button onclick="buyPotionItem('teleport')" class="btn-mc-trade" style="padding: 6px 12px; background: #9C27B0; color: white; border: 2px solid #6A1B9A; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; white-space: nowrap;">🟢 2 购买</button>
+                </div>
+            </div>
+
+            <div style="margin-top: 10px; font-size: 11px; color: #757575; line-height: 1.4;">
+                💡 <b>使用说明：</b>买到药水后闯关界面将自动出现快捷按键；多瓶显示 ×2、×3；<b>双击按键消耗一瓶饮用</b>。
+            </div>
+
+            <button class="btn-primary" onclick="closeVillagerModal()" style="margin-top: 14px; width: 100%; padding: 10px; font-weight: bold; font-size: 14px; border-radius: 6px;">完成交易 / 返回游戏</button>
         </div>
     </div>
 
@@ -2746,8 +2965,9 @@
     <script src="assets/c418_bgm.js?v=1.0.1"></script>
     <script src="assets/bamboo_door_open.js?v=1.0.1"></script>
     <script src="js/presetSamples_river.js?v=1.0.1"></script>
+    <script src="js/gameEconomy.js?v=20260919_v101"></script>
     <script src="js/mcPaintingStudio.js?v=1.0.1"></script>
-    <script src="js/mode7.js?v=20260919_v209"></script>
+    <script src="js/mode7.js?v=20260919_v220"></script>
     <script src="js/mode8.js?v=1.0.0"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -4326,6 +4546,81 @@
             document.getElementById('instructionsModal').classList.remove('hidden'); 
         }
         function closeInstructionsModal() { document.getElementById('instructionsModal').classList.add('hidden'); }
+
+        // ===== 🧑‍🌾 村民交易商铺控制逻辑 =====
+        function openVillagerModal() {
+            if (window.GameEconomy) {
+                GameEconomy.playAudio('villager_hrrr');
+                updateVillagerModalUI();
+            }
+            const modal = document.getElementById('villagerModal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeVillagerModal() {
+            const modal = document.getElementById('villagerModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function updateVillagerModalUI() {
+            if (!window.GameEconomy) return;
+            const trophies = GameEconomy.getTrophies();
+            const emeralds = GameEconomy.getEmeralds();
+            const potions = GameEconomy.getPotions();
+            const isDev = GameEconomy.isDevMode();
+
+            const tEl = document.getElementById('vmTrophies');
+            if (tEl) tEl.textContent = trophies;
+            const eEl = document.getElementById('vmEmeralds');
+            if (eEl) eEl.textContent = isDev ? (emeralds + ' (无限)') : emeralds;
+
+            const devBadge = document.getElementById('vmDevBadge');
+            if (devBadge) devBadge.style.display = isDev ? 'block' : 'none';
+
+            ['speed', 'jump', 'levitation', 'teleport'].forEach(type => {
+                const el = document.getElementById('vmCount_' + type);
+                if (el) el.textContent = isDev ? '∞' : (potions[type] || 0);
+            });
+        }
+
+        function tradeTrophy(qty) {
+            if (!window.GameEconomy) return;
+            if (qty === 'all') {
+                qty = GameEconomy.getTrophies();
+                if (qty <= 0) {
+                    GameEconomy.playAudio('villager_no');
+                    if (typeof showMessage === 'function') showMessage('当前没有可用奖杯！', window.innerWidth / 2, window.innerHeight * 0.4);
+                    return;
+                }
+            }
+            const res = GameEconomy.exchangeTrophyToEmerald(qty);
+            if (res.success) {
+                updateVillagerModalUI();
+                if (typeof showMessage === 'function') {
+                    showMessage(`✨ 成功用 ${res.count} 个奖杯兑换了 ${res.count} 颗绿宝石！`, window.innerWidth / 2, window.innerHeight * 0.4);
+                }
+            } else {
+                if (typeof showMessage === 'function') showMessage(res.msg, window.innerWidth / 2, window.innerHeight * 0.4);
+            }
+        }
+
+        function buyPotionItem(type) {
+            if (!window.GameEconomy) return;
+            const res = GameEconomy.buyPotion(type);
+            if (res.success) {
+                updateVillagerModalUI();
+                const potName = GameEconomy.POTION_TYPES[type].name;
+                if (typeof showMessage === 'function') {
+                    showMessage(`🧪 成功购买 1 瓶【${potName}】！`, window.innerWidth / 2, window.innerHeight * 0.4);
+                }
+            } else {
+                if (typeof showMessage === 'function') showMessage(res.msg, window.innerWidth / 2, window.innerHeight * 0.4);
+            }
+        }
+
+        window.addEventListener('economyUpdated', function () {
+            updateVillagerModalUI();
+        });
 
         function backToHome() {
             canvas.style.pointerEvents = 'auto';
@@ -10626,6 +10921,8 @@
             const modeDisplay = document.getElementById('modeDisplayBtn');
             if (modeDisplay) modeDisplay.textContent = mText;
             document.querySelector('.home-buttons button[onclick="openInstructionsModal()"]').innerHTML = "📖 游戏说明";
+            const vBtn = document.getElementById('villagerHomeBtn');
+            if (vBtn) vBtn.innerHTML = "🧑‍🌾 村民交易";
 
             if (mode === 3) {
                 // 进入“我的世界”主题
@@ -10642,6 +10939,7 @@
                 }
                 document.querySelector('.home-buttons button[onclick="openInstructionsModal()"]').innerHTML = 
                     '<span class="mc-icon icon-diamond"></span> 游戏说明';
+                if (vBtn) vBtn.innerHTML = '<span style="display:inline-block; font-size:16px; margin-right:4px;">🟢</span> 村民交易';
             } else if (mode === 4) {
                 // 进入“俄罗斯方块”主题
                 screen.classList.add('tetris-theme');
@@ -10864,7 +11162,8 @@
                     }
 
                     const savedLevelId = gameState.levelId;
-                    showMessage("✨ 关卡完成！", width / 2, height / 2);
+                    if (window.GameEconomy) GameEconomy.addTrophies(1);
+                    showMessage("✨ 关卡完成！🏆 获得奖杯 +1", width / 2, height / 2);
                     setTimeout(() => {
                         // 如果关卡已被指令切换，不再自动跳关
                         if (savedLevelId !== gameState.levelId) return;

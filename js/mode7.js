@@ -185,6 +185,14 @@
             nearLever: null
         },
 
+        // 药水状态机 (加速10秒、跳跃提升10秒、悬浮10秒、瞬移单次生效)
+        potionEffects: {
+            speed: { active: false, timer: 0 },
+            jump: { active: false, timer: 0 },
+            levitation: { active: false, timer: 0 },
+            teleport: { armed: false }
+        },
+
         // 按键状态
         keys: {
             left: false,
@@ -1211,6 +1219,14 @@
         m7.player.isCrouching = false;
         m7.goal.reached = false;
 
+        // 起点常驻村民 NPC (供玩家交易兑换药水)
+        m7.villager = {
+            x: 25,
+            y: groundY - 52,
+            w: 26,
+            h: 52
+        };
+
         if (m7.difficulty === 'normal') {
             endX = buildNormalLevel(lvl, groundY, addBlock, addGround, addCollapseTrap, addMovingBlock);
         } else {
@@ -1522,15 +1538,41 @@
             playSound('crouch');
         }
 
-        // 2. 水平速度计算（Shift 加速：无论是站立走还是爬行都能加速）
-        const isSprinting = !!m7.keys.sprint;
+        // ===== 药水效果时效衰减 =====
+        const isDev = (typeof isDevMode !== 'undefined' && isDevMode);
+        if (m7.potionEffects) {
+            if (m7.potionEffects.speed.timer > 0) {
+                m7.potionEffects.speed.timer -= dt;
+                if (m7.potionEffects.speed.timer <= 0) {
+                    m7.potionEffects.speed.timer = 0;
+                    m7.potionEffects.speed.active = false;
+                }
+            }
+            if (m7.potionEffects.jump.timer > 0) {
+                m7.potionEffects.jump.timer -= dt;
+                if (m7.potionEffects.jump.timer <= 0) {
+                    m7.potionEffects.jump.timer = 0;
+                    m7.potionEffects.jump.active = false;
+                }
+            }
+            if (m7.potionEffects.levitation.timer > 0) {
+                m7.potionEffects.levitation.timer -= dt;
+                if (m7.potionEffects.levitation.timer <= 0) {
+                    m7.potionEffects.levitation.timer = 0;
+                    m7.potionEffects.levitation.active = false;
+                }
+            }
+        }
+
+        // 2. 水平速度计算（关闭旧加速键：只有在村民处购买并饮用【加速药水】或开发者模式下，才激活冲刺加速！）
+        const hasSpeedPotion = (m7.potionEffects && m7.potionEffects.speed.timer > 0) || isDev;
         let currentSpeed = MOVE_SPEED;
         if (p.isCrouching) {
-            // 爬行基础速度 2.2，加速后达到 5.1（足够直接冲过暗坑）
-            currentSpeed = isSprinting ? (CRAWL_SPEED * 2.32) : CRAWL_SPEED;
+            // 爬行基础速度 2.2，加速药水生效时达到 5.1（极速冲刺爬行）
+            currentSpeed = hasSpeedPotion ? (CRAWL_SPEED * 2.32) : CRAWL_SPEED;
         } else {
-            // 站立基础速度 4.5，加速后达到 7.2（疾跑冲刺）
-            currentSpeed = isSprinting ? (MOVE_SPEED * 1.6) : MOVE_SPEED;
+            // 站立基础速度 4.2，加速药水生效时达到 7.2（疾跑冲刺）
+            currentSpeed = hasSpeedPotion ? (MOVE_SPEED * 1.7) : MOVE_SPEED;
         }
         let targetVx = 0;
         if (m7.keys.left) {
@@ -1542,47 +1584,80 @@
             p.facing = 1;
         }
 
-        const lerpFactor = isSprinting ? 0.45 : 0.35;
+        const lerpFactor = hasSpeedPotion ? 0.45 : 0.35;
         p.vx += (targetVx - p.vx) * lerpFactor;
         if (Math.abs(p.vx) > 0.1) {
             p.walkAnim += dt * (p.isCrouching ? 0.012 : 0.016);
         }
 
-        // 冲刺加速粒子轨迹特效
-        if (isSprinting && Math.abs(p.vx) > 1.2 && Math.random() < 0.45) {
+        // 冲刺加速金色粒子轨迹特效 (仅在加速药水激活时生成)
+        if (hasSpeedPotion && Math.abs(p.vx) > 1.2 && Math.random() < 0.45) {
             m7.particles.push({
                 x: p.facing === 1 ? p.x : p.x + p.w,
                 y: p.y + p.h - 4 + (Math.random() - 0.5) * 6,
                 vx: -p.facing * (1.5 + Math.random() * 2),
                 vy: -0.3 - Math.random() * 0.8,
                 life: 0.35,
-                color: p.isCrouching ? '#FFB300' : '#81C784',
+                color: '#FFB300',
                 size: 3 + Math.random() * 3
             });
         }
 
-        // 3. 跳跃（上键 / 空格，在未趴下且着地时）
-        if (m7.keys.up && p.isGrounded && !p.isCrouching) {
-            p.vy = JUMP_FORCE;
-            p.isGrounded = false;
-            playSound('jump');
-            // 跳跃微尘粒子
-            for (let i = 0; i < 5; i++) {
-                m7.particles.push({
-                    x: p.x + p.w / 2 + (Math.random() - 0.5) * 16,
-                    y: p.y + p.h,
-                    vx: (Math.random() - 0.5) * 2,
-                    vy: -Math.random() * 2,
-                    life: 1,
-                    color: '#81C784',
-                    size: 3 + Math.random() * 3
-                });
+        // 3. 跳跃（上键 / 空格，在未趴下且着地或悬浮时）
+        const hasJumpBoost = (m7.potionEffects && m7.potionEffects.jump.timer > 0) || isDev;
+        const hasLevitation = (m7.potionEffects && m7.potionEffects.levitation.timer > 0);
+
+        if (m7.keys.up && (p.isGrounded || hasLevitation) && !p.isCrouching) {
+            if (hasLevitation) {
+                // 悬浮药水：按上键缓缓浮升
+                p.vy = -3.5;
+            } else {
+                // 跳跃提升药水：跳跃力度达到 -17.5，跳到自身高度两倍以上 (高度达 260px)
+                p.vy = hasJumpBoost ? (JUMP_FORCE * 1.48) : JUMP_FORCE;
+                p.isGrounded = false;
+                playSound('jump');
+                // 跳跃粒子
+                const pColor = hasJumpBoost ? '#00E676' : '#81C784';
+                for (let i = 0; i < (hasJumpBoost ? 10 : 5); i++) {
+                    m7.particles.push({
+                        x: p.x + p.w / 2 + (Math.random() - 0.5) * 16,
+                        y: p.y + p.h,
+                        vx: (Math.random() - 0.5) * (hasJumpBoost ? 3.5 : 2),
+                        vy: -Math.random() * (hasJumpBoost ? 4 : 2),
+                        life: 1,
+                        color: pColor,
+                        size: 3 + Math.random() * (hasJumpBoost ? 4 : 3)
+                    });
+                }
             }
         }
 
-        // 4. 重力应用
-        p.vy += GRAVITY;
-        if (p.vy > 14) p.vy = 14;
+        // 4. 重力应用（悬浮药水：在空中悬浮 10 秒，完全免疫重力，自由空中漫步）
+        if (hasLevitation) {
+            if (m7.keys.down) {
+                p.vy = 3.2; // 按下键缓降
+            } else if (!m7.keys.up) {
+                p.vy = 0; // 滞空悬停！
+            }
+            p.isGrounded = true; // 悬浮状态下可自由空中漫步跨越一切深渊！
+
+            // 悬浮青白色潜影旋转气泡粒子
+            if (Math.random() < 0.35) {
+                const angle = performance.now() * 0.008;
+                m7.particles.push({
+                    x: p.x + p.w / 2 + Math.cos(angle) * 14,
+                    y: p.y + p.h - 6 + Math.sin(angle) * 4,
+                    vx: (Math.random() - 0.5) * 0.6,
+                    vy: -0.6 - Math.random() * 0.8,
+                    life: 0.8,
+                    color: Math.random() < 0.5 ? '#E0F7FA' : '#00E5FF',
+                    size: 3 + Math.random() * 2
+                });
+            }
+        } else {
+            p.vy += GRAVITY;
+            if (p.vy > 14) p.vy = 14;
+        }
 
         // 5. 水平移动与 AABB 碰撞
         p.x += p.vx;
@@ -1950,10 +2025,13 @@
     // 关卡胜利
     function handleLevelVictory() {
         playSound('win');
+        if (window.GameEconomy) {
+            GameEconomy.addTrophies(1);
+        }
         const isNormal = (m7.difficulty === 'normal');
         const diffText = isNormal ? '普通模式' : '简单模式';
         if (typeof showMessage === 'function') {
-            showMessage(`✨ 第 ${m7.level} 关通过 (${diffText})！`, window.innerWidth / 2, window.innerHeight / 2);
+            showMessage(`✨ 第 ${m7.level} 关通过 (${diffText})！🏆 获得奖杯 +1`, window.innerWidth / 2, window.innerHeight / 2);
         }
 
         // 保存关卡进度
@@ -2398,8 +2476,18 @@
         }
         ctx.globalAlpha = 1;
 
-        // H. 渲染玩家角色（方块人，支持站立、跑动、趴下爬行、触电）
+        // H1. 渲染关卡村民 NPC (供交易兑换药水)
+        if (m7.villager) {
+            renderVillagerNPC(ctx, m7.villager, dt);
+        }
+
+        // H2. 渲染玩家角色（方块人，支持站立、跑动、趴下爬行、触电）
         renderPlayer(ctx, dt);
+
+        // H3. 如果瞬移药水已激活，在世界中绘制瞬移落点准星瞄准指示
+        if (m7.potionEffects && m7.potionEffects.teleport.armed && m7.mouseCanvasPos) {
+            renderTeleportTarget(ctx, m7.mouseCanvasPos.x + m7.camera.x, m7.mouseCanvasPos.y + m7.camera.y);
+        }
 
         ctx.restore();
 
@@ -2490,10 +2578,152 @@
         ctx.restore();
     }
 
+    // ==========================================
+    // 关卡常驻村民 NPC 渲染
+    // ==========================================
+    function renderVillagerNPC(ctx, v, dt) {
+        ctx.save();
+        const bobbing = Math.sin(performance.now() * 0.003) * 1.5;
+        ctx.translate(v.x, v.y + bobbing);
+
+        // 1. 村民腿部 / 袍底 (18x12, 深棕色)
+        ctx.fillStyle = '#4E342E';
+        ctx.fillRect(4, 40, 18, 12);
+
+        // 2. 村民长袍身体 (20x24, 经典棕色)
+        ctx.fillStyle = '#795548';
+        ctx.fillRect(3, 18, 20, 24);
+
+        // 3. 交叉双手 (经典抱胸姿势, 22x10, 深棕色袖子 + 肤色双手)
+        ctx.fillStyle = '#5D4037';
+        ctx.fillRect(2, 24, 22, 10);
+        ctx.fillStyle = '#D7CCC8';
+        ctx.fillRect(9, 27, 8, 6);
+
+        // 4. 村民头部 (18x18, 肤色 #D7CCC8)
+        ctx.fillStyle = '#D7CCC8';
+        ctx.fillRect(4, 0, 18, 18);
+
+        // 5. 经典一字眉 (#3E2723)
+        ctx.fillStyle = '#3E2723';
+        ctx.fillRect(4, 5, 18, 3);
+
+        // 6. 绿色眼睛 (#2E7D32)
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(6, 8, 4, 4);
+        ctx.fillRect(16, 8, 4, 4);
+        ctx.fillStyle = '#2E7D32';
+        ctx.fillRect(8, 8, 2, 4);
+        ctx.fillRect(16, 8, 2, 4);
+
+        // 7. 村民标志性大鼻子 (#BCAAA4)
+        ctx.fillStyle = '#BCAAA4';
+        ctx.fillRect(11, 10, 4, 9);
+        ctx.strokeStyle = '#8D6E63';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(11, 10, 4, 9);
+
+        ctx.restore();
+
+        // 8. 漂浮在头顶的绿宝石与商铺标签
+        ctx.save();
+        const pulse = Math.sin(performance.now() * 0.005) * 3;
+        ctx.translate(v.x + v.w / 2, v.y - 12 + pulse);
+
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('💎', 0, -18);
+
+        // 村民标签背景
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.68)';
+        if (ctx.roundRect) ctx.roundRect(-46, -14, 92, 20, 6);
+        else ctx.fillRect(-46, -14, 92, 20);
+        ctx.fill();
+        ctx.strokeStyle = '#4CAF50';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.fillStyle = '#A5D6A7';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText('🧑‍🌾 村民交易', 0, 0);
+
+        // 玩家靠近时的气泡提示
+        const distToPlayer = Math.abs(m7.player.x - v.x);
+        if (distToPlayer < 95) {
+            ctx.fillStyle = 'rgba(255, 235, 59, 0.95)';
+            ctx.strokeStyle = '#F57F17';
+            ctx.lineWidth = 1;
+            if (ctx.roundRect) ctx.roundRect(-65, -44, 130, 22, 6);
+            else ctx.fillRect(-65, -44, 130, 22);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = '#3E2723';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText('Hrrr~ 点击或按E交易', 0, -29);
+        }
+        ctx.restore();
+    }
+
+    // ==========================================
+    // 瞬移瞄准指示准星
+    // ==========================================
+    function renderTeleportTarget(ctx, tx, ty) {
+        ctx.save();
+        const time = performance.now() * 0.006;
+        const pulseR = 14 + Math.sin(time * 2) * 3;
+
+        // 准星外圈光环
+        ctx.strokeStyle = '#E1BEE7';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(tx, ty, pulseR, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 动态十字瞄准线
+        ctx.strokeStyle = '#BA68C8';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(tx - pulseR - 6, ty);
+        ctx.lineTo(tx - pulseR + 4, ty);
+        ctx.moveTo(tx + pulseR - 4, ty);
+        ctx.lineTo(tx + pulseR + 6, ty);
+        ctx.moveTo(tx, ty - pulseR - 6);
+        ctx.lineTo(tx, ty - pulseR + 4);
+        ctx.moveTo(tx, ty + pulseR - 4);
+        ctx.lineTo(tx, ty + pulseR + 6);
+        ctx.stroke();
+
+        // 中心聚焦点
+        ctx.fillStyle = '#BA68C8';
+        ctx.beginPath();
+        ctx.arc(tx, ty, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 悬浮文字指示
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+        if (ctx.roundRect) ctx.roundRect(tx - 45, ty - pulseR - 26, 90, 20, 6);
+        else ctx.fillRect(tx - 45, ty - pulseR - 26, 90, 20);
+        ctx.fill();
+        ctx.strokeStyle = '#BA68C8';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = '#E1BEE7';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('点击瞬移至此', tx, ty - pulseR - 12);
+
+        ctx.restore();
+    }
+
+    // ==========================================
+    // 顶部专有 HUD 渲染
+    // ==========================================
     function renderMode7HUD(ctx, width, height) {
         ctx.save();
         const isNormal = (m7.difficulty === 'normal');
-        // 顶部关卡指示徽章
+
+        // 1. 中间关卡徽章
         ctx.fillStyle = isNormal ? 'rgba(230, 81, 0, 0.92)' : 'rgba(27, 94, 32, 0.85)';
         ctx.beginPath();
         if (ctx.roundRect) ctx.roundRect(width / 2 - 130, 12, 260, 36, 18);
@@ -2508,7 +2738,350 @@
         ctx.textAlign = 'center';
         const diffText = isNormal ? '普通模式' : '简单模式';
         ctx.fillText(`第七音 · 第 ${m7.level} / ${m7.maxLevels} 关 (${diffText})`, width / 2, 35);
+
+        // 2. 左上角：奖杯与绿宝石资产栏
+        const trophies = window.GameEconomy ? GameEconomy.getTrophies() : 0;
+        const emeralds = window.GameEconomy ? GameEconomy.getEmeralds() : 0;
+        const isDev = window.GameEconomy && GameEconomy.isDevMode();
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(16, 12, 140, 36, 18);
+        else ctx.rect(16, 12, 140, 36);
+        ctx.fill();
+        ctx.strokeStyle = '#FFE082';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#FFD54F';
+        ctx.fillText(`🏆 ${trophies}`, 28, 35);
+        ctx.fillStyle = '#69F0AE';
+        ctx.fillText(`💎 ${isDev ? '∞' : emeralds}`, 88, 35);
+
+        // 3. 右上角：【🧑‍🌾 村民交易】HUD 按钮
+        const btnW = 120;
+        const btnH = 36;
+        const btnX = width - btnW - 16;
+        const btnY = 12;
+        m7.hudVillagerBtn = { x: btnX, y: btnY, w: btnW, h: btnH };
+
+        ctx.fillStyle = 'rgba(46, 125, 50, 0.9)';
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(btnX, btnY, btnW, btnH, 18);
+        else ctx.rect(btnX, btnY, btnW, btnH);
+        ctx.fill();
+        ctx.strokeStyle = '#81C784';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🧑‍🌾 村民交易', btnX + btnW / 2, btnY + 23);
+
+        // 4. 激活药水效果倒计时指示条 (位于关卡指示牌下方)
+        let activeEffects = [];
+        if (m7.potionEffects) {
+            if (m7.potionEffects.speed.timer > 0) {
+                activeEffects.push({ icon: '⚡', name: '加速', time: m7.potionEffects.speed.timer, color: '#FFB300' });
+            }
+            if (m7.potionEffects.jump.timer > 0) {
+                activeEffects.push({ icon: '🦘', name: '跳跃', time: m7.potionEffects.jump.timer, color: '#00E676' });
+            }
+            if (m7.potionEffects.levitation.timer > 0) {
+                activeEffects.push({ icon: '🪶', name: '悬浮', time: m7.potionEffects.levitation.timer, color: '#00E5FF' });
+            }
+            if (m7.potionEffects.teleport.armed) {
+                activeEffects.push({ icon: '🔮', name: '瞬移就绪', time: null, color: '#BA68C8' });
+            }
+        }
+
+        if (activeEffects.length > 0) {
+            const itemW = 96;
+            let startX = width / 2 - (activeEffects.length * itemW) / 2;
+            activeEffects.forEach(eff => {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.78)';
+                ctx.beginPath();
+                if (ctx.roundRect) ctx.roundRect(startX, 54, itemW - 6, 24, 12);
+                else ctx.rect(startX, 54, itemW - 6, 24);
+                ctx.fill();
+                ctx.strokeStyle = eff.color;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.fillStyle = eff.color;
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center';
+                const str = eff.time !== null ? `${eff.icon}${eff.name} ${eff.time.toFixed(1)}s` : `${eff.icon}${eff.name}`;
+                ctx.fillText(str, startX + (itemW - 6) / 2, 70);
+                startX += itemW;
+            });
+        }
+
         ctx.restore();
+    }
+
+    // ==========================================
+    // 药水快捷按键与控制
+    // ==========================================
+    const lastPotionClicks = { speed: 0, jump: 0, levitation: 0, teleport: 0 };
+    let potionTipTimeout = null;
+
+    function showPotionTip(type, text) {
+        let tip = document.getElementById('m7PotionTip');
+        if (!tip) {
+            tip = document.createElement('div');
+            tip.id = 'm7PotionTip';
+            tip.style.cssText = `
+                position: fixed;
+                background: rgba(0, 0, 0, 0.88);
+                color: #FFEB3B;
+                font-size: 13px;
+                font-weight: bold;
+                padding: 4px 10px;
+                border-radius: 12px;
+                border: 1px solid #FFD54F;
+                pointer-events: none;
+                z-index: 600;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+                transition: opacity 0.2s ease;
+            `;
+            document.body.appendChild(tip);
+        }
+        const btn = document.getElementById('m7PotionBtn_' + type);
+        if (btn) {
+            const rect = btn.getBoundingClientRect();
+            tip.textContent = text;
+            tip.style.display = 'block';
+            tip.style.opacity = '1';
+            tip.style.left = (rect.left + rect.width / 2 - 40) + 'px';
+            tip.style.top = (rect.top - 32) + 'px';
+            clearTimeout(potionTipTimeout);
+            potionTipTimeout = setTimeout(() => {
+                if (tip) tip.style.opacity = '0';
+            }, 1200);
+        }
+    }
+
+    function handlePotionClick(type) {
+        const now = Date.now();
+        if (now - lastPotionClicks[type] < 450) {
+            // 双击达成！消耗 1 瓶药水并激活对应效果
+            lastPotionClicks[type] = 0;
+            const tip = document.getElementById('m7PotionTip');
+            if (tip) tip.style.opacity = '0';
+            drinkPotion(type);
+        } else {
+            // 第一次单按：记录时间，弹出双击提示
+            lastPotionClicks[type] = now;
+            const pName = window.GameEconomy ? GameEconomy.POTION_TYPES[type].name : type;
+            showPotionTip(type, `💡 双击饮用【${pName}】`);
+        }
+    }
+
+    function drinkPotion(type) {
+        if (!window.GameEconomy) return;
+        const res = GameEconomy.consumePotion(type);
+        if (!res.success) {
+            GameEconomy.playAudio('villager_no');
+            if (typeof showMessage === 'function') {
+                showMessage(res.msg, window.innerWidth / 2, window.innerHeight * 0.4);
+            }
+            return;
+        }
+
+        GameEconomy.playPotionDrinkSound();
+        const pName = GameEconomy.POTION_TYPES[type].name;
+
+        if (type === 'speed') {
+            m7.potionEffects.speed.timer = 10.0;
+            m7.potionEffects.speed.active = true;
+            if (typeof showMessage === 'function') {
+                showMessage(`⚡【${pName}】已饮用！极速冲刺 10 秒`, window.innerWidth / 2, window.innerHeight * 0.35);
+            }
+        } else if (type === 'jump') {
+            m7.potionEffects.jump.timer = 10.0;
+            m7.potionEffects.jump.active = true;
+            if (typeof showMessage === 'function') {
+                showMessage(`🦘【${pName}】已饮用！跳跃高度翻倍 10 秒`, window.innerWidth / 2, window.innerHeight * 0.35);
+            }
+        } else if (type === 'levitation') {
+            m7.potionEffects.levitation.timer = 10.0;
+            m7.potionEffects.levitation.active = true;
+            if (typeof showMessage === 'function') {
+                showMessage(`🪶【${pName}】已饮用！空中悬浮漫步 10 秒`, window.innerWidth / 2, window.innerHeight * 0.35);
+            }
+        } else if (type === 'teleport') {
+            m7.potionEffects.teleport.armed = true;
+            if (typeof showMessage === 'function') {
+                showMessage(`🔮【${pName}】已激活！点击或轻触画面任意位置直接瞬移`, window.innerWidth / 2, window.innerHeight * 0.35);
+            }
+        }
+
+        updatePotionButtonsUI();
+    }
+
+    function updatePotionButtonsUI() {
+        if (!window.GameEconomy) return;
+        const isDev = GameEconomy.isDevMode();
+        const potions = GameEconomy.getPotions();
+
+        ['speed', 'jump', 'levitation', 'teleport'].forEach(type => {
+            const btn = document.getElementById('m7PotionBtn_' + type);
+            const badge = document.getElementById('m7PotionBadge_' + type);
+            if (!btn || !badge) return;
+
+            const count = potions[type] || 0;
+            // 只要买到药水 (count > 0) 或处于开发者模式，按键就会出现
+            if (count > 0 || isDev) {
+                btn.style.display = 'flex';
+                if (isDev) {
+                    badge.style.display = 'block';
+                    badge.textContent = '∞';
+                    badge.style.background = '#7B1FA2';
+                } else if (count >= 2) {
+                    // 如果拥有多瓶药水，按钮右下角会显示数量标识（两瓶显示 ×2，三瓶显示 ×3）
+                    badge.style.display = 'block';
+                    badge.textContent = '×' + count;
+                    badge.style.background = '#D32F2F';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } else {
+                // 没有药水且不是开发者模式，按键隐藏
+                btn.style.display = 'none';
+            }
+        });
+    }
+
+    function bindPotionButton(btn, type) {
+        btn.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            getAudioContext();
+            handlePotionClick(type);
+            btn.style.transform = 'scale(0.9)';
+            setTimeout(() => { btn.style.transform = 'scale(1)'; }, 120);
+        });
+    }
+
+    // ==========================================
+    // 画布触控与点击交互 (瞬移、村民点击、HUD点击)
+    // ==========================================
+    function initCanvasInteraction() {
+        const canvas = document.getElementById('gameCanvas');
+        if (!canvas || typeof canvas.addEventListener !== 'function') return;
+        if (canvas.dataset) {
+            if (canvas.dataset.m7InteractionBound) return;
+            canvas.dataset.m7InteractionBound = 'true';
+        } else if (canvas._m7InteractionBound) {
+            return;
+        } else {
+            canvas._m7InteractionBound = true;
+        }
+
+        // 鼠标悬停跟踪
+        canvas.addEventListener('pointermove', (e) => {
+            if (typeof gameState === 'undefined' || gameState.mode !== 7 || !gameState.isPlaying) return;
+            const rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: canvas.width || 800, height: canvas.height || 600 };
+            const scaleX = rect.width ? (canvas.width / rect.width) : 1;
+            const scaleY = rect.height ? (canvas.height / rect.height) : 1;
+            m7.mouseCanvasPos = {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
+            };
+            if (m7.potionEffects && m7.potionEffects.teleport.armed) {
+                canvas.style.cursor = 'crosshair';
+            } else {
+                canvas.style.cursor = 'default';
+            }
+        });
+
+        canvas.addEventListener('pointerleave', () => {
+            m7.mouseCanvasPos = null;
+        });
+
+        canvas.addEventListener('pointerdown', (e) => {
+            if (typeof gameState === 'undefined' || gameState.mode !== 7 || !gameState.isPlaying) return;
+            getAudioContext();
+
+            const rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: canvas.width || 800, height: canvas.height || 600 };
+            const scaleX = rect.width ? (canvas.width / rect.width) : 1;
+            const scaleY = rect.height ? (canvas.height / rect.height) : 1;
+            const cx = (e.clientX - rect.left) * scaleX;
+            const cy = (e.clientY - rect.top) * scaleY;
+
+            // 1. 检查是否点击了右上角【🧑‍🌾 村民交易】HUD 按钮
+            if (m7.hudVillagerBtn) {
+                const b = m7.hudVillagerBtn;
+                if (cx >= b.x && cx <= b.x + b.w && cy >= b.y && cy <= b.y + b.h) {
+                    if (typeof openVillagerModal === 'function') openVillagerModal();
+                    return;
+                }
+            }
+
+            const worldX = cx + m7.camera.x;
+            const worldY = cy + m7.camera.y;
+
+            // 2. 检查是否点击了关卡内的常驻村民 NPC
+            if (m7.villager) {
+                const v = m7.villager;
+                if (worldX >= v.x - 15 && worldX <= v.x + v.w + 15 && worldY >= v.y - 20 && worldY <= v.y + v.h + 10) {
+                    if (typeof openVillagerModal === 'function') openVillagerModal();
+                    return;
+                }
+            }
+
+            // 3. 检查是否激活了【瞬移药水】
+            if (m7.potionEffects && m7.potionEffects.teleport.armed) {
+                m7.potionEffects.teleport.armed = false;
+                canvas.style.cursor = 'default';
+
+                // 起点紫粒子爆裂
+                for (let i = 0; i < 28; i++) {
+                    m7.particles.push({
+                        x: m7.player.x + m7.player.w / 2 + (Math.random() - 0.5) * 20,
+                        y: m7.player.y + m7.player.h / 2 + (Math.random() - 0.5) * 30,
+                        vx: (Math.random() - 0.5) * 6,
+                        vy: (Math.random() - 0.5) * 6,
+                        life: 0.65,
+                        color: Math.random() < 0.5 ? '#CE93D8' : '#7B1FA2',
+                        size: 3 + Math.random() * 4
+                    });
+                }
+
+                // 传送角色至目标位置
+                m7.player.x = Math.max(10, Math.min(worldX - m7.player.w / 2, m7.mapWidth - 30));
+                m7.player.y = Math.min(worldY - m7.player.h / 2, m7.mapHeight - 40);
+                m7.player.vx = 0;
+                m7.player.vy = 0;
+
+                // 终点紫粒子爆裂
+                for (let i = 0; i < 35; i++) {
+                    m7.particles.push({
+                        x: m7.player.x + m7.player.w / 2 + (Math.random() - 0.5) * 24,
+                        y: m7.player.y + m7.player.h / 2 + (Math.random() - 0.5) * 36,
+                        vx: (Math.random() - 0.5) * 7,
+                        vy: (Math.random() - 0.5) * 7,
+                        life: 0.75,
+                        color: Math.random() < 0.5 ? '#E1BEE7' : '#9C27B0',
+                        size: 4 + Math.random() * 4
+                    });
+                }
+
+                if (window.GameEconomy) {
+                    GameEconomy.playTeleportSound();
+                }
+
+                if (typeof showMessage === 'function') {
+                    showMessage('✨ 瞬移成功！', window.innerWidth / 2, window.innerHeight * 0.35);
+                }
+
+                updatePotionButtonsUI();
+            }
+        });
     }
 
     // ==========================================
@@ -2536,22 +3109,48 @@
         container.innerHTML = `
             <!-- 左侧移动键组 -->
             <div style="display: flex; gap: 15px; pointer-events: auto;">
-                <button id="m7BtnLeft" class="m7-btn" style="width: 58px; height: 58px; border-radius: 50%; background: rgba(46, 125, 50, 0.8); border: 2px solid #81C784; color: white; font-size: 22px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">◀</button>
-                <button id="m7BtnRight" class="m7-btn" style="width: 58px; height: 58px; border-radius: 50%; background: rgba(46, 125, 50, 0.8); border: 2px solid #81C784; color: white; font-size: 22px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">▶</button>
+                <button id="m7BtnLeft" class="m7-btn" style="width: 58px; height: 58px; border-radius: 50%; background: rgba(46, 125, 50, 0.85); border: 2px solid #81C784; color: white; font-size: 22px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">◀</button>
+                <button id="m7BtnRight" class="m7-btn" style="width: 58px; height: 58px; border-radius: 50%; background: rgba(46, 125, 50, 0.85); border: 2px solid #81C784; color: white; font-size: 22px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">▶</button>
             </div>
 
-            <!-- 右侧动作键组 (跳跃、趴下/潜行、⚡加速、互动) -->
-            <div style="display: flex; gap: 10px; align-items: flex-end; pointer-events: auto;">
-                <button id="m7BtnInteract" class="m7-btn" style="width: 50px; height: 50px; border-radius: 50%; background: rgba(255, 179, 0, 0.85); border: 2px solid #FFE082; color: white; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">🕹️拉杆</button>
-                <button id="m7BtnSprint" class="m7-btn" style="width: 58px; height: 58px; border-radius: 50%; background: rgba(230, 81, 0, 0.88); border: 2px solid #FFE082; color: white; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.35);">⚡加速</button>
-                <button id="m7BtnDown" class="m7-btn" style="width: 58px; height: 58px; border-radius: 50%; background: rgba(56, 142, 60, 0.88); border: 2px solid #C8E6C9; color: white; font-size: 15px; font-weight: bold; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.35);">▼趴下</button>
-                <button id="m7BtnUp" class="m7-btn" style="width: 64px; height: 64px; border-radius: 50%; background: rgba(27, 94, 32, 0.85); border: 2px solid #81C784; color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">▲跳跃</button>
+            <!-- 右侧动作键组 (药水栏 + 基础动作) -->
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 10px; pointer-events: none;">
+                <!-- 药水快捷栏 (买到药水或开发者模式时出现) -->
+                <div id="m7PotionBar" style="display: flex; gap: 8px; pointer-events: auto; align-items: center;">
+                    <button id="m7PotionBtn_speed" class="m7-btn m7-potion-btn" style="position: relative; width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #FF6F00, #E65100); border: 2px solid #FFE082; color: white; display: none; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; touch-action: manipulation; box-shadow: 0 4px 10px rgba(255,111,0,0.4); cursor: pointer;" title="加速药水 (双击饮用)">
+                        <span style="font-size: 18px; line-height: 1;">⚡</span>
+                        <span>加速</span>
+                        <span id="m7PotionBadge_speed" style="position: absolute; right: -4px; bottom: -4px; background: #D32F2F; color: white; font-size: 11px; font-weight: bold; border-radius: 10px; padding: 0 5px; border: 1.5px solid white; display: none; line-height: 16px;">×2</span>
+                    </button>
+                    <button id="m7PotionBtn_jump" class="m7-btn m7-potion-btn" style="position: relative; width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #2E7D32, #1B5E20); border: 2px solid #A5D6A7; color: white; display: none; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; touch-action: manipulation; box-shadow: 0 4px 10px rgba(46,125,50,0.4); cursor: pointer;" title="跳跃提升药水 (双击饮用)">
+                        <span style="font-size: 18px; line-height: 1;">🦘</span>
+                        <span>跳跃</span>
+                        <span id="m7PotionBadge_jump" style="position: absolute; right: -4px; bottom: -4px; background: #D32F2F; color: white; font-size: 11px; font-weight: bold; border-radius: 10px; padding: 0 5px; border: 1.5px solid white; display: none; line-height: 16px;">×2</span>
+                    </button>
+                    <button id="m7PotionBtn_levitation" class="m7-btn m7-potion-btn" style="position: relative; width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #00838F, #006064); border: 2px solid #80DEEA; color: white; display: none; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,131,143,0.4); cursor: pointer;" title="悬浮药水 (双击饮用)">
+                        <span style="font-size: 18px; line-height: 1;">🪶</span>
+                        <span>悬浮</span>
+                        <span id="m7PotionBadge_levitation" style="position: absolute; right: -4px; bottom: -4px; background: #D32F2F; color: white; font-size: 11px; font-weight: bold; border-radius: 10px; padding: 0 5px; border: 1.5px solid white; display: none; line-height: 16px;">×2</span>
+                    </button>
+                    <button id="m7PotionBtn_teleport" class="m7-btn m7-potion-btn" style="position: relative; width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #6A1B9A, #4A148C); border: 2px solid #E1BEE7; color: white; display: none; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; touch-action: manipulation; box-shadow: 0 4px 10px rgba(106,27,154,0.4); cursor: pointer;" title="瞬移药水 (双击饮用)">
+                        <span style="font-size: 18px; line-height: 1;">🔮</span>
+                        <span>瞬移</span>
+                        <span id="m7PotionBadge_teleport" style="position: absolute; right: -4px; bottom: -4px; background: #D32F2F; color: white; font-size: 11px; font-weight: bold; border-radius: 10px; padding: 0 5px; border: 1.5px solid white; display: none; line-height: 16px;">×2</span>
+                    </button>
+                </div>
+
+                <!-- 动作按键组 (拉杆、趴下、跳跃) -->
+                <div style="display: flex; gap: 10px; align-items: flex-end; pointer-events: auto;">
+                    <button id="m7BtnInteract" class="m7-btn" style="width: 50px; height: 50px; border-radius: 50%; background: rgba(255, 179, 0, 0.85); border: 2px solid #FFE082; color: white; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">🕹️拉杆</button>
+                    <button id="m7BtnDown" class="m7-btn" style="width: 58px; height: 58px; border-radius: 50%; background: rgba(56, 142, 60, 0.88); border: 2px solid #C8E6C9; color: white; font-size: 15px; font-weight: bold; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 10px rgba(0,0,0,0.35);">▼趴下</button>
+                    <button id="m7BtnUp" class="m7-btn" style="width: 64px; height: 64px; border-radius: 50%; background: rgba(27, 94, 32, 0.85); border: 2px solid #81C784; color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">▲跳跃</button>
+                </div>
             </div>
         `;
 
         document.body.appendChild(container);
 
-        // 绑定触控事件
+        // 绑定移动与动作按键
         function bindTouch(id, keyName, isAction = false) {
             const btn = document.getElementById(id);
             if (!btn) return;
@@ -2585,19 +3184,29 @@
         bindTouch('m7BtnRight', 'right');
         bindTouch('m7BtnUp', 'up');
         bindTouch('m7BtnDown', 'down');
-        bindTouch('m7BtnSprint', 'sprint');
         bindTouch('m7BtnInteract', 'interact', true);
+
+        // 绑定药水按键 (双击使用)
+        ['speed', 'jump', 'levitation', 'teleport'].forEach(type => {
+            const btn = document.getElementById('m7PotionBtn_' + type);
+            if (btn) bindPotionButton(btn, type);
+        });
+
+        updatePotionButtonsUI();
     }
 
     function showMobileControls() {
         initMobileControls();
         const el = document.getElementById('mode7Controls');
         if (el) el.style.display = 'flex';
+        updatePotionButtonsUI();
     }
 
     function hideMobileControls() {
         const el = document.getElementById('mode7Controls');
         if (el) el.style.display = 'none';
+        const tip = document.getElementById('m7PotionTip');
+        if (tip) tip.style.opacity = '0';
     }
 
     // ==========================================
@@ -2619,8 +3228,20 @@
             } else if (e.code === 'ArrowUp' || e.code === 'KeyW') {
                 m7.keys.up = true;
             } else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
-                // ⭐ Shift 键触发冲刺加速（站着走和爬行均支持加速）
+                // Shift 冲刺加速
                 m7.keys.sprint = true;
+            } else if (e.code === 'Digit1') {
+                handlePotionClick('speed');
+            } else if (e.code === 'Digit2') {
+                handlePotionClick('jump');
+            } else if (e.code === 'Digit3') {
+                handlePotionClick('levitation');
+            } else if (e.code === 'Digit4') {
+                handlePotionClick('teleport');
+            } else if (e.code === 'KeyE') {
+                if (typeof openVillagerModal === 'function') {
+                    openVillagerModal();
+                }
             } else if (e.code === 'ArrowDown' || e.code === 'KeyS' || e.code === 'KeyC' || e.code === 'ControlLeft' || e.code === 'ControlRight') {
                 m7.keys.down = true;
             } else if (e.code === 'Space') {
@@ -2696,10 +3317,20 @@
             gameState.mode7Difficulty = m7.difficulty;
         }
 
+        // 重置药水临时状态并刷新药水快捷栏
+        m7.potionEffects = {
+            speed: { active: false, timer: 0 },
+            jump: { active: false, timer: 0 },
+            levitation: { active: false, timer: 0 },
+            teleport: { armed: false }
+        };
+
         initBackgroundElements();
         buildLevelData(lvl);
         initKeyboardListeners();
+        initCanvasInteraction();
         showMobileControls();
+        updatePotionButtonsUI();
 
         // 隐藏其他模式的控件
         const mcControls = document.getElementById('mcControls');
@@ -2739,6 +3370,24 @@
         m7.keys.up = false;
         m7.keys.down = false;
         m7.keys.sprint = false;
+        if (m7.potionEffects) {
+            m7.potionEffects.speed.active = false;
+            m7.potionEffects.speed.timer = 0;
+            m7.potionEffects.jump.active = false;
+            m7.potionEffects.jump.timer = 0;
+            m7.potionEffects.levitation.active = false;
+            m7.potionEffects.levitation.timer = 0;
+            m7.potionEffects.teleport.armed = false;
+        }
+        const canvas = document.getElementById('gameCanvas');
+        if (canvas) canvas.style.cursor = 'default';
     };
+
+    // 监听经济系统变动，实时更新药水按键显示
+    window.addEventListener('economyUpdated', () => {
+        if (typeof updatePotionButtonsUI === 'function') {
+            updatePotionButtonsUI();
+        }
+    });
 
 })();
