@@ -101,6 +101,32 @@
                 gain.connect(ctx.destination);
                 osc.start(now);
                 osc.stop(now + 0.35);
+            } else if (type === 'crumble') {
+                // 塌陷落石崩解声
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(140, now);
+                osc.frequency.exponentialRampToValueAtTime(45, now + 0.22);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.22);
+            } else if (type === 'slide') {
+                // 巨石机关滑动/机械推挤声
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(90, now);
+                osc.frequency.linearRampToValueAtTime(170, now + 0.25);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
             } else if (type === 'win') {
                 // 通关和弦欢呼音
                 [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
@@ -125,9 +151,13 @@
     const m7 = {
         level: 1,
         maxLevels: 25,
+        difficulty: 'easy',  // 'easy' | 'normal'
         mapWidth: 0,
         mapHeight: 0,
         blocks: [],          // [{ x, y, w, h, type, color, topColor, solid, id }]
+        collapseTraps: [],   // [{ x, y, w, h, state, timer, vy, dropDelay, color, topColor, solid, shakeOffset }]
+        movingBlocks: [],    // [{ x, y, w, h, minX, maxX, dir, speed, type, color, topColor, solid }]
+        level10Trap: null,   // 第10关双坑联动与往复推挤地坑专属机关
         levers: [],          // [{ x, y, state: 'left'|'right', animProgress: 0, targetDoorId }]
         doors: [],           // [{ id, x, y, w, h, isOpen: false, openProgress: 0 }]
         electrics: [],       // [{ x, y, w, h, animTimer: 0 }]
@@ -177,6 +207,7 @@
         bgHills: [],
         initialized: false
     };
+    window.m7 = m7;
 
     // 初始化背景远景元素
     function initBackgroundElements() {
@@ -192,58 +223,22 @@
             });
         }
         m7.bgHills = [];
+        const isNormal = (m7.difficulty === 'normal');
         for (let i = 0; i < 30; i++) {
             m7.bgHills.push({
                 x: i * 200,
                 y: 260 + Math.sin(i * 1.5) * 40,
                 r: 120 + Math.random() * 60,
-                color: i % 2 === 0 ? '#43A047' : '#388E3C'
+                color: isNormal ? (i % 2 === 0 ? '#FFA000' : '#F57C00') : (i % 2 === 0 ? '#43A047' : '#388E3C')
             });
         }
     }
 
     // ==========================================
-    // 关卡数据设计（共 25 关，难度梯度递增）
+    // 简单模式关卡设计（共 25 关，难度梯度递增）
     // ==========================================
-    function buildLevelData(lvl) {
-        m7.blocks = [];
-        m7.levers = [];
-        m7.doors = [];
-        m7.electrics = [];
-        m7.signs = [];
-        m7.particles = [];
-
-        const groundY = 480; // 地面基础高度
-        let endX = 1400;     // 关卡长度随着关卡增加
-
-        // 辅助添加方块矩阵
-        function addBlock(x, y, w, h, type = 'grass', solid = true, id = null) {
-            let color = '#4CAF50';
-            let topColor = '#81C784';
-            if (type === 'dirt') { color = '#795548'; topColor = '#8D6E63'; }
-            else if (type === 'stone') { color = '#607D8B'; topColor = '#90A4AE'; }
-            else if (type === 'brick') { color = '#A1887F'; topColor = '#BCAAA4'; }
-            else if (type === 'wood') { color = '#8D6E63'; topColor = '#A1887F'; }
-            else if (type === 'gold') { color = '#FFC107'; topColor = '#FFE082'; }
-            else if (type === 'leaves') { color = '#2E7D32'; topColor = '#43A047'; }
-            else if (type === 'tunnel') { color = '#3E2723'; topColor = '#4E342E'; }
-
-            m7.blocks.push({ x, y, w, h, type, color, topColor, solid, id });
-        }
-
-        // 辅助添加平地
-        function addGround(startX, lengthX, y = groundY, type = 'grass') {
-            addBlock(startX, y, lengthX, 160, type, true);
-        }
-
-        // 默认玩家出生点
-        m7.player.x = 80;
-        m7.player.y = groundY - m7.player.standH;
-        m7.player.vx = 0;
-        m7.player.vy = 0;
-        m7.player.isDead = false;
-        m7.player.isCrouching = false;
-        m7.goal.reached = false;
+    function buildEasyLevel(lvl, groundY, addBlock, addGround) {
+        let endX = 1400;
 
         // 根据关卡定制
         if (lvl === 1) {
@@ -386,8 +381,21 @@
             m7.goal.x = endX;
             m7.goal.y = groundY - 80;
 
-        } else if (lvl >= 11 && lvl <= 19) {
-            // 【第 11 ~ 19 关：渐进增强的多重挑战】
+        } else if (lvl === 11) {
+            // ⭐【第 11 关：空中漫步挑战】
+            // 规则：只有趴下（一直摁着趴下）才能过去的关卡。当玩家趴下时，往右会直接走在空气上面。
+            // 只有这一关有这个特性，其他关没有。不做告示牌提醒。
+            endX = 1100;
+            // 起点左侧平台（地面高 groundY）
+            addGround(0, 240, groundY);
+            // 中间（240 ~ 1020）纯空气，不生成任何方块，不做告示牌提醒！
+            // 终点右侧平台
+            addGround(endX - 80, 400, groundY);
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl >= 12 && lvl <= 19) {
+            // 【第 12 ~ 19 关：渐进增强的多重挑战】
             endX = 1700 + (lvl - 10) * 100;
             addGround(0, 240, groundY);
 
@@ -649,10 +657,745 @@
             m7.goal.y = groundY - 80;
         }
 
+        return endX;
+    }
+
+    // ==========================================
+    // 普通难度关卡设计（共 25 关，渐进陷阱与机关挑战）
+    // ==========================================
+    function buildNormalLevel(lvl, groundY, addBlock, addGround, addCollapseTrap, addMovingBlock) {
+        let endX = 1400;
+
+        if (lvl === 1) {
+            // ⭐【第 1 关：平地塌陷陷阱（暗藏玄机）】
+            // 开局是一条平的地面，然后在玩家前面设置一个陷阱，玩家走到上面后会掉下去
+            endX = 1300;
+            addGround(0, 360, groundY, 'grass');
+            // 前方塌陷陷阱 (宽 100px)，表面与平地完全一致，踩中 40ms 即崩塌下坠
+            addCollapseTrap(360, groundY, 100, 160, 40, 'grass');
+            // 陷阱后平坦地面
+            addGround(460, endX - 460 + 300, groundY, 'grass');
+
+            m7.signs.push({ x: 180, y: groundY - 60, text: '⚠️ 普通模式：第 1 关', subText: '前方看似平坦，走到上面会掉下去！' });
+            m7.signs.push({ x: 540, y: groundY - 60, text: '漂亮的跳跃！', subText: '右侧光柱为通关终点' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 2) {
+            // 【第 2 关：连环双塌陷坑】
+            endX = 1450;
+            addGround(0, 320, groundY, 'grass');
+            addCollapseTrap(320, groundY, 90, 160, 60, 'grass');
+            addGround(410, 130, groundY, 'stone');
+            addCollapseTrap(540, groundY, 90, 160, 60, 'grass');
+            addGround(630, 900, groundY, 'grass');
+
+            m7.signs.push({ x: 200, y: groundY - 60, text: '连环双塌陷坑', subText: '预判起跳距离，中间有坚硬石台' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 3) {
+            // 【第 3 关：低矮通道暗坑】
+            endX = 1500;
+            addGround(0, 340, groundY, 'grass');
+            addGround(340, 100, groundY, 'stone');
+            addCollapseTrap(440, groundY, 100, 160, 140, 'dirt');
+            addGround(540, 120, groundY, 'stone');
+            addBlock(340, groundY - 78, 320, 42, 'brick');
+
+            addGround(660, 900, groundY, 'grass');
+            m7.signs.push({ x: 220, y: groundY - 60, text: '低矮暗道有险情！', subText: '趴下爬行时快速越过暗坑' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 4) {
+            // 【第 4 关：浮空崩裂方块】
+            endX = 1550;
+            addGround(0, 260, groundY, 'grass');
+            addCollapseTrap(350, groundY - 40, 80, 28, 350, 'wood');
+            addCollapseTrap(480, groundY - 80, 80, 28, 350, 'wood');
+            addCollapseTrap(610, groundY - 50, 80, 28, 350, 'wood');
+
+            addGround(740, 900, groundY, 'grass');
+            m7.signs.push({ x: 180, y: groundY - 60, text: '脆弱的浮空踏板', subText: '踩中 0.35 秒后碎裂，不可停留！' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 5) {
+            // 【第 5 关：虚假黄金引诱】
+            endX = 1600;
+            addGround(0, 280, groundY, 'grass');
+            addCollapseTrap(360, groundY - 80, 80, 24, 70, 'gold');
+            addCollapseTrap(480, groundY - 130, 80, 24, 70, 'gold');
+            addCollapseTrap(600, groundY - 140, 80, 24, 70, 'gold');
+
+            addGround(340, 360, groundY, 'stone');
+            addBlock(340, groundY - 78, 360, 42, 'stone');
+
+            addGround(700, 950, groundY, 'grass');
+            m7.signs.push({ x: 200, y: groundY - 60, text: '虚妄的黄金', subText: '高处黄金是下坠陷阱，下方隧道安全' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 6) {
+            // 【第 6 关：巡逻推挤方块初现】
+            endX = 1650;
+            addGround(0, 320, groundY, 'grass');
+            addGround(320, 460, groundY, 'stone');
+            addMovingBlock(520, groundY - 70, 60, 70, 400, 700, 2.6, 'stone');
+
+            addGround(780, 900, groundY, 'grass');
+            m7.signs.push({ x: 220, y: groundY - 60, text: '巡逻推挤巨石', subText: '小心被巨石推落深渊！可踩在其顶' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 7) {
+            // 【第 7 关：真假浮石断崖】
+            endX = 1700;
+            addGround(0, 260, groundY, 'grass');
+            addCollapseTrap(340, groundY - 40, 70, 26, 280, 'stone');
+            addBlock(460, groundY - 80, 70, 26, 'stone');
+            addCollapseTrap(580, groundY - 120, 70, 26, 280, 'stone');
+            addBlock(700, groundY - 70, 70, 26, 'stone');
+            addCollapseTrap(820, groundY - 40, 70, 26, 280, 'stone');
+
+            addGround(940, 800, groundY, 'grass');
+            m7.signs.push({ x: 180, y: groundY - 60, text: '虚实浮台', subText: '深色石台坚固，浅色踩踏即坠' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 8) {
+            // 【第 8 关：下沉阶梯大跨步】
+            endX = 1750;
+            addGround(0, 240, groundY - 120, 'grass');
+            addCollapseTrap(320, groundY - 100, 70, 24, 300, 'wood');
+            addCollapseTrap(440, groundY - 70, 70, 24, 300, 'wood');
+            addCollapseTrap(560, groundY - 40, 70, 24, 300, 'wood');
+            addCollapseTrap(680, groundY - 10, 70, 24, 300, 'wood');
+
+            addGround(800, 1000, groundY, 'grass');
+            m7.signs.push({ x: 160, y: groundY - 180, text: '坠落台阶链', subText: '连续向前奔跑跳跃，不要停顿！' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 9) {
+            // 【第 9 关：长廊推挤与地缝避险】
+            endX = 1800;
+            addGround(0, 300, groundY, 'grass');
+            addBlock(300, groundY - 110, 480, 40, 'brick');
+            addGround(300, 160, groundY, 'stone');
+            addBlock(460, groundY + 20, 140, 140, 'stone');
+            addGround(600, 180, groundY, 'stone');
+            addMovingBlock(620, groundY - 70, 50, 70, 340, 720, 2.8, 'obsidian');
+
+            addGround(780, 1100, groundY, 'grass');
+            m7.signs.push({ x: 200, y: groundY - 60, text: '低空巨石推挤', subText: '进入中间凹槽按 ▼ 趴下避险' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 10) {
+            // ⭐⭐⭐【第 10 关：双坑联动、多重方块推挤与往复回填陷阱】⭐⭐⭐
+            // 规则：玩家前面有两个坑。第一个坑是直接掉下去；第二个坑不会直接掉下去，
+            // 而是前面会多出来好几个方块，玩家跳不过去。接着方块往左移动，坑出现让玩家掉进去。
+            // 要是玩家没有掉进去躲过去了，就再倒过来：坑回填上，方块也从左边回到右边。
+            // 但如果玩家再次过来，还会重新触发。
+            endX = 1850;
+            addGround(0, 320, groundY, 'grass');
+
+            // 第 1 个坑：320 到 460 (宽 140px 无底深渊，跳不过去直接掉下去坠渊死亡)
+
+            // 中间安全浮岛：460 到 590 (宽 130px)
+            addGround(460, 130, groundY, 'stone');
+
+            // 第 2 个坑：590 到 730 (宽 140px)
+            // 初始状态下不直接掉下去，由动态 pitCover 覆盖，玩家踩上去稳如泰山
+
+            // 右侧平台：740 往后
+            addGround(740, endX - 740 + 300, groundY, 'grass');
+
+            // 初始化第 10 关专属往复陷阱状态机
+            m7.level10Trap = {
+                pit1: { x: 320, w: 140 },
+                midPlatform: { x: 460, w: 130 },
+                pit2: { x: 590, w: 140 },
+                pitCover: {
+                    x: 590,
+                    y: groundY,
+                    currentY: groundY,
+                    w: 140,
+                    h: 160,
+                    solid: true,
+                    color: '#795548',
+                    topColor: '#8D6E63'
+                },
+                wall: {
+                    initialX: 740,
+                    x: 740,
+                    targetX: 530,
+                    y: groundY - 140, // 高达 140px (3.5 格高！阻挡直接起跳)
+                    w: 52,
+                    h: 140,
+                    solid: false,
+                    active: false,
+                    visible: false
+                },
+                state: 'idle', // 'idle' | 'triggered' | 'holding' | 'reversing'
+                timer: 0,
+                triggerRangeX: 540
+            };
+
+            m7.signs.push({ x: 180, y: groundY - 60, text: '⭐ 第 10 关：双坑试炼', subText: '一坑必坠，二坑暗藏多重推挤方块！' });
+            m7.signs.push({ x: 475, y: groundY - 60, text: '后撤避险可倒转机关', subText: '亦可踩上推挤方块顶端翻越！' });
+
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 11) {
+            // 【第 11 关：双坑推挤机制进阶 + 高空栈道】
+            endX = 1850;
+            addGround(0, 300, groundY, 'grass');
+            addBlock(280, groundY - 140, 80, 24, 'wood');
+            addBlock(420, groundY - 160, 100, 24, 'wood');
+            addBlock(580, groundY - 140, 80, 24, 'wood');
+
+            addGround(420, 140, groundY, 'stone');
+            addMovingBlock(680, groundY - 100, 50, 100, 480, 720, 3.2, 'obsidian');
+
+            addGround(740, 1100, groundY, 'grass');
+            m7.signs.push({ x: 180, y: groundY - 60, text: '高低两重天', subText: '可走高空栈道避开地面推挤' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 12) {
+            // 【第 12 关：真假双拉杆】
+            endX = 1900;
+            addGround(0, 500, groundY, 'grass');
+            m7.levers.push({
+                x: 420, y: groundY - 30, w: 32, h: 30, state: 'left', animProgress: 0, targetDoorId: 'fake_lever_door'
+            });
+            addCollapseTrap(380, groundY, 110, 160, 60, 'grass');
+
+            addBlock(640, groundY - 60, 90, 220, 'stone');
+            addBlock(730, groundY - 130, 100, 290, 'gold');
+            m7.levers.push({
+                x: 770, y: groundY - 160, w: 32, h: 30, state: 'left', animProgress: 0, targetDoorId: 'door_lvl12'
+            });
+
+            addGround(950, 950, groundY, 'grass');
+            addBlock(1200, groundY - 220, 60, 140, 'brick');
+            m7.doors.push({ id: 'door_lvl12', x: 1200, y: groundY - 80, w: 60, h: 80, isOpen: false, openProgress: 0 });
+
+            m7.signs.push({ x: 260, y: groundY - 60, text: '真假双拉杆', subText: '平地拉杆暗藏陷阱，高台拉杆方为生门' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 13) {
+            // 【第 13 关：游弋移动电网】
+            endX = 1900;
+            addGround(0, 360, groundY, 'grass');
+            addGround(360, 400, groundY, 'stone');
+            m7.electrics.push({ x: 440, y: groundY - 30, w: 200, h: 30, animTimer: 0 });
+            addMovingBlock(420, groundY - 90, 70, 24, 380, 680, 2.5, 'wood');
+
+            addGround(760, 1150, groundY, 'grass');
+            m7.signs.push({ x: 220, y: groundY - 60, text: '电网与滑移台', subText: '借移动木板跳跃避开高压电流' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 14) {
+            // 【第 14 关：塌陷逃亡阶梯（多米诺）】
+            endX = 1950;
+            addGround(0, 240, groundY, 'grass');
+            for (let i = 0; i < 6; i++) {
+                addCollapseTrap(280 + i * 110, groundY - (i * 24), 85, 24, 260 + i * 50, 'brick');
+            }
+            addGround(960, 1000, groundY, 'grass');
+            m7.signs.push({ x: 160, y: groundY - 60, text: '多米诺塌陷阶梯', subText: '一经踏上逐级瓦解，全力向前冲！' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 15) {
+            // 【第 15 关：伪终点暗道】
+            endX = 2000;
+            addGround(0, 400, groundY, 'grass');
+            addBlock(700, groundY - 140, 50, 140, 'brick');
+            addCollapseTrap(580, groundY, 120, 160, 50, 'dirt');
+            addGround(380, 360, groundY + 60, 'tunnel');
+            addBlock(380, groundY - 18, 360, 42, 'brick');
+
+            addGround(760, 1250, groundY, 'grass');
+            m7.signs.push({ x: 240, y: groundY - 60, text: '伪终点陷阱', subText: '直行是死穴，钻入地下暗道方可通关' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 16) {
+            // 【第 16 关：双向交错推挤墙】
+            endX = 2050;
+            addGround(0, 300, groundY, 'grass');
+            addGround(300, 500, groundY, 'stone');
+            addMovingBlock(340, groundY - 80, 50, 80, 300, 500, 2.2, 'obsidian');
+            addMovingBlock(680, groundY - 80, 50, 80, 540, 760, 2.2, 'obsidian');
+            addBlock(500, groundY - 130, 40, 20, 'gold');
+
+            addGround(800, 1250, groundY, 'grass');
+            m7.signs.push({ x: 180, y: groundY - 60, text: '双向交错推挤', subText: '中间高台是避险黄金安全岛' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 17) {
+            // 【第 17 关：高空电弧与下沉浮台】
+            endX = 2100;
+            addGround(0, 280, groundY, 'grass');
+            m7.electrics.push({ x: 340, y: groundY - 150, w: 420, h: 26, animTimer: 0 });
+            addCollapseTrap(380, groundY - 50, 75, 26, 350, 'wood');
+            addCollapseTrap(520, groundY - 50, 75, 26, 350, 'wood');
+            addCollapseTrap(660, groundY - 50, 75, 26, 350, 'wood');
+
+            addGround(800, 1300, groundY, 'grass');
+            m7.signs.push({ x: 180, y: groundY - 60, text: '控高微操', subText: '头顶有电网，脚下会崩塌，轻点跳跃！' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 18) {
+            // 【第 18 关：极限微操·单格连续下落跳】
+            endX = 2150;
+            addGround(0, 240, groundY, 'grass');
+            for (let i = 0; i < 5; i++) {
+                addCollapseTrap(300 + i * 140, groundY - 40, 50, 24, 250, 'stone');
+            }
+            addGround(1020, 1150, groundY, 'grass');
+            m7.signs.push({ x: 150, y: groundY - 60, text: '单格极限跳', subText: '极其狭窄的落脚点，落地即起跳！' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 19) {
+            // 【第 19 关：逆向推力隧道】
+            endX = 2200;
+            addGround(0, 320, groundY, 'grass');
+            addGround(320, 450, groundY, 'stone');
+            addBlock(320, groundY - 78, 450, 42, 'brick');
+            addMovingBlock(680, groundY - 40, 40, 40, 380, 720, 2.4, 'obsidian');
+
+            addGround(770, 1450, groundY, 'grass');
+            m7.signs.push({ x: 200, y: groundY - 60, text: '隧道迎面撞击', subText: '在隧道内把握时机，找准节奏穿行' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 20) {
+            // 【第 20 关：综合考验·推挤墙+拉杆升门】
+            endX = 2200;
+            addGround(0, 400, groundY, 'grass');
+            addMovingBlock(520, groundY - 90, 60, 90, 420, 660, 3.0, 'obsidian');
+            addBlock(720, groundY - 120, 140, 280, 'gold');
+            m7.levers.push({
+                x: 770, y: groundY - 150, w: 32, h: 30, state: 'left', animProgress: 0, targetDoorId: 'door_lvl20_norm'
+            });
+
+            addGround(920, 1300, groundY, 'grass');
+            addBlock(1200, groundY - 220, 60, 140, 'brick');
+            m7.doors.push({ id: 'door_lvl20_norm', x: 1200, y: groundY - 80, w: 60, h: 80, isOpen: false, openProgress: 0 });
+
+            m7.signs.push({ x: 240, y: groundY - 60, text: '巨石拦路拉杆开门', subText: '越过推挤巨石，拉动高台拉杆开门' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 21) {
+            // 【第 21 关：电弧追击隧道】
+            endX = 2250;
+            addGround(0, 300, groundY, 'grass');
+            addGround(300, 450, groundY, 'tunnel');
+            addBlock(300, groundY - 78, 450, 42, 'tunnel');
+            m7.electrics.push({ x: 360, y: groundY - 65, w: 320, h: 26, animTimer: 0 });
+            addMovingBlock(310, groundY - 50, 40, 50, 280, 680, 1.6, 'stone');
+
+            addGround(750, 1500, groundY, 'grass');
+            m7.signs.push({ x: 180, y: groundY - 60, text: '趴下避电爬行', subText: '保持趴下姿态避开电网与后方逼近块' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 22) {
+            // 【第 22 关：虚空交替双向回填跳台】
+            endX = 2300;
+            addGround(0, 260, groundY, 'grass');
+            addMovingBlock(340, groundY - 60, 75, 26, 280, 520, 2.5, 'gold');
+            addMovingBlock(560, groundY - 110, 75, 26, 480, 720, 2.8, 'gold');
+            addMovingBlock(780, groundY - 60, 75, 26, 700, 940, 2.5, 'gold');
+
+            addGround(980, 1350, groundY, 'grass');
+            m7.signs.push({ x: 160, y: groundY - 60, text: '移动浮空飞艇', subText: '踩在移动金色飞石上横渡天险' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 23) {
+            // 【第 23 关：机关升降墙与多重假地面】
+            endX = 2350;
+            addGround(0, 300, groundY, 'grass');
+            addCollapseTrap(300, groundY, 120, 160, 80, 'stone');
+            addGround(420, 120, groundY, 'stone');
+            addCollapseTrap(540, groundY, 120, 160, 80, 'stone');
+            addGround(660, 140, groundY, 'stone');
+            addMovingBlock(840, groundY - 90, 55, 90, 700, 900, 3.2, 'obsidian');
+
+            addGround(940, 1450, groundY, 'grass');
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 24) {
+            // 【第 24 关：高压电网+推挤墙+动态落穴大结合】
+            endX = 2400;
+            addGround(0, 320, groundY, 'grass');
+            m7.electrics.push({ x: 320, y: groundY - 30, w: 220, h: 30, animTimer: 0 });
+            addCollapseTrap(380, groundY - 80, 80, 24, 300, 'wood');
+            addGround(540, 240, groundY, 'stone');
+            addMovingBlock(620, groundY - 80, 50, 80, 540, 760, 3.2, 'obsidian');
+            m7.electrics.push({ x: 780, y: groundY - 65, w: 240, h: 26, animTimer: 0 });
+            addBlock(780, groundY - 78, 240, 42, 'tunnel');
+            addGround(780, 240, groundY, 'tunnel');
+
+            addGround(1020, 1400, groundY, 'grass');
+            m7.signs.push({ x: 200, y: groundY - 60, text: '巅峰前夕·致命绝境', subText: '集电网、推挤墙与崩裂台于一体' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+
+        } else if (lvl === 25) {
+            // 🏆【第 25 关：终极大闯关·普通难度巅峰】
+            endX = 2500;
+            addGround(0, 320, groundY, 'grass');
+            addGround(460, 130, groundY, 'stone');
+            addGround(740, 240, groundY, 'grass');
+
+            m7.level10Trap = {
+                pit1: { x: 320, w: 140 },
+                midPlatform: { x: 460, w: 130 },
+                pit2: { x: 590, w: 140 },
+                pitCover: {
+                    x: 590, y: groundY, currentY: groundY, w: 140, h: 160, solid: true, color: '#795548', topColor: '#8D6E63'
+                },
+                wall: {
+                    initialX: 740, x: 740, targetX: 530, y: groundY - 140, w: 52, h: 140, solid: false, active: false, visible: false
+                },
+                state: 'idle',
+                timer: 0,
+                triggerRangeX: 540
+            };
+
+            m7.electrics.push({ x: 980, y: groundY - 30, w: 260, h: 30, animTimer: 0 });
+            addCollapseTrap(1030, groundY - 80, 75, 24, 320, 'wood');
+            addCollapseTrap(1140, groundY - 120, 75, 24, 320, 'wood');
+
+            addGround(1240, 200, groundY, 'grass');
+            addBlock(1440, groundY - 80, 90, 240, 'stone');
+            addBlock(1530, groundY - 150, 120, 310, 'gold');
+            m7.levers.push({
+                x: 1580, y: groundY - 180, w: 32, h: 30, state: 'left', animProgress: 0, targetDoorId: 'door_lvl25_norm'
+            });
+
+            addGround(1700, 850, groundY, 'grass');
+            addBlock(2000, groundY - 220, 60, 140, 'brick');
+            m7.doors.push({ id: 'door_lvl25_norm', x: 2000, y: groundY - 80, w: 60, h: 80, isOpen: false, openProgress: 0 });
+
+            m7.signs.push({ x: 180, y: groundY - 60, text: '🏆 第 25 关：普通难度终极巅峰', subText: '突破连环机关，赢得无上荣耀！' });
+            m7.goal.x = endX;
+            m7.goal.y = groundY - 80;
+        }
+
+        return endX;
+    }
+
+    // ==========================================
+    // 关卡数据构建总入口
+    // ==========================================
+    function buildLevelData(lvl) {
+        m7.blocks = [];
+        m7.levers = [];
+        m7.doors = [];
+        m7.electrics = [];
+        m7.signs = [];
+        m7.particles = [];
+        m7.collapseTraps = [];
+        m7.movingBlocks = [];
+        m7.level10Trap = null;
+
+        const groundY = 480; // 地面基础高度
+        let endX = 1400;
+
+        function addBlock(x, y, w, h, type = 'grass', solid = true, id = null) {
+            let color = '#4CAF50';
+            let topColor = '#81C784';
+            if (m7.difficulty === 'normal' && type === 'grass') {
+                color = '#D87C19';
+                topColor = '#FFB300';
+            }
+            else if (type === 'dirt') { color = '#795548'; topColor = '#8D6E63'; }
+            else if (type === 'stone') { color = '#607D8B'; topColor = '#90A4AE'; }
+            else if (type === 'brick') { color = '#A1887F'; topColor = '#BCAAA4'; }
+            else if (type === 'wood') { color = '#8D6E63'; topColor = '#A1887F'; }
+            else if (type === 'gold') { color = '#FFC107'; topColor = '#FFE082'; }
+            else if (type === 'leaves') { color = '#2E7D32'; topColor = '#43A047'; }
+            else if (type === 'tunnel') { color = '#3E2723'; topColor = '#4E342E'; }
+            else if (type === 'obsidian') { color = '#263238'; topColor = '#37474F'; }
+
+            m7.blocks.push({ x, y, w, h, type, color, topColor, solid, id });
+        }
+
+        function addGround(startX, lengthX, y = groundY, type = 'grass') {
+            addBlock(startX, y, lengthX, 160, type, true);
+        }
+
+        function addCollapseTrap(x, y, w, h = 160, dropDelay = 80, type = 'grass') {
+            let color = '#4CAF50';
+            let topColor = '#81C784';
+            if (m7.difficulty === 'normal' && type === 'grass') {
+                color = '#D87C19';
+                topColor = '#FFB300';
+            }
+            else if (type === 'dirt') { color = '#795548'; topColor = '#8D6E63'; }
+            else if (type === 'stone') { color = '#607D8B'; topColor = '#90A4AE'; }
+            else if (type === 'brick') { color = '#A1887F'; topColor = '#BCAAA4'; }
+            else if (type === 'wood') { color = '#8D6E63'; topColor = '#A1887F'; }
+            else if (type === 'gold') { color = '#FFC107'; topColor = '#FFE082'; }
+
+            m7.collapseTraps.push({
+                x, y, w, h,
+                type, color, topColor,
+                state: 'idle',
+                timer: 0,
+                vy: 0,
+                dropDelay,
+                solid: true,
+                shakeOffset: 0
+            });
+        }
+
+        function addMovingBlock(x, y, w, h, minX, maxX, speed = 2, type = 'stone') {
+            let color = '#607D8B';
+            let topColor = '#90A4AE';
+            if (type === 'brick') { color = '#A1887F'; topColor = '#BCAAA4'; }
+            else if (type === 'wood') { color = '#8D6E63'; topColor = '#A1887F'; }
+            else if (type === 'obsidian') { color = '#263238'; topColor = '#37474F'; }
+            else if (type === 'gold') { color = '#FFC107'; topColor = '#FFE082'; }
+
+            m7.movingBlocks.push({
+                x, y, w, h,
+                minX, maxX,
+                dir: 1,
+                speed,
+                type, color, topColor,
+                solid: true
+            });
+        }
+
+        // 默认玩家出生点
+        m7.player.x = 80;
+        m7.player.y = groundY - m7.player.standH;
+        m7.player.vx = 0;
+        m7.player.vy = 0;
+        m7.player.isDead = false;
+        m7.player.isCrouching = false;
+        m7.goal.reached = false;
+
+        if (m7.difficulty === 'normal') {
+            endX = buildNormalLevel(lvl, groundY, addBlock, addGround, addCollapseTrap, addMovingBlock);
+        } else {
+            endX = buildEasyLevel(lvl, groundY, addBlock, addGround);
+        }
+
         m7.mapWidth = endX + 350;
         m7.mapHeight = groundY + 200;
         m7.camera.x = m7.player.x - 200;
         m7.camera.y = m7.player.y - 200;
+    }
+
+    // ==========================================
+    // 机关与陷阱物理更新
+    // ==========================================
+    function updateCollapseTraps(dt) {
+        const p = m7.player;
+        m7.collapseTraps.forEach(trap => {
+            if (trap.state === 'idle') {
+                const isSteppingOn = (!p.isDead &&
+                    p.x + p.w > trap.x + 4 && p.x < trap.x + trap.w - 4 &&
+                    p.y + p.h >= trap.y - 6 && p.y + p.h <= trap.y + 16);
+
+                if (isSteppingOn) {
+                    trap.state = 'triggered';
+                    trap.timer = 0;
+                    playSound('crumble');
+                    for (let i = 0; i < 10; i++) {
+                        m7.particles.push({
+                            x: trap.x + Math.random() * trap.w,
+                            y: trap.y + 2,
+                            vx: (Math.random() - 0.5) * 3,
+                            vy: -Math.random() * 2.5,
+                            life: 1,
+                            color: trap.topColor || '#81C784',
+                            size: 3 + Math.random() * 3
+                        });
+                    }
+                }
+            } else if (trap.state === 'triggered') {
+                trap.timer += dt;
+                trap.shakeOffset = (Math.random() - 0.5) * 5;
+                if (trap.timer >= trap.dropDelay) {
+                    trap.state = 'falling';
+                    trap.solid = false; // 失去支撑实体，玩家跌落！
+                    trap.vy = 1.2;
+                }
+            } else if (trap.state === 'falling') {
+                trap.vy += 0.8 * (dt / 16.67);
+                trap.y += trap.vy * (dt / 16.67);
+                if (trap.y > m7.mapHeight + 250) {
+                    trap.state = 'gone';
+                }
+            }
+        });
+    }
+
+    function updateMovingBlocks(dt) {
+        const p = m7.player;
+        m7.movingBlocks.forEach(b => {
+            const step = (b.speed || 2) * (dt / 16.67);
+            b.x += b.dir * step;
+            if (b.dir > 0 && b.x >= b.maxX) {
+                b.x = b.maxX;
+                b.dir = -1;
+            } else if (b.dir < 0 && b.x <= b.minX) {
+                b.x = b.minX;
+                b.dir = 1;
+            }
+
+            if (!p.isDead && isColliding(p, b)) {
+                // 踩在顶部平台借力
+                if (p.vy >= 0 && (p.y + p.h - b.y) < 14) {
+                    p.y = b.y - p.h;
+                    p.vy = 0;
+                    p.isGrounded = true;
+                    p.x += b.dir * step;
+                } else {
+                    // 水平推挤
+                    if (b.dir > 0) {
+                        p.x = b.x + b.w;
+                    } else {
+                        p.x = b.x - p.w;
+                    }
+                    if (Math.abs(p.vx) > 0) p.vx = 0;
+                }
+            }
+        });
+    }
+
+    function updateLevel10Trap(dt) {
+        const tr = m7.level10Trap;
+        if (!tr) return;
+        const p = m7.player;
+        const groundY = 480;
+
+        if (tr.state === 'idle') {
+            tr.pitCover.currentY = groundY;
+            tr.pitCover.solid = true;
+            tr.wall.x = tr.wall.initialX;
+            tr.wall.solid = false;
+            tr.wall.active = false;
+            tr.wall.visible = false;
+
+            // 触发条件：玩家到达中间浮岛并接近第2个坑 (x >= 540)
+            if (!p.isDead && p.x >= tr.triggerRangeX && p.x < 740) {
+                tr.state = 'triggered';
+                tr.wall.solid = true;
+                tr.wall.active = true;
+                tr.wall.visible = true;
+                tr.timer = 0;
+                playSound('lever');
+                playSound('slide');
+                if (typeof showMessage === 'function') {
+                    showMessage('⚠️ 前方方块高墙升起并向左推来！', window.innerWidth / 2, window.innerHeight * 0.3);
+                }
+            }
+        } else if (tr.state === 'triggered') {
+            const moveStep = 3.0 * (dt / 16.67);
+            tr.wall.x -= moveStep;
+
+            // 第 2 坑覆盖地面迅速下坠开裂打开
+            tr.pitCover.currentY += 4.5 * (dt / 16.67);
+            if (tr.pitCover.currentY > groundY + 20) {
+                tr.pitCover.solid = false;
+            }
+
+            if (tr.wall.x <= tr.wall.targetX) {
+                tr.wall.x = tr.wall.targetX;
+                tr.state = 'holding';
+                tr.timer = 0;
+            }
+
+            handleWallPlayerCollision(tr.wall, -moveStep);
+
+        } else if (tr.state === 'holding') {
+            tr.timer += dt;
+            tr.pitCover.solid = false;
+
+            handleWallPlayerCollision(tr.wall, 0);
+
+            // 闪避判定：玩家存活未掉进坑，且成功后撤避险 (x < 540)
+            if (!p.isDead && p.x < 540 && tr.timer >= 600) {
+                tr.state = 'reversing';
+                tr.timer = 0;
+                playSound('slide');
+            }
+        } else if (tr.state === 'reversing') {
+            // 倒过来：坑回填上，方块也从左边回到右边
+            const moveStep = 2.6 * (dt / 16.67);
+            tr.wall.x += moveStep;
+
+            tr.pitCover.currentY -= 4.0 * (dt / 16.67);
+            if (tr.pitCover.currentY <= groundY) {
+                tr.pitCover.currentY = groundY;
+                tr.pitCover.solid = true; // 坑回填上，恢复支撑！
+            }
+
+            handleWallPlayerCollision(tr.wall, moveStep);
+
+            if (tr.wall.x >= tr.wall.initialX) {
+                tr.wall.x = tr.wall.initialX;
+                tr.pitCover.currentY = groundY;
+                tr.pitCover.solid = true;
+                tr.wall.solid = false;
+                tr.wall.active = false;
+                tr.wall.visible = false;
+                tr.state = 'idle'; // 再次靠近还会重新触发！
+                tr.timer = 0;
+            }
+        }
+    }
+
+    function handleWallPlayerCollision(wall, moveX) {
+        const p = m7.player;
+        if (!wall.solid || p.isDead) return;
+
+        const wallBox = { x: wall.x, y: wall.y, w: wall.w, h: wall.h };
+        if (isColliding(p, wallBox)) {
+            // 站在墙顶部
+            if (p.vy >= 0 && (p.y + p.h - wall.y) < 14) {
+                p.y = wall.y - p.h;
+                p.vy = 0;
+                p.isGrounded = true;
+                p.x += moveX;
+            } else {
+                // 水平推挤
+                if (moveX < 0) {
+                    p.x = wall.x - p.w;
+                    if (p.vx > 0) p.vx = 0;
+                } else if (moveX > 0) {
+                    p.x = wall.x + wall.w;
+                    if (p.vx < 0) p.vx = 0;
+                } else {
+                    if (p.x + p.w / 2 < wall.x + wall.w / 2) {
+                        p.x = wall.x - p.w;
+                    } else {
+                        p.x = wall.x + wall.w;
+                    }
+                }
+            }
+        }
     }
 
     // ==========================================
@@ -664,9 +1407,16 @@
             p.deadTimer += dt;
             if (p.deadTimer > 1000) {
                 // 重新开始当前关卡
-                startMode7Level(m7.level);
+                startMode7Level(m7.level, m7.difficulty);
             }
             return;
+        }
+
+        // 机关与陷阱物理更新
+        updateCollapseTraps(dt);
+        updateMovingBlocks(dt);
+        if (m7.level10Trap) {
+            updateLevel10Trap(dt);
         }
 
         // 1. 趴下状态控制（下键触发）
@@ -683,6 +1433,12 @@
             };
             for (const b of m7.blocks) {
                 if (b.solid && isColliding(headBox, b)) {
+                    canStand = false;
+                    break;
+                }
+            }
+            for (const tr of m7.collapseTraps) {
+                if (tr.solid && isColliding(headBox, tr)) {
                     canStand = false;
                     break;
                 }
@@ -754,6 +1510,21 @@
         p.isGrounded = false;
         handleVerticalCollisions();
 
+        // 简单模式第 11 关在空气中爬行时生成微弱空气微尘反馈
+        if (m7.difficulty === 'easy' && m7.level === 11 && p.isCrouching && p.isGrounded && p.x > 240 && p.x < 1020) {
+            if (Math.random() < 0.25) {
+                m7.particles.push({
+                    x: p.x + p.w / 2 + (Math.random() - 0.5) * 12,
+                    y: 480,
+                    vx: (Math.random() - 0.5) * 0.4,
+                    vy: -0.2 - Math.random() * 0.3,
+                    life: 0.5,
+                    color: 'rgba(255, 255, 255, 0.4)',
+                    size: 2 + Math.random() * 2
+                });
+            }
+        }
+
         // 7. 跌入深渊死亡判定
         if (p.y > m7.mapHeight + 100) {
             triggerDeath('掉下深渊！');
@@ -807,6 +1578,32 @@
                 }
             }
         }
+        // 与固体崩塌陷阱检测
+        for (const tr of m7.collapseTraps) {
+            if (!tr.solid) continue;
+            if (isColliding(p, tr)) {
+                if (p.vx > 0) {
+                    p.x = tr.x - p.w;
+                    p.vx = 0;
+                } else if (p.vx < 0) {
+                    p.x = tr.x + tr.w;
+                    p.vx = 0;
+                }
+            }
+        }
+        // 与第10关活动坑盖板检测
+        if (m7.level10Trap && m7.level10Trap.pitCover && m7.level10Trap.pitCover.solid) {
+            const pc = m7.level10Trap.pitCover;
+            if (isColliding(p, pc)) {
+                if (p.vx > 0) {
+                    p.x = pc.x - p.w;
+                    p.vx = 0;
+                } else if (p.vx < 0) {
+                    p.x = pc.x + pc.w;
+                    p.vx = 0;
+                }
+            }
+        }
         // 与大门检测
         for (const d of m7.doors) {
             if (d.isOpen) continue;
@@ -840,6 +1637,45 @@
                 }
             }
         }
+        // 与固体崩塌陷阱检测
+        for (const tr of m7.collapseTraps) {
+            if (!tr.solid) continue;
+            if (isColliding(p, tr)) {
+                if (p.vy > 0) {
+                    p.y = tr.y - p.h;
+                    p.vy = 0;
+                    p.isGrounded = true;
+                } else if (p.vy < 0) {
+                    p.y = tr.y + tr.h;
+                    p.vy = 0;
+                }
+            }
+        }
+        // 与第10关活动坑盖板检测
+        if (m7.level10Trap && m7.level10Trap.pitCover && m7.level10Trap.pitCover.solid) {
+            const pc = m7.level10Trap.pitCover;
+            if (isColliding(p, pc)) {
+                if (p.vy > 0) {
+                    p.y = pc.currentY - p.h;
+                    p.vy = 0;
+                    p.isGrounded = true;
+                } else if (p.vy < 0) {
+                    p.y = pc.currentY + pc.h;
+                    p.vy = 0;
+                }
+            }
+        }
+        // 与第10关方块高墙顶部踩踏检测
+        if (m7.level10Trap && m7.level10Trap.wall && m7.level10Trap.wall.solid) {
+            const wl = m7.level10Trap.wall;
+            if (isColliding(p, wl)) {
+                if (p.vy >= 0 && (p.y + p.h - wl.y) < 14) {
+                    p.y = wl.y - p.h;
+                    p.vy = 0;
+                    p.isGrounded = true;
+                }
+            }
+        }
         // 与大门检测
         for (const d of m7.doors) {
             if (d.isOpen) continue;
@@ -851,6 +1687,21 @@
                 } else if (p.vy < 0) {
                     p.y = d.y + d.h;
                     p.vy = 0;
+                }
+            }
+        }
+
+        // 【简单模式第 11 关专属特性】：只有趴下（一直摁着趴下）才能直接走在空气上面，其他关没有
+        const isLevel11AirWalk = (m7.difficulty === 'easy' && m7.level === 11);
+        if (isLevel11AirWalk && p.isCrouching && m7.keys.down) {
+            const airGroundY = 480; // 与起点和终点地面高度一致
+            // 玩家处于深渊空中悬浮范围 (从左平台边缘 220 开始，到终点平台前)
+            if (p.x + p.w > 220 && p.x < m7.mapWidth) {
+                // 当玩家脚底位于空气地面高度附近，且不是在向上跃起
+                if (p.y + p.h >= airGroundY && p.y + p.h <= airGroundY + 28 && p.vy >= 0) {
+                    p.y = airGroundY - p.h;
+                    p.vy = 0;
+                    p.isGrounded = true;
                 }
             }
         }
@@ -934,8 +1785,29 @@
     // 关卡胜利
     function handleLevelVictory() {
         playSound('win');
+        const isNormal = (m7.difficulty === 'normal');
+        const diffText = isNormal ? '普通模式' : '简单模式';
         if (typeof showMessage === 'function') {
-            showMessage(`✨ 第 ${m7.level} 关通过！`, window.innerWidth / 2, window.innerHeight / 2);
+            showMessage(`✨ 第 ${m7.level} 关通过 (${diffText})！`, window.innerWidth / 2, window.innerHeight / 2);
+        }
+
+        // 保存关卡进度
+        if (typeof gameState !== 'undefined') {
+            if (!gameState.mode7Progress) {
+                gameState.mode7Progress = { easy: 1, normal: 1 };
+            }
+            const nextLvl = m7.level + 1;
+            if (isNormal) {
+                if (nextLvl > (gameState.mode7Progress.normal || 1)) {
+                    gameState.mode7Progress.normal = Math.min(nextLvl, m7.maxLevels);
+                    localStorage.setItem('mode7_progress_normal', gameState.mode7Progress.normal);
+                }
+            } else {
+                if (nextLvl > (gameState.mode7Progress.easy || 1)) {
+                    gameState.mode7Progress.easy = Math.min(nextLvl, m7.maxLevels);
+                    localStorage.setItem('mode7_progress_easy', gameState.mode7Progress.easy);
+                }
+            }
         }
 
         setTimeout(() => {
@@ -944,10 +1816,10 @@
                 if (typeof showVictoryScreen === 'function') {
                     showVictoryScreen();
                 } else if (typeof showMessage === 'function') {
-                    showMessage('🎉 恭喜通关第七模式（简单模式）！', window.innerWidth / 2, window.innerHeight / 2);
+                    showMessage(`🎉 恭喜通关第七模式（${diffText}）！`, window.innerWidth / 2, window.innerHeight / 2);
                 }
             } else {
-                startMode7Level(m7.level + 1);
+                startMode7Level(m7.level + 1, m7.difficulty);
             }
         }, 800);
     }
@@ -965,15 +1837,24 @@
         const camX = m7.camera.x;
         const camY = m7.camera.y;
 
-        // 2. 绘制绿色主题背景（渐变天空）
+        // 2. 绘制主题背景（渐变天空）
         const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
-        skyGrad.addColorStop(0, '#E8F5E9');   // 极其清爽的浅薄荷绿
-        skyGrad.addColorStop(0.5, '#C8E6C9'); // 柔和春绿
-        skyGrad.addColorStop(1, '#A5D6A7');   // 自然草绿
+        if (m7.difficulty === 'normal') {
+            // 普通模式：黄色的背景（黄色加点橘）
+            skyGrad.addColorStop(0, '#FFF9C4');   // 明朗淡金黄
+            skyGrad.addColorStop(0.35, '#FFE082'); // 柔和金黄
+            skyGrad.addColorStop(0.65, '#FFCA28'); // 金黄偏橘
+            skyGrad.addColorStop(0.85, '#FFA726'); // 黄色加点橘
+            skyGrad.addColorStop(1, '#FF9800');    // 温暖橘黄
+        } else {
+            skyGrad.addColorStop(0, '#E8F5E9');   // 极其清爽的浅薄荷绿
+            skyGrad.addColorStop(0.5, '#C8E6C9'); // 柔和春绿
+            skyGrad.addColorStop(1, '#A5D6A7');   // 自然草绿
+        }
         ctx.fillStyle = skyGrad;
         ctx.fillRect(0, 0, width, height);
 
-        // 3. 视差远景（绿色像素山丘）
+        // 3. 视差远景（普通模式：温暖金黄/橘色像素山丘；简单模式：绿色山丘）
         ctx.save();
         m7.bgHills.forEach(hill => {
             const screenX = hill.x - camX * 0.25;
@@ -992,7 +1873,7 @@
             if (c.x > m7.mapWidth + 500) c.x = -200;
             const screenX = c.x - camX * 0.4;
             const screenY = c.y - camY * 0.2;
-            ctx.fillStyle = `rgba(255, 255, 255, ${c.opacity})`;
+            ctx.fillStyle = m7.difficulty === 'normal' ? `rgba(255, 253, 231, ${c.opacity * 0.85})` : `rgba(255, 255, 255, ${c.opacity})`;
             ctx.fillRect(screenX, screenY, c.w, c.h);
             ctx.fillRect(screenX + 15, screenY - 8, c.w - 30, c.h + 16);
         });
@@ -1021,8 +1902,8 @@
             ctx.fillRect(b.x, b.y + b.h - 4, b.w, 4);
 
             if (b.type === 'grass') {
-                // 草方块垂下来的草叶纹理
-                ctx.fillStyle = '#4CAF50';
+                // 草方块垂下来的草叶纹理 (普通模式采用金黄偏橘纹理，简单模式采用鲜绿)
+                ctx.fillStyle = (m7.difficulty === 'normal') ? '#FFA000' : '#4CAF50';
                 for (let i = 0; i < b.w; i += 12) {
                     ctx.fillRect(b.x + i, b.y + 6, 6, 4);
                 }
@@ -1034,6 +1915,104 @@
                 }
             }
         });
+
+        // A2. 渲染崩塌陷阱方块
+        m7.collapseTraps.forEach(trap => {
+            if (trap.state === 'gone') return;
+            ctx.save();
+            const ox = trap.shakeOffset || 0;
+            ctx.translate(trap.x + ox, trap.y);
+
+            ctx.fillStyle = trap.color || '#4CAF50';
+            ctx.fillRect(0, 0, trap.w, trap.h);
+
+            ctx.fillStyle = trap.topColor || '#81C784';
+            ctx.fillRect(0, 0, trap.w, 6);
+
+            // 碎裂纹路
+            if (trap.state === 'triggered' || trap.state === 'falling') {
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(trap.w * 0.2, 0);
+                ctx.lineTo(trap.w * 0.45, 18);
+                ctx.lineTo(trap.w * 0.35, 36);
+                ctx.moveTo(trap.w * 0.6, 0);
+                ctx.lineTo(trap.w * 0.75, 26);
+                ctx.stroke();
+            }
+            ctx.restore();
+        });
+
+        // A3. 渲染巡逻推挤方块
+        m7.movingBlocks.forEach(mb => {
+            ctx.save();
+            ctx.fillStyle = mb.color || '#607D8B';
+            ctx.fillRect(mb.x, mb.y, mb.w, mb.h);
+            ctx.fillStyle = mb.topColor || '#90A4AE';
+            ctx.fillRect(mb.x, mb.y, mb.w, 6);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillRect(mb.x + 4, mb.y + 10, mb.w - 8, mb.h - 14);
+            ctx.fillStyle = '#FFE082';
+            ctx.fillRect(mb.x + mb.w / 2 - 2, mb.y + mb.h / 2 - 2, 4, 4);
+            ctx.restore();
+        });
+
+        // A4. 渲染第 10 关往复双坑与推挤方块高墙
+        if (m7.level10Trap) {
+            const tr = m7.level10Trap;
+            const groundY = 480;
+
+            // 1. 坑 2 的活动盖板
+            if (tr.pitCover && tr.pitCover.currentY < groundY + 160) {
+                ctx.save();
+                ctx.fillStyle = tr.pitCover.color;
+                ctx.fillRect(tr.pitCover.x, tr.pitCover.currentY, tr.pitCover.w, tr.pitCover.h);
+                ctx.fillStyle = tr.pitCover.topColor;
+                ctx.fillRect(tr.pitCover.x, tr.pitCover.currentY, tr.pitCover.w, 6);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.fillRect(tr.pitCover.x, tr.pitCover.currentY + 6, 4, tr.pitCover.h);
+                ctx.fillRect(tr.pitCover.x + tr.pitCover.w - 4, tr.pitCover.currentY + 6, 4, tr.pitCover.h);
+                ctx.restore();
+            }
+
+            // 2. 推挤方块高墙（3.5格高）
+            if (tr.wall && (tr.wall.active || tr.wall.visible)) {
+                ctx.save();
+                const wx = tr.wall.x;
+                const wy = tr.wall.y;
+                const ww = tr.wall.w;
+                const wh = tr.wall.h;
+
+                // 曜石底色
+                ctx.fillStyle = '#263238';
+                ctx.fillRect(wx, wy, ww, wh);
+
+                // 坚硬顶层平台
+                ctx.fillStyle = '#78909C';
+                ctx.fillRect(wx, wy, ww, 8);
+
+                // 分层方块与符文雕花
+                const blockSize = 40;
+                for (let py = 0; py < wh; py += blockSize) {
+                    const blockH = Math.min(blockSize, wh - py);
+                    ctx.strokeStyle = '#37474F';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(wx, wy + py, ww, blockH);
+                    ctx.fillStyle = '#FF1744';
+                    ctx.fillRect(wx + 6, wy + py + blockH / 2 - 3, 6, 6);
+                }
+
+                // 动态方向指示
+                ctx.fillStyle = tr.state === 'triggered' ? '#FFEB3B' : '#00E676';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.textAlign = 'center';
+                const arrow = tr.state === 'triggered' ? '◀' : '▶';
+                ctx.fillText(arrow, wx + ww / 2, wy + wh / 2);
+
+                ctx.restore();
+            }
+        }
 
         // B. 渲染提示木牌
         m7.signs.forEach(s => {
@@ -1277,20 +2256,22 @@
 
     function renderMode7HUD(ctx, width, height) {
         ctx.save();
+        const isNormal = (m7.difficulty === 'normal');
         // 顶部关卡指示徽章
-        ctx.fillStyle = 'rgba(27, 94, 32, 0.85)';
+        ctx.fillStyle = isNormal ? 'rgba(230, 81, 0, 0.92)' : 'rgba(27, 94, 32, 0.85)';
         ctx.beginPath();
-        if (ctx.roundRect) ctx.roundRect(width / 2 - 120, 12, 240, 36, 18);
-        else ctx.rect(width / 2 - 120, 12, 240, 36);
+        if (ctx.roundRect) ctx.roundRect(width / 2 - 130, 12, 260, 36, 18);
+        else ctx.rect(width / 2 - 130, 12, 260, 36);
         ctx.fill();
-        ctx.strokeStyle = '#81C784';
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = isNormal ? '#FFD54F' : '#81C784';
+        ctx.lineWidth = 2;
         ctx.stroke();
 
         ctx.fillStyle = '#FFFFFF';
         ctx.font = 'bold 15px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`第七音 · 第 ${m7.level} / ${m7.maxLevels} 关 (简单模式)`, width / 2, 35);
+        const diffText = isNormal ? '普通模式' : '简单模式';
+        ctx.fillText(`第七音 · 第 ${m7.level} / ${m7.maxLevels} 关 (${diffText})`, width / 2, 35);
         ctx.restore();
     }
 
@@ -1428,9 +2409,15 @@
     // ==========================================
     // 对外公开 API
     // ==========================================
-    window.startMode7Level = function (lvl = 1) {
+    function startMode7Level(lvl = 1, diff = null) {
         if (lvl < 1) lvl = 1;
         if (lvl > m7.maxLevels) lvl = m7.maxLevels;
+
+        if (diff === 'normal' || diff === 'easy') {
+            m7.difficulty = diff;
+        } else if (typeof gameState !== 'undefined' && gameState.mode7Difficulty) {
+            m7.difficulty = gameState.mode7Difficulty;
+        }
 
         m7.level = lvl;
         if (typeof gameState !== 'undefined') {
@@ -1440,6 +2427,7 @@
             gameState.targetCount = m7.maxLevels;
             gameState.currentLevelCollected = lvl - 1;
             gameState.timeLeft = 9999; // 不限时
+            gameState.mode7Difficulty = m7.difficulty;
         }
 
         initBackgroundElements();
@@ -1459,14 +2447,16 @@
         const scoreLabel = document.getElementById('scoreLabel');
         if (scoreLabel) scoreLabel.textContent = '当前关卡';
         const scoreDisplay = document.getElementById('scoreDisplay');
-        if (scoreDisplay) scoreDisplay.textContent = `第 ${lvl} / ${m7.maxLevels} 关`;
+        const diffLabel = m7.difficulty === 'normal' ? '普通模式' : '简单模式';
+        if (scoreDisplay) scoreDisplay.textContent = `第 ${lvl} / ${m7.maxLevels} 关 (${diffLabel})`;
 
         // 隐藏倒计时与收集篮
         const timerBox = document.getElementById('timerBox');
         if (timerBox) timerBox.classList.add('hidden');
         const basket = document.getElementById('basket');
         if (basket) basket.classList.add('hidden');
-    };
+    }
+    window.startMode7Level = startMode7Level;
 
     window.loopMode7 = function (t, dt) {
         updatePhysics(dt);

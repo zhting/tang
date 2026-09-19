@@ -2268,6 +2268,54 @@
         </div>
     </div>
 
+    <!-- 模式七：第七音 模式选择弹窗 -->
+    <div id="mode7SetupModal" class="modal-overlay hidden" style="z-index: 550;">
+        <div class="modal-content" style="background: rgba(20, 24, 22, 0.96); border: 3px solid #FF9800; border-radius: 16px; color: #FFF; max-width: 520px; width: 94%; box-shadow: 0 10px 35px rgba(0,0,0,0.85); padding: 22px;">
+            <h2 id="m7ModalTitle" style="color: #FFB300; font-size: 22px; margin-bottom: 6px; text-align: center;">🎵 第七音 · 模式选择</h2>
+            <p style="font-size: 13px; color: #E0E0E0; text-align: center; margin-bottom: 18px;">经典方块物理跳跃，请选择挑战模式：</p>
+            
+            <div style="display: flex; gap: 14px; margin-bottom: 16px;">
+                <!-- 简单模式卡片 (绿色) -->
+                <div id="m7DiffEasyCard" onclick="selectMode7Difficulty('easy')" style="flex: 1; padding: 16px 12px; background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 60%, #43a047 100%); border: 3px solid #81C784; border-radius: 12px; cursor: pointer; text-align: center; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(46, 125, 50, 0.4);">
+                    <div style="font-size: 32px; margin-bottom: 4px;">🟢</div>
+                    <div style="font-weight: bold; font-size: 18px; color: #FFFFFF; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">简单模式</div>
+                    <div style="font-size: 11px; color: #E8F5E9; margin-top: 4px; opacity: 0.95;">25 关基础平台跳跃</div>
+                    <div id="m7EasyProgressBadge" style="font-size: 12px; color: #C8E6C9; margin-top: 6px; font-weight: bold;">进度: 第 1 关</div>
+                    <button onclick="event.stopPropagation(); launchMode7Level('easy', (gameState.mode7Progress && gameState.mode7Progress.easy) || 1);" style="margin-top: 10px; width: 100%; padding: 8px 0; background: #81C784; color: #1B5E20; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.25);">▶ 进入简单模式</button>
+                </div>
+
+                <!-- 普通模式卡片 (黄色加点橘) -->
+                <div id="m7DiffNormalCard" onclick="selectMode7Difficulty('normal')" style="flex: 1; padding: 16px 12px; background: linear-gradient(135deg, #e65100 0%, #f57c00 35%, #ffa000 70%, #ffb300 100%); border: 3px solid #FFD54F; border-radius: 12px; cursor: pointer; text-align: center; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.45);">
+                    <div style="font-size: 32px; margin-bottom: 4px;">🟠</div>
+                    <div style="font-weight: bold; font-size: 18px; color: #FFFFFF; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">普通模式</div>
+                    <div style="font-size: 11px; color: #FFF8E1; margin-top: 4px; opacity: 0.95;">25 关机关陷阱重重</div>
+                    <div id="m7NormalProgressBadge" style="font-size: 12px; color: #FFFDE7; margin-top: 6px; font-weight: bold;">进度: 第 1 关</div>
+                    <button onclick="event.stopPropagation(); launchMode7Level('normal', (gameState.mode7Progress && gameState.mode7Progress.normal) || 1);" style="margin-top: 10px; width: 100%; padding: 8px 0; background: #FFD54F; color: #BF360C; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.25);">▶ 进入普通模式</button>
+                </div>
+            </div>
+
+            <!-- 难度玩法说明区域 -->
+            <div id="m7DiffDesc" style="font-size: 12px; color: #FFF; background: rgba(0,0,0,0.55); padding: 12px 14px; border-radius: 8px; border-left: 4px solid #FF9800; line-height: 1.5; margin-bottom: 18px; text-align: left;">
+                <!-- 由 JS 动态注入 -->
+            </div>
+
+            <!-- 开始关卡微调 / 重开选择 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; font-size: 13px; background: rgba(0,0,0,0.35); padding: 8px 12px; border-radius: 6px;">
+                <span style="color: #DDD;">选择起点关卡：</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="btn-secondary" onclick="changeMode7StartLevel(-1)" style="padding: 4px 10px; margin: 0; font-size: 12px;">◀</button>
+                    <span id="m7SelectedLevelText" style="font-weight: bold; color: #FFEB3B; min-width: 65px; text-align: center;">第 1 关</span>
+                    <button class="btn-secondary" onclick="changeMode7StartLevel(1)" style="padding: 4px 10px; margin: 0; font-size: 12px;">▶</button>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px;">
+                <button class="btn-secondary" style="flex: 1; margin: 0; padding: 10px; border-radius: 8px;" onclick="closeMode7SetupModal()">返回大厅</button>
+                <button id="m7LaunchBtn" class="btn-primary" style="flex: 1.4; margin: 0; padding: 10px; border-radius: 8px; font-weight: bold; background: linear-gradient(135deg, #e65100 0%, #ff9800 100%);" onclick="launchMode7Level()">▶ 开始闯关</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 机缘倒计时提示条 -->
     <div id="mcLuckyTimerBar" class="hidden" style="position: absolute; top: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: #FFD700; border: 2px solid #FFD700; border-radius: 8px; padding: 10px 25px; z-index: 490; font-family: monospace, sans-serif; font-size: 16px; font-weight: bold; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); pointer-events: none;">
         ✨ 触发特殊机缘！等待 30 秒后机缘将自动刷走... <span id="mcLuckyTimerValue" style="color: #FF3D00; font-size: 20px; margin-left: 10px;">30s</span>
@@ -2696,7 +2744,7 @@
     <script src="assets/bamboo_door_open.js?v=1.0.1"></script>
     <script src="js/presetSamples_river.js?v=1.0.1"></script>
     <script src="js/mcPaintingStudio.js?v=1.0.1"></script>
-    <script src="js/mode7.js?v=1.0.0"></script>
+    <script src="js/mode7.js?v=2.0.1"></script>
     <script src="js/mode8.js?v=1.0.0"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -3721,9 +3769,18 @@
                 else if (gameState.mode === 3) startMode3Level(num);
                 else if (gameState.mode === 4) startMode4Level(num);
                 else if (gameState.mode === 5) startMode5Level(num);
-                else if (gameState.mode === 7 && typeof startMode7Level === 'function') startMode7Level(num);
+                else if (gameState.mode === 7 && typeof startMode7Level === 'function') startMode7Level(num, gameState.mode7Difficulty || 'normal');
                 else if (gameState.mode === 8 && typeof startMode8Level === 'function') startMode8Level(num);
                 devLog(`⏩ 已跳到第 ${num} 关`);
+                return;
+            }
+
+            // 切换第七音难度
+            if (/普通|normal|简单|easy/.test(cmd) && gameState.mode === 7) {
+                const diff = /普通|normal/.test(cmd) ? 'normal' : 'easy';
+                gameState.mode7Difficulty = diff;
+                if (typeof startMode7Level === 'function') startMode7Level(gameState.level || 1, diff);
+                devLog(`🎵 已切换至第七音 [${diff === 'normal' ? '普通难度' : '简单模式'}]`);
                 return;
             }
 
@@ -4008,7 +4065,8 @@
                 { id: 4, name: '模式四：俄罗斯方块', icon: '🧱', color: 'linear-gradient(135deg, #FF5722 0%, #FF9800 100%)', text: 'white' },
                 { id: 5, name: '模式五：走下天梯', icon: '🪜', color: 'linear-gradient(135deg, #4A148C 0%, #8E24AA 100%)', text: 'white' },
                 { id: 6, name: '模式六：我的世界图画', icon: '🖼️', color: 'linear-gradient(135deg, #795548 0%, #8D6E63 100%)', text: 'white' },
-                { id: 7, name: '模式七：第七音 (简单模式)', icon: '🎵', color: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)', text: 'white' },
+                { id: 7, name: '模式七：第七音 (简单模式)', icon: '🟢', color: 'linear-gradient(135deg, #1b5e20 0%, #43a047 100%)', text: 'white', diff: 'easy' },
+                { id: 7.5, name: '模式七：第七音 (普通模式)', icon: '🟠', color: 'linear-gradient(135deg, #e65100 0%, #ffa000 100%)', text: 'white', diff: 'normal' },
                 { id: 8, name: '模式八：坚果保龄球 (种植版)', icon: '🌰', color: 'linear-gradient(135deg, #5D4037 0%, #388E3C 100%)', text: 'white' }
             ];
 
@@ -4020,16 +4078,17 @@
                 
                 // 使用最严谨的数值比较
                 const currentUnlocked = getUnlockedMode();
-                const isUnlocked = (Number(currentUnlocked) >= m.id);
+                const reqId = Math.floor(m.id);
+                const isUnlocked = (Number(currentUnlocked) >= reqId);
                 
                 if (isUnlocked) {
                     btn.innerHTML = `${m.icon} ${m.name}`;
-                    btn.onclick = () => selectMode(m.id);
+                    btn.onclick = () => selectMode(m.id, m.diff || null);
                     btn.style.opacity = '1';
                     btn.style.filter = 'none';
                     btn.disabled = false;
                 } else {
-                    btn.innerHTML = `🔒 ${m.name} <br><span style="font-size:12px;opacity:0.8;">(需通关模式${m.id - 1}第 50 关)</span>`;
+                    btn.innerHTML = `🔒 ${m.name} <br><span style="font-size:12px;opacity:0.8;">(需通关模式${reqId - 1}第 50 关)</span>`;
                     btn.style.opacity = '0.5';
                     btn.style.filter = 'grayscale(100%)';
                     btn.style.cursor = 'not-allowed';
@@ -4048,16 +4107,27 @@
 
         function closeModeModal() { document.getElementById('modeModal').classList.add('hidden'); }
 
-        function selectMode(mode) {
+        function selectMode(mode, diff = null) {
+            const modeId = Math.floor(mode);
             // 二次校验解锁状态
             const unlocked = isDevMode ? 99 : getUnlockedMode();
-            if (unlocked < mode) {
+            if (unlocked < modeId) {
                 showMessage(`🔒 该模式尚未解锁！`, width / 2, height / 2);
                 return;
             }
-            gameState.mode = mode; updateHomeTheme();
+            gameState.mode = modeId;
+            if (modeId === 7) {
+                if (diff) {
+                    gameState.mode7Difficulty = diff;
+                    currentMode7Difficulty = diff;
+                } else if (!gameState.mode7Difficulty) {
+                    gameState.mode7Difficulty = 'normal';
+                    currentMode7Difficulty = 'normal';
+                }
+            }
+            updateHomeTheme();
             const modeNames = ["一", "二", "三", "四", "五", "六", "七", "八"];
-            document.getElementById('modeDisplayBtn').textContent = modeNames[mode - 1] || mode;
+            document.getElementById('modeDisplayBtn').textContent = modeNames[modeId - 1] || modeId;
 
             closeModeModal();
         }
@@ -4134,8 +4204,8 @@
                 `;
             } else if (mode === 7) {
                 content.innerHTML = `
-                    <p style="margin-bottom: 8px; color: #FFF;"><b>【玩法：第七音 · 简单模式】</b></p>
-                    <p style="margin-bottom: 12px;">让玩家初步感受第七模式的操作与方块平台跳跃机制。背景颜色为清新自然绿色，以方块为核心场景元素。</p>
+                    <p style="margin-bottom: 8px; color: #FFF;"><b>【玩法：第七音 · 模式体系】</b></p>
+                    <p style="margin-bottom: 12px;">第七音模式现已开启双模式体系：<b>简单模式（绿色背景）</b> 与 <b>普通模式（黄色加点橘背景）</b>，各自拥有 25 个精心调校的关卡，全程无倒计时压力！</p>
                     <p style="margin-bottom: 8px; color: #FFF;"><b>【按键与操作】</b></p>
                     <p style="margin-bottom: 12px;">
                         ◀ / ▶ (或 A / D)：向左 / 向右移动<br>
@@ -4143,12 +4213,18 @@
                         ▼ (或 S)：趴下 / 低矮通道爬行<br>
                         空格键：在拉杆旁拉动机关
                     </p>
-                    <p style="margin-bottom: 8px; color: #FFF;"><b>【关卡与特殊机制】</b></p>
+                    <p style="margin-bottom: 8px; color: #81C784;"><b>【🟢 简单模式（25 关 · 清新绿意背景）】</b></p>
                     <p style="margin-bottom: 12px;">
-                        ⏳ <b>关卡不限时：</b> 全程无倒计时，共 25 关，难度逐级递增（第 1 关平路教学）。<br>
-                        🕹️ <b>第 20 关拉杆开门：</b> 在拉杆旁按空格，拉杆从左拉到右，右侧大门升起打开！<br>
-                        ⚡ <b>第 24 关高压电流：</b> 触碰高压电流立即触电失败，需躲避电网通关！<br>
-                        🏆 <b>第 25 关终极通关：</b> 简单模式巅峰挑战！
+                        背景为清爽自然的绿色，以经典方块平台跳跃、趴下钻洞爬行为核心。<br>
+                        🕹️ <b>第 20 关拉杆开门：</b> 在拉杆旁按空格键升起大门！<br>
+                        ⚡ <b>第 24 关高压电流：</b> 需巧妙跳跃避开电网！
+                    </p>
+                    <p style="margin-bottom: 8px; color: #FFB74D;"><b>【🟠 普通模式（25 关 · 黄色加点橘主题背景）】</b></p>
+                    <p style="margin-bottom: 12px;">
+                        背景为黄色加点橘的绚丽暖色调，机关陷阱重重，极度考验身法与反应！<br>
+                        🕳️ <b>第 1 关平地暗坑陷阱：</b> 表面平整看似普通地面，玩家一旦走到上面地块瞬间崩塌陷落，掉下去跌入深渊！<br>
+                        🧱 <b>第 10 关往复推挤双坑陷阱：</b> 前方出现两个坑。第 1 个坑是直接掉下去；第 2 个坑表面有地块覆盖不会直接掉入，但接近时前方多出好几个方块高墙无法跳跃，紧接着方块向左推挤，地坑裂开让玩家掉入！若玩家敏捷后退成功躲避，地坑将回填，方块倒退回右侧原位；玩家若再次走近还会重新触发！<br>
+                        ⚡ <b>连环进阶陷阱：</b> 浮空崩裂台、移动电网、推挤高墙考验微操极限！
                     </p>
                 `;
             } else if (mode === 8) {
@@ -4210,6 +4286,8 @@
             }
 
             // 隐藏并停止模式七：第七音
+            const m7SetupModal = document.getElementById('mode7SetupModal');
+            if (m7SetupModal) m7SetupModal.classList.add('hidden');
             if (typeof window.stopMode7 === 'function') {
                 window.stopMode7();
             }
@@ -8630,6 +8708,140 @@
             }
         }
 
+        // ===== 模式七：第七音 模式/难度控制 =====
+        let currentMode7Difficulty = 'normal'; // 默认进入普通模式，黄色加点橘
+        let mode7SelectedLevel = 1;
+
+        function openMode7SetupModal() {
+            if (!gameState.mode7Progress) {
+                let savedEasy = localStorage.getItem('mode7_progress_easy');
+                let savedNormal = localStorage.getItem('mode7_progress_normal');
+                gameState.mode7Progress = {
+                    easy: savedEasy ? parseInt(savedEasy, 10) : (gameState.sessionLevels[7] || 1),
+                    normal: savedNormal ? parseInt(savedNormal, 10) : 1
+                };
+            }
+            const diff = gameState.mode7Difficulty || 'normal';
+            selectMode7Difficulty(diff);
+            document.getElementById('mode7SetupModal').classList.remove('hidden');
+        }
+
+        function closeMode7SetupModal() {
+            document.getElementById('mode7SetupModal').classList.add('hidden');
+            backToHome();
+        }
+
+        function selectMode7Difficulty(diff) {
+            currentMode7Difficulty = diff;
+            gameState.mode7Difficulty = diff;
+            const easyCard = document.getElementById('m7DiffEasyCard');
+            const normalCard = document.getElementById('m7DiffNormalCard');
+            const desc = document.getElementById('m7DiffDesc');
+            const launchBtn = document.getElementById('m7LaunchBtn');
+            const modalContent = document.querySelector('#mode7SetupModal .modal-content');
+
+            if (!gameState.mode7Progress) {
+                gameState.mode7Progress = { easy: 1, normal: 1 };
+            }
+
+            const easyProgress = gameState.mode7Progress.easy || 1;
+            const normalProgress = gameState.mode7Progress.normal || 1;
+            const easyBadge = document.getElementById('m7EasyProgressBadge');
+            const normalBadge = document.getElementById('m7NormalProgressBadge');
+            if (easyBadge) easyBadge.textContent = `进度: 第 ${easyProgress} 关`;
+            if (normalBadge) normalBadge.textContent = `进度: 第 ${normalProgress} 关`;
+
+            if (diff === 'easy') {
+                mode7SelectedLevel = easyProgress;
+                if (modalContent) modalContent.style.border = '3px solid #81C784';
+                if (easyCard) {
+                    easyCard.style.transform = 'scale(1.03)';
+                    easyCard.style.outline = '3px solid #A5D6A7';
+                    easyCard.style.boxShadow = '0 0 20px rgba(129, 199, 132, 0.7)';
+                    easyCard.style.opacity = '1';
+                }
+                if (normalCard) {
+                    normalCard.style.transform = 'scale(0.97)';
+                    normalCard.style.outline = 'none';
+                    normalCard.style.boxShadow = 'none';
+                    normalCard.style.opacity = '0.75';
+                }
+                if (desc) {
+                    desc.style.borderLeftColor = '#81C784';
+                    desc.innerHTML = `🟢 <b>简单模式（共 25 关 · 清新绿意背景）</b><br>
+                    • 清爽绿色基调，全程无倒计时压力，适合熟悉方块跳跃手感<br>
+                    • 经典方块跑跳、趴下爬行通道<br>
+                    • 第 20 关机关拉杆开门，第 24 关躲避高压电网，轻松畅玩！`;
+                }
+                if (launchBtn) {
+                    launchBtn.style.background = 'linear-gradient(135deg, #2e7d32 0%, #66bb6a 100%)';
+                    launchBtn.textContent = '▶ 开始闯关 (简单模式)';
+                }
+            } else {
+                mode7SelectedLevel = normalProgress;
+                if (modalContent) modalContent.style.border = '3px solid #FF9800';
+                if (normalCard) {
+                    normalCard.style.transform = 'scale(1.03)';
+                    normalCard.style.outline = '3px solid #FFF59D';
+                    normalCard.style.boxShadow = '0 0 22px rgba(255, 179, 0, 0.8)';
+                    normalCard.style.opacity = '1';
+                }
+                if (easyCard) {
+                    easyCard.style.transform = 'scale(0.97)';
+                    easyCard.style.outline = 'none';
+                    easyCard.style.boxShadow = 'none';
+                    easyCard.style.opacity = '0.75';
+                }
+                if (desc) {
+                    desc.style.borderLeftColor = '#FF9800';
+                    desc.innerHTML = `🟠 <b>普通模式（共 25 关 · 黄色加点橘主题背景）</b><br>
+                    • 危机四伏！第 1 关看似平坦草地，走上去地块瞬间塌落陷阱，玩家会掉下去！<br>
+                    • 第 10 关特色双坑联动：推挤方块高墙 + 往复回填地坑，避开未掉入时地坑回填、方块复原，再次靠近还会重新触发！<br>
+                    • 连环塌陷浮台、移动推挤方块与移动电弧网，考验身法与机智！`;
+                }
+                if (launchBtn) {
+                    launchBtn.style.background = 'linear-gradient(135deg, #e65100 0%, #ff9800 100%)';
+                    launchBtn.textContent = '▶ 开始闯关 (普通模式)';
+                }
+            }
+            updateMode7SelectedLevelDisplay();
+        }
+
+        function changeMode7StartLevel(delta) {
+            const maxUnlocked = (gameState.mode7Progress && gameState.mode7Progress[currentMode7Difficulty]) || 1;
+            let nextLvl = mode7SelectedLevel + delta;
+            if (nextLvl < 1) nextLvl = 1;
+            if (nextLvl > Math.min(25, maxUnlocked)) nextLvl = Math.min(25, maxUnlocked);
+            mode7SelectedLevel = nextLvl;
+            updateMode7SelectedLevelDisplay();
+        }
+
+        function updateMode7SelectedLevelDisplay() {
+            const el = document.getElementById('m7SelectedLevelText');
+            if (el) el.textContent = `第 ${mode7SelectedLevel} 关`;
+        }
+
+        function launchMode7Level(diff = null, lvl = null) {
+            if (diff === 'normal' || diff === 'easy') {
+                currentMode7Difficulty = diff;
+                gameState.mode7Difficulty = diff;
+            }
+            if (typeof lvl === 'number' && lvl >= 1) {
+                mode7SelectedLevel = lvl;
+            }
+            document.getElementById('mode7SetupModal').classList.add('hidden');
+            document.getElementById("uiLayer").classList.remove("hidden");
+            document.getElementById('homeScreen').classList.add('hidden');
+            gameState.isPlaying = true;
+            gameState.mode = 7;
+            gameState.mode7Difficulty = currentMode7Difficulty;
+            gameState.lastTime = performance.now();
+            if (typeof window.startMode7Level === 'function') {
+                window.startMode7Level(mode7SelectedLevel, currentMode7Difficulty);
+            }
+            requestAnimationFrame(loop);
+        }
+
         function startMode3Level(n) {
             if (typeof THREE === 'undefined') {
                 console.error('Three.js is not loaded; mode 3 cannot start.');
@@ -10277,12 +10489,21 @@
                 startBtn.style.color = "#ffffff";
                 startBtn.innerHTML = "▶ 开启画室";
             } else if (mode === 7) {
-                // 进入“第七音 · 简单模式”主题
-                title.textContent = "第七音 · 简单模式";
-                screen.style.background = "linear-gradient(135deg, #1b5e20 0%, #2e7d32 50%, #43a047 100%)";
-                startBtn.style.background = "linear-gradient(135deg, #2e7d32 0%, #66bb6a 100%)";
-                startBtn.style.color = "#ffffff";
-                startBtn.innerHTML = "▶ 开始闯关 (第七音)";
+                // 进入“第七音”主题
+                const isNormal = (gameState.mode7Difficulty === 'normal');
+                if (isNormal) {
+                    title.textContent = "第七音 · 普通模式";
+                    screen.style.background = "linear-gradient(135deg, #e65100 0%, #f57c00 45%, #ffa000 100%)";
+                    startBtn.style.background = "linear-gradient(135deg, #ff6f00 0%, #ffb300 100%)";
+                    startBtn.style.color = "#ffffff";
+                    startBtn.innerHTML = "▶ 开始闯关 (普通模式)";
+                } else {
+                    title.textContent = "第七音 · 简单模式";
+                    screen.style.background = "linear-gradient(135deg, #1b5e20 0%, #2e7d32 50%, #43a047 100%)";
+                    startBtn.style.background = "linear-gradient(135deg, #2e7d32 0%, #66bb6a 100%)";
+                    startBtn.style.color = "#ffffff";
+                    startBtn.innerHTML = "▶ 开始闯关 (简单模式)";
+                }
             } else if (mode === 8) {
                 // 进入“坚果保龄球 · 种植版”主题
                 title.textContent = "坚果保龄球 · 种植版";
@@ -10347,9 +10568,8 @@
                 }
                 return;
             } else if (mode === 7) {
-                if (typeof window.startMode7Level === 'function') {
-                    startMode7Level(startLevel);
-                }
+                openMode7SetupModal();
+                return;
             } else if (mode === 8) {
                 if (typeof window.startMode8Level === 'function') {
                     startMode8Level(startLevel);
