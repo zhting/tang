@@ -174,7 +174,7 @@
             w: 26,
             h: 50,
             standH: 50,
-            crouchH: 24,
+            crouchH: 22,
             isGrounded: false,
             isCrouching: false,
             facing: 1, // 1: 右, -1: 左
@@ -784,11 +784,15 @@
             // 【第 9 关：长廊推挤与地缝避险】
             endX = 1800;
             addGround(0, 300, groundY, 'grass');
-            addBlock(300, groundY - 110, 480, 40, 'brick');
+            // 上方长廊天花板：抬升至 groundY - 130，底部高 390 (站立拥有 40px 充裕净空，起跳不再撞头)
+            addBlock(300, groundY - 130, 480, 40, 'brick');
             addGround(300, 160, groundY, 'stone');
-            addBlock(460, groundY + 20, 140, 140, 'stone');
+            // 中间避险凹槽：深度 22px (y = groundY + 22 = 502)
+            addBlock(460, groundY + 22, 140, 140, 'stone');
             addGround(600, 180, groundY, 'stone');
-            addMovingBlock(620, groundY - 70, 50, 70, 340, 720, 2.8, 'obsidian');
+            // 巡逻巨石：y = groundY - 90 = 390, h = 80，底部为 470
+            // 在平地 (480) 净空仅 10px（封路推挤）；在凹槽 (502) 净空达 32px，趴下 (22px) 即可从容避险穿过！
+            addMovingBlock(620, groundY - 90, 50, 80, 340, 720, 2.8, 'obsidian');
 
             addGround(780, 1100, groundY, 'grass');
             m7.signs.push({ x: 200, y: groundY - 60, text: '低空巨石推挤', subText: '进入中间凹槽按 ▼ 趴下避险' });
@@ -1257,6 +1261,7 @@
         const p = m7.player;
         m7.movingBlocks.forEach(b => {
             const step = (b.speed || 2) * (dt / 16.67);
+            const prevX = b.x;
             b.x += b.dir * step;
             if (b.dir > 0 && b.x >= b.maxX) {
                 b.x = b.maxX;
@@ -1266,21 +1271,29 @@
                 b.dir = 1;
             }
 
-            if (!p.isDead && isColliding(p, b)) {
-                // 踩在顶部平台借力
-                if (p.vy >= 0 && (p.y + p.h - b.y) < 14) {
+            // 1. 如果玩家稳稳站在移动方块顶部，跟随方块平移
+            if (!p.isDead && p.isGrounded && Math.abs(p.y + p.h - b.y) <= 4 && (p.x + p.w > b.x + 2 && p.x < b.x + b.w - 2)) {
+                p.x += (b.x - prevX);
+            }
+            // 2. 如果移动方块撞上/推挤玩家
+            else if (!p.isDead && isColliding(p, b)) {
+                // 踩在顶部借力
+                if (p.vy >= 0 && (p.y + p.h - b.y) <= 14) {
                     p.y = b.y - p.h;
                     p.vy = 0;
                     p.isGrounded = true;
-                    p.x += b.dir * step;
+                    p.x += (b.x - prevX);
                 } else {
-                    // 水平推挤
-                    if (b.dir > 0) {
+                    // 水平推挤：根据玩家中心与方块中心的相对位置推挤，严禁反向瞬移
+                    const pCenterX = p.x + p.w / 2;
+                    const bCenterX = b.x + b.w / 2;
+                    if (b.dir > 0 && pCenterX > bCenterX) {
                         p.x = b.x + b.w;
-                    } else {
+                        if (p.vx < 0) p.vx = 0;
+                    } else if (b.dir < 0 && pCenterX < bCenterX) {
                         p.x = b.x - p.w;
+                        if (p.vx > 0) p.vx = 0;
                     }
-                    if (Math.abs(p.vx) > 0) p.vx = 0;
                 }
             }
         });
@@ -1595,7 +1608,7 @@
 
     function handleHorizontalCollisions() {
         const p = m7.player;
-        const STEP_UP_MAX = 16; // 冲刺跨越暗坑时允许平滑踏上平台的微小高差容差 (Step-Up)
+        const STEP_UP_MAX = 24; // 冲刺跨越暗坑/凹槽时允许平滑踏上平台的微小高差容差 (Step-Up)
 
         // 与所有固体方块检测
         for (const b of m7.blocks) {
@@ -1626,6 +1639,22 @@
                 } else if (p.vx < 0) {
                     p.x = b.x + b.w;
                     p.vx = 0;
+                }
+            }
+        }
+        // 与所有移动巡逻推挤方块横向碰撞检测
+        for (const mb of m7.movingBlocks) {
+            if (!mb.solid) continue;
+            if (isColliding(p, mb)) {
+                if (p.vy >= 0 && (p.y + p.h - mb.y) <= 8) continue;
+                const pCenterX = p.x + p.w / 2;
+                const bCenterX = mb.x + mb.w / 2;
+                if (pCenterX < bCenterX) {
+                    p.x = mb.x - p.w;
+                    if (p.vx > 0) p.vx = 0;
+                } else {
+                    p.x = mb.x + mb.w;
+                    if (p.vx < 0) p.vx = 0;
                 }
             }
         }
@@ -1684,6 +1713,20 @@
                 } else if (p.vy < 0) {
                     // 顶头
                     p.y = b.y + b.h;
+                    p.vy = 0;
+                }
+            }
+        }
+        // 与所有移动巡逻推挤方块垂直检测 (支持站在上方借力乘骑，以及顶头)
+        for (const mb of m7.movingBlocks) {
+            if (!mb.solid) continue;
+            if (isColliding(p, mb)) {
+                if (p.vy > 0 && (p.y + p.h - mb.y) <= 16) {
+                    p.y = mb.y - p.h;
+                    p.vy = 0;
+                    p.isGrounded = true;
+                } else if (p.vy < 0) {
+                    p.y = mb.y + mb.h;
                     p.vy = 0;
                 }
             }
@@ -2257,25 +2300,25 @@
         }
 
         if (p.isCrouching) {
-            // 【趴下/爬行姿势】(高度 24px, 宽度 36px)
-            // 身体扁平横置
+            // 【趴下/爬行姿势】(高度 22px, 宽度 26px，碰撞箱与图像精准对齐)
+            // 身体扁平横置 (16x12)
             ctx.fillStyle = '#2196F3'; // 衣服
-            ctx.fillRect(4, 8, 24, 14);
+            ctx.fillRect(2, 6, 16, 12);
 
-            // 头部
+            // 头部 (11x11)
             ctx.fillStyle = '#FFCC80'; // 肤色
-            ctx.fillRect(20, 2, 14, 14);
+            ctx.fillRect(15, 2, 11, 11);
 
             // 眼睛
             ctx.fillStyle = '#1A237E';
-            ctx.fillRect(30, 6, 3, 4);
+            ctx.fillRect(22, 5, 3, 3);
 
             // 爬行四肢动画
-            const limbAnim = Math.sin(p.walkAnim) * 4;
+            const limbAnim = Math.sin(p.walkAnim) * 3;
             ctx.fillStyle = '#1565C0'; // 裤子
-            ctx.fillRect(0, 12, 8, 10 + limbAnim);
+            ctx.fillRect(0, 9, 6, 8 + limbAnim);
             ctx.fillStyle = '#455A64'; // 手臂
-            ctx.fillRect(16, 14, 8, 8 - limbAnim);
+            ctx.fillRect(12, 10, 6, 7 - limbAnim);
 
         } else {
             // 【站立/奔跑/跳跃姿势】(高度 50px, 宽度 26px)
