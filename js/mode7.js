@@ -1816,6 +1816,18 @@
         setTimeout(() => {
             if (m7.level >= m7.maxLevels) {
                 // 25关全部通关！
+                if (!isNormal) {
+                    // ⭐ 简单模式全部 25 关通关！普通模式永久解锁开启！
+                    try {
+                        localStorage.setItem('mode7_easy_completed', 'true');
+                    } catch (e) {}
+                    if (typeof gameState !== 'undefined') {
+                        gameState.mode7EasyCompleted = true;
+                    }
+                    if (typeof showMessage === 'function') {
+                        showMessage('🎉 恭喜通关简单模式全部 25 关！【普通模式】已永久解锁！', window.innerWidth / 2, window.innerHeight / 2);
+                    }
+                }
                 if (typeof showVictoryScreen === 'function') {
                     showVictoryScreen();
                 } else if (typeof showMessage === 'function') {
@@ -2417,11 +2429,33 @@
         if (lvl < 1) lvl = 1;
         if (lvl > m7.maxLevels) lvl = m7.maxLevels;
 
-        if (diff === 'normal' || diff === 'easy') {
-            m7.difficulty = diff;
-        } else if (typeof gameState !== 'undefined' && gameState.mode7Difficulty) {
-            m7.difficulty = gameState.mode7Difficulty;
+        let targetDiff = diff;
+        if (!targetDiff && typeof gameState !== 'undefined' && gameState.mode7Difficulty) {
+            targetDiff = gameState.mode7Difficulty;
         }
+        if (targetDiff !== 'normal' && targetDiff !== 'easy') {
+            targetDiff = 'easy';
+        }
+
+        // 校验普通模式是否解锁（未通关简单模式且未开启创造者模式时禁止进入普通模式）
+        if (targetDiff === 'normal') {
+            let isUnlocked = false;
+            if (typeof isMode7NormalUnlocked === 'function') {
+                isUnlocked = isMode7NormalUnlocked();
+            } else {
+                const isDev = (typeof isDevMode !== 'undefined' && isDevMode);
+                const isCreator = (typeof localStorage !== 'undefined' && localStorage.getItem('creator_mode_active') === 'true');
+                const isEasyWon = (typeof localStorage !== 'undefined' && localStorage.getItem('mode7_easy_completed') === 'true');
+                isUnlocked = isDev || isCreator || isEasyWon;
+            }
+            if (!isUnlocked) {
+                targetDiff = 'easy';
+                if (typeof showMessage === 'function') {
+                    showMessage('🔒 普通模式尚未解锁！需通关简单模式全部 25 关', window.innerWidth / 2, window.innerHeight / 2);
+                }
+            }
+        }
+        m7.difficulty = targetDiff;
 
         m7.level = lvl;
         if (typeof gameState !== 'undefined') {

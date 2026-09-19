@@ -2288,12 +2288,12 @@
                 </div>
 
                 <!-- 普通模式卡片 (黄色加点橘) -->
-                <div id="m7DiffNormalCard" onclick="selectMode7Difficulty('normal')" style="flex: 1; padding: 16px 12px; background: linear-gradient(135deg, #e65100 0%, #f57c00 35%, #ffa000 70%, #ffb300 100%); border: 3px solid #FFD54F; border-radius: 12px; cursor: pointer; text-align: center; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.45);">
-                    <div style="font-size: 32px; margin-bottom: 4px;">🟠</div>
-                    <div style="font-weight: bold; font-size: 18px; color: #FFFFFF; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">普通模式</div>
-                    <div style="font-size: 11px; color: #FFF8E1; margin-top: 4px; opacity: 0.95;">25 关机关陷阱重重</div>
+                <div id="m7DiffNormalCard" onclick="handleMode7NormalCardClick()" style="flex: 1; padding: 16px 12px; background: linear-gradient(135deg, #e65100 0%, #f57c00 35%, #ffa000 70%, #ffb300 100%); border: 3px solid #FFD54F; border-radius: 12px; cursor: pointer; text-align: center; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.45); position: relative;">
+                    <div id="m7NormalCardIcon" style="font-size: 32px; margin-bottom: 4px;">🟠</div>
+                    <div id="m7NormalCardTitle" style="font-weight: bold; font-size: 18px; color: #FFFFFF; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">普通模式</div>
+                    <div id="m7NormalCardSubText" style="font-size: 11px; color: #FFF8E1; margin-top: 4px; opacity: 0.95;">25 关机关陷阱重重</div>
                     <div id="m7NormalProgressBadge" style="font-size: 12px; color: #FFFDE7; margin-top: 6px; font-weight: bold;">进度: 第 1 关</div>
-                    <button onclick="event.stopPropagation(); launchMode7Level('normal', (gameState.mode7Progress && gameState.mode7Progress.normal) || 1);" style="margin-top: 10px; width: 100%; padding: 8px 0; background: #FFD54F; color: #BF360C; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.25);">▶ 进入普通模式</button>
+                    <button id="m7NormalCardBtn" onclick="event.stopPropagation(); handleMode7NormalCardBtnClick();" style="margin-top: 10px; width: 100%; padding: 8px 0; background: #FFD54F; color: #BF360C; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.25);">▶ 进入普通模式</button>
                 </div>
             </div>
 
@@ -2747,7 +2747,7 @@
     <script src="assets/bamboo_door_open.js?v=1.0.1"></script>
     <script src="js/presetSamples_river.js?v=1.0.1"></script>
     <script src="js/mcPaintingStudio.js?v=1.0.1"></script>
-    <script src="js/mode7.js?v=20260919_v205"></script>
+    <script src="js/mode7.js?v=20260919_v206"></script>
     <script src="js/mode8.js?v=1.0.0"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -3636,39 +3636,82 @@
         const LB_KEY = 'brick_game_leaderboard';
         const UNLOCK_KEY = 'brick_game_unlocked_mode';
 
-        // ===== 开发者测试后门 =====
+        // ===== 创造者 / 开发者模式后门 =====
         let titleClickCount = 0;
         let titleClickTimer = null;
         let isDevMode = false;
+        try {
+            if (localStorage.getItem('creator_mode_active') === 'true') isDevMode = true;
+        } catch (e) {}
+
+        function isMode7NormalUnlocked() {
+            if (typeof isDevMode !== 'undefined' && isDevMode) return true;
+            try {
+                if (localStorage.getItem('creator_mode_active') === 'true') return true;
+                if (localStorage.getItem('mode7_easy_completed') === 'true') return true;
+                if (localStorage.getItem('mode7_easy_all_cleared') === 'true') return true;
+            } catch (e) {}
+            if (typeof gameState !== 'undefined' && gameState.mode7EasyCompleted) return true;
+            return false;
+        }
+        window.isMode7NormalUnlocked = isMode7NormalUnlocked;
 
         function handleTitleClick() {
             titleClickCount++;
             if (titleClickTimer) clearTimeout(titleClickTimer);
 
-            // 连续点击 5 次触发解锁
+            // 连续点击 5 次触发解锁创造者模式
             if (titleClickCount >= 5) {
                 isDevMode = true;
+                try {
+                    localStorage.setItem('creator_mode_active', 'true');
+                } catch (e) {}
                 
-                showMessage("🔧 开发者模式：已激活！", width / 2, height / 2);
-                document.getElementById('devConsole').classList.remove('hidden');
-                devLog('🔧 开发者模式已激活，输入 help 查看指令', 'info');
+                showMessage("🔧 创造者模式已激活！普通模式与所有关卡不受限制", width / 2, height / 2);
+                const devConsole = document.getElementById('devConsole');
+                if (devConsole) devConsole.classList.remove('hidden');
+                devLog('🔧 创造者模式已激活！全模式全关卡不受限制自由畅玩', 'info');
                 titleClickCount = 0;
+
+                // 立即更新卡片与主页主题
+                if (typeof updateMode7CardsVisual === 'function') {
+                    updateMode7CardsVisual();
+                }
+                if (typeof updateHomeTheme === 'function') {
+                    updateHomeTheme();
+                }
             } else {
-                // 如果 1 秒内没有连续点击，则重置计数
-                titleClickTimer = setTimeout(() => { titleClickCount = 0; }, 1000);
+                // 如果 1.5 秒内没有连续点击，则重置计数
+                titleClickTimer = setTimeout(() => { titleClickCount = 0; }, 1500);
             }
         }
 
-                // ===== 开发者指令系统 =====
+        // ===== 开发者指令系统 =====
         if (isDevMode) {
-            document.getElementById('devConsole').classList.remove('hidden');
+            const devConsole = document.getElementById('devConsole');
+            if (devConsole) devConsole.classList.remove('hidden');
         }
 
-        document.getElementById('homeTitle').addEventListener('pointerdown', (e) => {
-            handleTitleClick();
-        });
+        let lastTitleTap = 0;
+        function bindTitleTap(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const handler = (e) => {
+                const now = Date.now();
+                if (now - lastTitleTap < 80) return;
+                lastTitleTap = now;
+                handleTitleClick();
+            };
+            el.addEventListener('pointerdown', handler);
+            el.addEventListener('click', handler);
+            el.style.cursor = 'pointer';
+        }
+        bindTitleTap('homeTitle');
+        bindTitleTap('modeDisplayBtn');
+
         function devLog(msg, type = '') {
             const log = document.getElementById('devLog');
+            if (!log) return;
             const line = document.createElement('div');
             if (type) line.className = 'log-' + type;
             line.textContent = msg;
@@ -3702,14 +3745,23 @@
             // 永久解锁所有模式
             if (/解锁|unlock|全部解锁/.test(cmd)) {
                 localStorage.setItem(UNLOCK_KEY, 99);
-                devLog('🔓 所有模式已永久解锁！', 'info');
+                localStorage.setItem('creator_mode_active', 'true');
+                localStorage.setItem('mode7_easy_completed', 'true');
+                isDevMode = true;
+                devLog('🔓 所有模式与第七音普通模式已永久解锁！', 'info');
+                if (typeof updateMode7CardsVisual === 'function') updateMode7CardsVisual();
+                if (typeof updateHomeTheme === 'function') updateHomeTheme();
                 return;
             }
 
             // 锁定所有模式（保留关卡进度）
             if (/锁定|lock/.test(cmd)) {
                 localStorage.setItem(UNLOCK_KEY, 1);
-                devLog('🔒 模式已重新锁定，进度已保留', 'info');
+                localStorage.removeItem('creator_mode_active');
+                localStorage.removeItem('mode7_easy_completed');
+                localStorage.removeItem('mode7_easy_all_cleared');
+                isDevMode = false;
+                devLog('🔒 模式已重新锁定，普通模式已锁定', 'info');
                 setTimeout(() => location.reload(), 1000);
                 return;
             }
@@ -4082,8 +4134,13 @@
                 // 使用最严谨的数值比较
                 const currentUnlocked = getUnlockedMode();
                 const reqId = Math.floor(m.id);
-                const isUnlocked = (Number(currentUnlocked) >= reqId);
+                let isUnlocked = (Number(currentUnlocked) >= reqId);
                 
+                // 特殊校验：普通模式(id: 7.5) 必须在简单模式通关后解锁，创造者模式不受限制
+                if (m.id === 7.5 && !isMode7NormalUnlocked()) {
+                    isUnlocked = false;
+                }
+
                 if (isUnlocked) {
                     btn.innerHTML = `${m.icon} ${m.name}`;
                     btn.onclick = () => selectMode(m.id, m.diff || null);
@@ -4091,13 +4148,17 @@
                     btn.style.filter = 'none';
                     btn.disabled = false;
                 } else {
-                    btn.innerHTML = `🔒 ${m.name} <br><span style="font-size:12px;opacity:0.8;">(需通关模式${reqId - 1}第 50 关)</span>`;
+                    const lockReason = (m.id === 7.5) ? '(需通关简单模式全部 25 关)' : `(需通关模式${reqId - 1}第 50 关)`;
+                    btn.innerHTML = `🔒 ${m.name} <br><span style="font-size:12px;opacity:0.8;">${lockReason}</span>`;
                     btn.style.opacity = '0.5';
                     btn.style.filter = 'grayscale(100%)';
                     btn.style.cursor = 'not-allowed';
                     btn.disabled = true;
                     btn.onclick = (e) => {
                         e.preventDefault();
+                        if (m.id === 7.5) {
+                            showMessage('🔒 普通模式尚未解锁！需通关简单模式全部 25 关（或连点五下“第一小院”开启创造者模式）', width / 2, height / 2);
+                        }
                         return false;
                     };
                 }
@@ -4118,14 +4179,20 @@
                 showMessage(`🔒 该模式尚未解锁！`, width / 2, height / 2);
                 return;
             }
+            if (mode === 7.5 || (modeId === 7 && diff === 'normal')) {
+                if (!isMode7NormalUnlocked()) {
+                    showMessage("🔒 普通模式尚未解锁！需通关简单模式全部 25 关（或连点五下“第一小院”开启创造者模式）", width / 2, height / 2);
+                    diff = 'easy';
+                }
+            }
             gameState.mode = modeId;
             if (modeId === 7) {
                 if (diff) {
                     gameState.mode7Difficulty = diff;
                     currentMode7Difficulty = diff;
                 } else if (!gameState.mode7Difficulty) {
-                    gameState.mode7Difficulty = 'normal';
-                    currentMode7Difficulty = 'normal';
+                    gameState.mode7Difficulty = isMode7NormalUnlocked() ? 'normal' : 'easy';
+                    currentMode7Difficulty = gameState.mode7Difficulty;
                 }
             }
             updateHomeTheme();
@@ -8712,8 +8779,104 @@
         }
 
         // ===== 模式七：第七音 模式/难度控制 =====
-        let currentMode7Difficulty = 'normal'; // 默认进入普通模式，黄色加点橘
+        let currentMode7Difficulty = 'easy'; // 默认优先进入简单模式，通关或开启创造者模式后解锁普通模式
         let mode7SelectedLevel = 1;
+
+        function updateMode7CardsVisual() {
+            const isNormalUnlocked = isMode7NormalUnlocked();
+            const normalCard = document.getElementById('m7DiffNormalCard');
+            const normalIcon = document.getElementById('m7NormalCardIcon');
+            const normalTitle = document.getElementById('m7NormalCardTitle');
+            const normalSub = document.getElementById('m7NormalCardSubText');
+            const normalBadge = document.getElementById('m7NormalProgressBadge');
+            const normalBtn = document.getElementById('m7NormalCardBtn');
+            const normalProgress = (gameState.mode7Progress && gameState.mode7Progress.normal) || 1;
+
+            if (!isNormalUnlocked) {
+                if (normalCard) {
+                    normalCard.style.background = 'linear-gradient(135deg, #263238 0%, #37474F 60%, #1c252a 100%)';
+                    normalCard.style.border = '2px dashed #78909C';
+                    normalCard.style.boxShadow = 'none';
+                    normalCard.style.opacity = '0.75';
+                    normalCard.style.cursor = 'not-allowed';
+                }
+                if (normalIcon) normalIcon.textContent = '🔒';
+                if (normalTitle) normalTitle.innerHTML = '普通模式 <span style="font-size:12px;color:#FFB74D;font-weight:normal;">(未解锁)</span>';
+                if (normalSub) {
+                    normalSub.textContent = '需通关简单模式全部 25 关';
+                    normalSub.style.color = '#FFCC80';
+                }
+                if (normalBadge) {
+                    normalBadge.textContent = '🔒 简单模式通关后永久开启';
+                    normalBadge.style.color = '#FFE082';
+                }
+                if (normalBtn) {
+                    normalBtn.textContent = '🔒 尚未解锁';
+                    normalBtn.style.background = '#455A64';
+                    normalBtn.style.color = '#ECEFF1';
+                    normalBtn.style.cursor = 'not-allowed';
+                    normalBtn.style.boxShadow = 'none';
+                }
+            } else {
+                if (normalCard) {
+                    normalCard.style.background = 'linear-gradient(135deg, #e65100 0%, #f57c00 35%, #ffa000 70%, #ffb300 100%)';
+                    normalCard.style.border = '3px solid #FFD54F';
+                    normalCard.style.boxShadow = '0 4px 15px rgba(255, 152, 0, 0.45)';
+                    normalCard.style.opacity = (currentMode7Difficulty === 'normal') ? '1' : '0.75';
+                    normalCard.style.cursor = 'pointer';
+                }
+                if (normalIcon) normalIcon.textContent = '🟠';
+                if (normalTitle) normalTitle.textContent = '普通模式';
+                if (normalSub) {
+                    normalSub.textContent = '25 关机关陷阱重重';
+                    normalSub.style.color = '#FFF8E1';
+                }
+                if (normalBadge) {
+                    normalBadge.textContent = `进度: 第 ${normalProgress} 关`;
+                    normalBadge.style.color = '#FFFDE7';
+                }
+                if (normalBtn) {
+                    normalBtn.textContent = '▶ 进入普通模式';
+                    normalBtn.style.background = '#FFD54F';
+                    normalBtn.style.color = '#BF360C';
+                    normalBtn.style.cursor = 'pointer';
+                    normalBtn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.25)';
+                }
+            }
+        }
+        window.updateMode7CardsVisual = updateMode7CardsVisual;
+
+        function shakeMode7NormalCard() {
+            const el = document.getElementById('m7DiffNormalCard');
+            if (!el) return;
+            el.animate([
+                { transform: 'translateX(0)' },
+                { transform: 'translateX(-8px)' },
+                { transform: 'translateX(8px)' },
+                { transform: 'translateX(-6px)' },
+                { transform: 'translateX(6px)' },
+                { transform: 'translateX(0)' }
+            ], { duration: 350, iterations: 1 });
+        }
+
+        function handleMode7NormalCardClick() {
+            if (!isMode7NormalUnlocked()) {
+                shakeMode7NormalCard();
+                showMessage("🔒 普通模式尚未解锁！需通关简单模式全部 25 关，或在首页连点五下“第一小院”开启创造者模式。", window.innerWidth / 2, window.innerHeight / 2);
+                return;
+            }
+            selectMode7Difficulty('normal');
+        }
+
+        function handleMode7NormalCardBtnClick() {
+            if (!isMode7NormalUnlocked()) {
+                shakeMode7NormalCard();
+                showMessage("🔒 普通模式尚未解锁！需通关简单模式全部 25 关，或在首页连点五下“第一小院”开启创造者模式。", window.innerWidth / 2, window.innerHeight / 2);
+                return;
+            }
+            const p = (gameState.mode7Progress && gameState.mode7Progress.normal) || 1;
+            launchMode7Level('normal', p);
+        }
 
         function openMode7SetupModal() {
             if (!gameState.mode7Progress) {
@@ -8724,8 +8887,13 @@
                     normal: savedNormal ? parseInt(savedNormal, 10) : 1
                 };
             }
-            const diff = gameState.mode7Difficulty || 'normal';
+            const isNormalUnlocked = isMode7NormalUnlocked();
+            let diff = gameState.mode7Difficulty || (isNormalUnlocked ? 'normal' : 'easy');
+            if (!isNormalUnlocked) {
+                diff = 'easy';
+            }
             selectMode7Difficulty(diff);
+            updateMode7CardsVisual();
             document.getElementById('mode7SetupModal').classList.remove('hidden');
         }
 
@@ -8735,6 +8903,13 @@
         }
 
         function selectMode7Difficulty(diff) {
+            const isNormalUnlocked = isMode7NormalUnlocked();
+            if (diff === 'normal' && !isNormalUnlocked) {
+                shakeMode7NormalCard();
+                showMessage("🔒 普通模式尚未解锁！需通关简单模式全部 25 关，或在首页连点五下“第一小院”开启创造者模式。", window.innerWidth / 2, window.innerHeight / 2);
+                diff = 'easy';
+            }
+
             currentMode7Difficulty = diff;
             gameState.mode7Difficulty = diff;
             const easyCard = document.getElementById('m7DiffEasyCard');
@@ -8752,7 +8927,7 @@
             const easyBadge = document.getElementById('m7EasyProgressBadge');
             const normalBadge = document.getElementById('m7NormalProgressBadge');
             if (easyBadge) easyBadge.textContent = `进度: 第 ${easyProgress} 关`;
-            if (normalBadge) normalBadge.textContent = `进度: 第 ${normalProgress} 关`;
+            if (normalBadge && isNormalUnlocked) normalBadge.textContent = `进度: 第 ${normalProgress} 关`;
 
             if (diff === 'easy') {
                 mode7SelectedLevel = easyProgress;
@@ -8766,15 +8941,13 @@
                 if (normalCard) {
                     normalCard.style.transform = 'scale(0.97)';
                     normalCard.style.outline = 'none';
-                    normalCard.style.boxShadow = 'none';
-                    normalCard.style.opacity = '0.75';
                 }
                 if (desc) {
                     desc.style.borderLeftColor = '#81C784';
                     desc.innerHTML = `🟢 <b>简单模式（共 25 关 · 清新绿意背景）</b><br>
                     • 清爽绿色基调，全程无倒计时压力，适合熟悉方块跳跃手感<br>
                     • 经典方块跑跳、趴下爬行通道<br>
-                    • 第 20 关机关拉杆开门，第 24 关躲避高压电网，轻松畅玩！`;
+                    • 第 11 关空中漫步（需潜行），第 20 关拉杆开门，第 24 关高压电弧，轻松畅玩！`;
                 }
                 if (launchBtn) {
                     launchBtn.style.background = 'linear-gradient(135deg, #2e7d32 0%, #66bb6a 100%)';
@@ -8807,6 +8980,7 @@
                     launchBtn.textContent = '▶ 开始闯关 (普通模式)';
                 }
             }
+            updateMode7CardsVisual();
             updateMode7SelectedLevelDisplay();
         }
 
@@ -8825,10 +8999,15 @@
         }
 
         function launchMode7Level(diff = null, lvl = null) {
-            if (diff === 'normal' || diff === 'easy') {
-                currentMode7Difficulty = diff;
-                gameState.mode7Difficulty = diff;
+            let targetDiff = diff || currentMode7Difficulty;
+            if (targetDiff === 'normal' && !isMode7NormalUnlocked()) {
+                shakeMode7NormalCard();
+                showMessage("🔒 普通模式尚未解锁！需通关简单模式全部 25 关，或在首页连点五下“第一小院”开启创造者模式。", window.innerWidth / 2, window.innerHeight / 2);
+                selectMode7Difficulty('easy');
+                return;
             }
+            currentMode7Difficulty = targetDiff;
+            gameState.mode7Difficulty = targetDiff;
             if (typeof lvl === 'number' && lvl >= 1) {
                 mode7SelectedLevel = lvl;
             }
@@ -10493,7 +10672,12 @@
                 startBtn.innerHTML = "▶ 开启画室";
             } else if (mode === 7) {
                 // 进入“第七音”主题
-                const isNormal = (gameState.mode7Difficulty === 'normal');
+                let isNormal = (gameState.mode7Difficulty === 'normal');
+                if (isNormal && !isMode7NormalUnlocked()) {
+                    gameState.mode7Difficulty = 'easy';
+                    currentMode7Difficulty = 'easy';
+                    isNormal = false;
+                }
                 if (isNormal) {
                     title.textContent = "第七音 · 普通模式";
                     screen.style.background = "linear-gradient(135deg, #e65100 0%, #f57c00 45%, #ffa000 100%)";
@@ -10571,6 +10755,10 @@
                 }
                 return;
             } else if (mode === 7) {
+                if (!isMode7NormalUnlocked()) {
+                    gameState.mode7Difficulty = 'easy';
+                    currentMode7Difficulty = 'easy';
+                }
                 openMode7SetupModal();
                 return;
             } else if (mode === 8) {
