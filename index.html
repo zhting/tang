@@ -850,55 +850,77 @@
         .mc-theme .btn-home::after {
             display: none !important;
         }
-        /* 首页村民 NPC 交互与动画样式 */
+        /* 首页 3D 我的世界原版村民 NPC 交互与样式 */
         .home-villager-wrapper {
-            display: flex;
+            display: none; /* 默认隐藏，仅在我的世界主题(Mode 3)下激活显示 */
             flex-direction: column;
             align-items: center;
+            justify-content: flex-end;
             cursor: pointer;
             user-select: none;
-            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-            animation: villagerFloat 2.6s ease-in-out infinite alternate;
+            position: relative;
             z-index: 20;
-            margin-bottom: 5px;
+            margin-left: 10px;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         .home-villager-wrapper:hover {
-            transform: scale(1.1) translateY(-6px);
+            transform: scale(1.05) translateY(-4px);
         }
         .home-villager-wrapper:active {
-            transform: scale(0.95);
+            transform: scale(0.96);
         }
-        @keyframes villagerFloat {
-            0% { transform: translateY(0px); }
-            100% { transform: translateY(-8px); }
-        }
-        .villager-speech-bubble {
+        /* 方方正正的 Minecraft 原版风格对话框，纯中文 */
+        .mc-square-dialogue {
             position: relative;
-            background: #FFFFFF;
-            color: #3E2723;
-            font-size: 13px;
+            background: #C6C6C6;
+            border: 3px solid #000000;
+            box-shadow: inset 2px 2px #FFFFFF, inset -2px -2px #555555, 0 6px 14px rgba(0,0,0,0.5);
+            padding: 6px 12px;
+            color: #111111;
+            font-family: 'Press Start 2P', 'Zpix', 'SimSun', 'Microsoft YaHei', sans-serif;
+            font-size: 12px;
             font-weight: bold;
-            padding: 6px 14px;
-            border-radius: 12px;
-            border: 2px solid #5D4037;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            margin-bottom: 8px;
+            line-height: 1.4;
+            text-align: center;
             white-space: nowrap;
             pointer-events: none;
-            display: flex;
-            align-items: center;
-            gap: 4px;
+            margin-bottom: 6px;
+            border-radius: 0 !important;
+            user-select: none;
+            letter-spacing: 0.5px;
+            animation: mcDialogueFloat 2.4s ease-in-out infinite alternate;
         }
-        .villager-speech-bubble .bubble-arrow {
+        @keyframes mcDialogueFloat {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-4px); }
+        }
+        .mc-square-dialogue::after {
+            content: '';
             position: absolute;
-            bottom: -6px;
+            bottom: -8px;
             left: 50%;
             transform: translateX(-50%);
             width: 0;
             height: 0;
             border-left: 6px solid transparent;
             border-right: 6px solid transparent;
-            border-top: 6px solid #5D4037;
+            border-top: 6px solid #000000;
+        }
+        .mc-square-dialogue::before {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 4px solid #C6C6C6;
+            z-index: 1;
+        }
+        .mc-trade-content, .mc-trade-content * {
+            border-radius: 0 !important;
         }
         .btn-mc-trade {
             transition: all 0.15s ease;
@@ -2036,48 +2058,18 @@
     <!-- 首页 -->
     <div id="homeScreen" class="home-screen">
         <h1 id="homeTitle">积木小院</h1>
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px;">
-            <!-- 首页可交互村民 NPC -->
+        <div class="home-buttons">
+            <button class="btn-home" id="startBtn" onclick="startGame(gameState.mode)">▶ 开始游戏</button>
+            <button class="btn-home" onclick="openLeaderboard()">🏆 排行榜</button>
+            <button class="btn-home" onclick="openModeModal()">⚙️ 选择模式 (<span id="modeDisplayBtn">一</span>)</button>
+            <button class="btn-home" onclick="openInstructionsModal()">📖 游戏说明</button>
+            <!-- 3D 我的世界原版村民 NPC（仅在我的世界主题模式下显示，立于游戏说明按钮旁） -->
             <div id="homeVillagerNpc" class="home-villager-wrapper" onclick="openVillagerModal()" title="点击与村民交易药水">
-                <div class="villager-speech-bubble">
-                    <span>🧑‍🌾 Hrrr~ 点击找我交易药水！</span>
-                    <div class="bubble-arrow"></div>
+                <div class="mc-square-dialogue">
+                    <div>点击我交易神奇药水！</div>
+                    <div style="font-size: 10px; color: #555; margin-top: 2px;">（加速 · 跳跃 · 悬浮 · 瞬移）</div>
                 </div>
-                <div class="villager-avatar">
-                    <svg viewBox="0 0 48 64" width="70" height="92" style="filter: drop-shadow(0 6px 12px rgba(0,0,0,0.45));">
-                        <!-- 头部 -->
-                        <rect x="14" y="6" width="20" height="24" fill="#C8966E"/>
-                        <rect x="16" y="12" width="16" height="3" fill="#4E342E"/>
-                        <rect x="16" y="16" width="4" height="4" fill="#FFFFFF"/>
-                        <rect x="18" y="16" width="2" height="4" fill="#2E7D32"/>
-                        <rect x="28" y="16" width="4" height="4" fill="#FFFFFF"/>
-                        <rect x="28" y="16" width="2" height="4" fill="#2E7D32"/>
-                        <!-- 大长鼻子 -->
-                        <rect x="21" y="18" width="6" height="12" fill="#B27B50"/>
-                        <rect x="22" y="28" width="4" height="2" fill="#8D5B36"/>
-                        <!-- 嘴唇与下巴 -->
-                        <rect x="20" y="30" width="8" height="2" fill="#9E6B43"/>
-                        <!-- 棕色长袍身体 -->
-                        <rect x="10" y="30" width="28" height="26" fill="#5D4037"/>
-                        <rect x="22" y="30" width="4" height="26" fill="#4E342E"/>
-                        <rect x="10" y="52" width="28" height="4" fill="#3E2723"/>
-                        <!-- 经典合抱交叉双臂 -->
-                        <rect x="8" y="34" width="32" height="12" rx="2" fill="#6D4C41"/>
-                        <rect x="16" y="36" width="16" height="8" fill="#5D4037"/>
-                        <!-- 手中的绿宝石 -->
-                        <polygon points="24,37 27,40 24,43 21,40" fill="#00E676"/>
-                        <!-- 双脚 -->
-                        <rect x="15" y="56" width="7" height="6" fill="#3E2723"/>
-                        <rect x="26" y="56" width="7" height="6" fill="#3E2723"/>
-                    </svg>
-                </div>
-            </div>
-            <div class="home-buttons">
-                <button class="btn-home" id="startBtn" onclick="startGame(gameState.mode)">▶ 开始游戏</button>
-                <button class="btn-home" onclick="openLeaderboard()">🏆 排行榜</button>
-                <button class="btn-home" onclick="openModeModal()">⚙️ 选择模式 (<span id="modeDisplayBtn">一</span>)</button>
-                <button class="btn-home" onclick="openInstructionsModal()">📖 游戏说明</button>
-                <button class="btn-home" id="villagerHomeBtn" onclick="openVillagerModal()">🧑‍🌾 村民交易</button>
+                <canvas id="homeVillager3DCanvas" width="130" height="190" style="width: 130px; height: 190px; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.45));"></canvas>
             </div>
         </div>
     </div>
@@ -4621,6 +4613,381 @@
         window.addEventListener('economyUpdated', function () {
             updateVillagerModalUI();
         });
+
+        // ==============================================================
+        // 🧑‍🌾 首页 3D 我的世界原版村民模型与渲染引擎 (Three.js WebGL)
+        // ==============================================================
+        let homeVillager3DRenderer = null;
+        let homeVillager3DScene = null;
+        let homeVillager3DCamera = null;
+        let homeVillagerGroup = null;
+        let homeVillagerHead = null;
+
+        function createVillagerModel3D() {
+            const group = new THREE.Group();
+
+            // 工具：生成像素风 CanvasTexture (最近邻过滤，纯正像素无模糊)
+            function makePixelTexture(width, height, drawFn) {
+                const c = document.createElement('canvas');
+                c.width = width;
+                c.height = height;
+                const ctx = c.getContext('2d');
+                drawFn(ctx, width, height);
+                const tex = new THREE.CanvasTexture(c);
+                tex.magFilter = THREE.NearestFilter;
+                tex.minFilter = THREE.NearestFilter;
+                tex.generateMipmaps = false;
+                return tex;
+            }
+
+            // 1. 村民头部 (比例 0.52w x 0.65h x 0.52d，修长端正)
+            const headFrontTex = makePixelTexture(16, 20, (ctx, w, h) => {
+                // 原版肤色与微噪点
+                const skinPalette = ['#C69680', '#BD8B72', '#B38068', '#CA9B85'];
+                for (let x = 0; x < w; x++) {
+                    for (let y = 0; y < h; y++) {
+                        ctx.fillStyle = skinPalette[(x * 3 + y * 7) % skinPalette.length];
+                        ctx.fillRect(x, y, 1, 1);
+                    }
+                }
+                // 原版连体浓眉 (Unibrow)
+                ctx.fillStyle = '#4E342E';
+                ctx.fillRect(2, 5, 12, 2);
+                ctx.fillStyle = '#3E2723';
+                ctx.fillRect(3, 5, 10, 1);
+
+                // 绿宝石双眼 (Emerald Eyes)
+                // 右眼 (画师视角左)
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(2, 7, 2, 3);
+                ctx.fillStyle = '#2E7D32';
+                ctx.fillRect(4, 7, 2, 3);
+                ctx.fillStyle = '#1B5E20';
+                ctx.fillRect(4, 8, 2, 2);
+
+                // 左眼 (画师视角右)
+                ctx.fillStyle = '#2E7D32';
+                ctx.fillRect(10, 7, 2, 3);
+                ctx.fillStyle = '#1B5E20';
+                ctx.fillRect(10, 8, 2, 2);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(12, 7, 2, 3);
+
+                // 两眼间鼻梁
+                ctx.fillStyle = '#BD8B72';
+                ctx.fillRect(6, 7, 4, 3);
+
+                // 嘴巴
+                ctx.fillStyle = '#7C4A36';
+                ctx.fillRect(6, 16, 4, 1);
+                ctx.fillStyle = '#5A3526';
+                ctx.fillRect(7, 16, 2, 1);
+            });
+
+            const headSideTex = makePixelTexture(16, 20, (ctx, w, h) => {
+                const skinPalette = ['#C69680', '#BD8B72', '#B38068', '#C08F79'];
+                for (let x = 0; x < w; x++) {
+                    for (let y = 0; y < h; y++) {
+                        ctx.fillStyle = skinPalette[(x * 5 + y * 11) % skinPalette.length];
+                        ctx.fillRect(x, y, 1, 1);
+                    }
+                }
+            });
+
+            const headTopTex = makePixelTexture(16, 16, (ctx, w, h) => {
+                const skinPalette = ['#C69680', '#BD8B72', '#C08F79'];
+                for (let x = 0; x < w; x++) {
+                    for (let y = 0; y < h; y++) {
+                        ctx.fillStyle = skinPalette[(x * 7 + y * 13) % skinPalette.length];
+                        ctx.fillRect(x, y, 1, 1);
+                    }
+                }
+            });
+
+            const headBottomTex = makePixelTexture(16, 16, (ctx, w, h) => {
+                ctx.fillStyle = '#A4735E';
+                ctx.fillRect(0, 0, w, h);
+            });
+
+            const headMaterials = [
+                new THREE.MeshLambertMaterial({ map: headSideTex }),
+                new THREE.MeshLambertMaterial({ map: headSideTex }),
+                new THREE.MeshLambertMaterial({ map: headTopTex }),
+                new THREE.MeshLambertMaterial({ map: headBottomTex }),
+                new THREE.MeshLambertMaterial({ map: headFrontTex }),
+                new THREE.MeshLambertMaterial({ map: headSideTex })
+            ];
+
+            const headGeom = new THREE.BoxGeometry(0.52, 0.65, 0.52);
+            const headMesh = new THREE.Mesh(headGeom, headMaterials);
+            headMesh.position.y = 1.62;
+
+            // 2. 标志性 3D 大长鼻子 (直接附着于头部，随头部转动)
+            const noseFrontTex = makePixelTexture(4, 8, (ctx, w, h) => {
+                ctx.fillStyle = '#BD8B72';
+                ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = '#C69680';
+                ctx.fillRect(1, 0, 2, 2);
+                ctx.fillStyle = '#A4735E';
+                ctx.fillRect(0, 6, w, 2);
+            });
+            const noseSideTex = makePixelTexture(4, 8, (ctx, w, h) => {
+                ctx.fillStyle = '#A4735E';
+                ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = '#8C5845';
+                ctx.fillRect(0, 5, w, 3);
+            });
+            const noseTopTex = makePixelTexture(4, 4, (ctx, w, h) => {
+                ctx.fillStyle = '#C69680';
+                ctx.fillRect(0, 0, w, h);
+            });
+            const noseBottomTex = makePixelTexture(4, 4, (ctx, w, h) => {
+                ctx.fillStyle = '#7C4A36';
+                ctx.fillRect(0, 0, w, h);
+            });
+
+            const noseMaterials = [
+                new THREE.MeshLambertMaterial({ map: noseSideTex }),
+                new THREE.MeshLambertMaterial({ map: noseSideTex }),
+                new THREE.MeshLambertMaterial({ map: noseTopTex }),
+                new THREE.MeshLambertMaterial({ map: noseBottomTex }),
+                new THREE.MeshLambertMaterial({ map: noseFrontTex }),
+                new THREE.MeshLambertMaterial({ map: noseTopTex })
+            ];
+            const noseGeom = new THREE.BoxGeometry(0.13, 0.26, 0.13);
+            const noseMesh = new THREE.Mesh(noseGeom, noseMaterials);
+            noseMesh.position.set(0, -0.06, 0.26 + 0.065);
+            headMesh.add(noseMesh);
+
+            group.add(headMesh);
+
+            // 3. 经典棕色长袍身体 (修长身材，非矮胖)
+            const robeFrontTex = makePixelTexture(16, 24, (ctx, w, h) => {
+                const robePalette = ['#6D4C41', '#5D4037', '#795548', '#634439'];
+                for (let x = 0; x < w; x++) {
+                    for (let y = 0; y < h; y++) {
+                        ctx.fillStyle = robePalette[(x * 7 + y * 13) % robePalette.length];
+                        ctx.fillRect(x, y, 1, 1);
+                    }
+                }
+                // 长袍正中缝线与暗扣
+                ctx.fillStyle = '#3E2723';
+                ctx.fillRect(7, 0, 2, h);
+                ctx.fillStyle = '#2E1E17';
+                ctx.fillRect(8, 0, 1, h);
+
+                // 底部深色长袍下摆边
+                ctx.fillStyle = '#4E342E';
+                ctx.fillRect(0, h - 3, w, 3);
+            });
+
+            const robeSideTex = makePixelTexture(16, 24, (ctx, w, h) => {
+                const robePalette = ['#6D4C41', '#5D4037', '#795548', '#634439'];
+                for (let x = 0; x < w; x++) {
+                    for (let y = 0; y < h; y++) {
+                        ctx.fillStyle = robePalette[(x * 5 + y * 11) % robePalette.length];
+                        ctx.fillRect(x, y, 1, 1);
+                    }
+                }
+                ctx.fillStyle = '#4E342E';
+                ctx.fillRect(0, h - 3, w, 3);
+            });
+
+            const robeTopBottomTex = makePixelTexture(16, 16, (ctx, w, h) => {
+                ctx.fillStyle = '#4E342E';
+                ctx.fillRect(0, 0, w, h);
+            });
+
+            const robeMaterials = [
+                new THREE.MeshLambertMaterial({ map: robeSideTex }),
+                new THREE.MeshLambertMaterial({ map: robeSideTex }),
+                new THREE.MeshLambertMaterial({ map: robeTopBottomTex }),
+                new THREE.MeshLambertMaterial({ map: robeTopBottomTex }),
+                new THREE.MeshLambertMaterial({ map: robeFrontTex }),
+                new THREE.MeshLambertMaterial({ map: robeSideTex })
+            ];
+
+            const robeGeom = new THREE.BoxGeometry(0.54, 0.95, 0.38);
+            const robeMesh = new THREE.Mesh(robeGeom, robeMaterials);
+            robeMesh.position.y = 0.90;
+            group.add(robeMesh);
+
+            // 4. 经典交叉合抱双臂 (Folded Crossed Arms，袖口露出肤色双手)
+            const armsFrontTex = makePixelTexture(16, 8, (ctx, w, h) => {
+                // 两侧棕色长袍袖子
+                ctx.fillStyle = '#6D4C41';
+                ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = '#4E342E';
+                ctx.fillRect(4, 0, 1, h);
+                ctx.fillRect(11, 0, 1, h);
+
+                // 袖口中插抱的肤色双手
+                ctx.fillStyle = '#C69680';
+                ctx.fillRect(5, 1, 6, 6);
+                ctx.fillStyle = '#BD8B72';
+                ctx.fillRect(6, 2, 4, 4);
+                // 双手中缝
+                ctx.fillStyle = '#4E342E';
+                ctx.fillRect(7, 2, 2, 4);
+            });
+
+            const armsSideTex = makePixelTexture(8, 8, (ctx, w, h) => {
+                ctx.fillStyle = '#5D4037';
+                ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = '#4E342E';
+                ctx.fillRect(0, 6, w, 2);
+            });
+
+            const armsTopTex = makePixelTexture(16, 8, (ctx, w, h) => {
+                ctx.fillStyle = '#6D4C41';
+                ctx.fillRect(0, 0, w, h);
+            });
+
+            const armsBottomTex = makePixelTexture(16, 8, (ctx, w, h) => {
+                ctx.fillStyle = '#4E342E';
+                ctx.fillRect(0, 0, w, h);
+            });
+
+            const armsMaterials = [
+                new THREE.MeshLambertMaterial({ map: armsSideTex }),
+                new THREE.MeshLambertMaterial({ map: armsSideTex }),
+                new THREE.MeshLambertMaterial({ map: armsTopTex }),
+                new THREE.MeshLambertMaterial({ map: armsBottomTex }),
+                new THREE.MeshLambertMaterial({ map: armsFrontTex }),
+                new THREE.MeshLambertMaterial({ map: armsTopTex })
+            ];
+
+            const armsGeom = new THREE.BoxGeometry(0.60, 0.28, 0.26);
+            const armsMesh = new THREE.Mesh(armsGeom, armsMaterials);
+            armsMesh.position.set(0, 0.98, 0.20);
+            group.add(armsMesh);
+
+            // 5. 修长腿部与深色靴子 (Left & Right Legs)
+            const legTex = makePixelTexture(8, 16, (ctx, w, h) => {
+                // 裤腿
+                ctx.fillStyle = '#4E342E';
+                ctx.fillRect(0, 0, w, 10);
+                ctx.fillStyle = '#3E2723';
+                ctx.fillRect(0, 6, w, 4);
+
+                // 靴子
+                ctx.fillStyle = '#271814';
+                ctx.fillRect(0, 10, w, 6);
+                ctx.fillStyle = '#1B100C';
+                ctx.fillRect(0, 14, w, 2);
+            });
+
+            const legMat = new THREE.MeshLambertMaterial({ map: legTex });
+            const legGeom = new THREE.BoxGeometry(0.20, 0.48, 0.26);
+
+            const leftLeg = new THREE.Mesh(legGeom, legMat);
+            leftLeg.position.set(-0.13, 0.24, 0);
+            group.add(leftLeg);
+
+            const rightLeg = new THREE.Mesh(legGeom, legMat);
+            rightLeg.position.set(0.13, 0.24, 0);
+            group.add(rightLeg);
+
+            return { group, head: headMesh };
+        }
+
+        function initHomeVillager3D() {
+            const canvas = document.getElementById('homeVillager3DCanvas');
+            if (!canvas || typeof THREE === 'undefined') return;
+            if (homeVillager3DRenderer) return; // 已经初始化过，无需重复创建
+
+            const width = 130;
+            const height = 190;
+
+            homeVillager3DScene = new THREE.Scene();
+            homeVillager3DCamera = new THREE.PerspectiveCamera(34, width / height, 0.1, 50);
+            homeVillager3DCamera.position.set(0, 1.12, 3.6);
+
+            try {
+                homeVillager3DRenderer = new THREE.WebGLRenderer({
+                    canvas: canvas,
+                    alpha: true,
+                    antialias: true
+                });
+            } catch (err) {
+                console.warn("无法初始化村民 3D 渲染器", err);
+                return;
+            }
+
+            homeVillager3DRenderer.setSize(width, height);
+            homeVillager3DRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+            // 灯光设置：经典方块阴影立体感
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.88);
+            homeVillager3DScene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.65);
+            dirLight.position.set(2.2, 3.8, 3.2);
+            homeVillager3DScene.add(dirLight);
+
+            const rimLight = new THREE.DirectionalLight(0x81D4FA, 0.25);
+            rimLight.position.set(-2.5, 1.5, -2.0);
+            homeVillager3DScene.add(rimLight);
+
+            // 构建 3D 原版村民模型
+            const villagerData = createVillagerModel3D();
+            homeVillagerGroup = villagerData.group;
+            homeVillagerHead = villagerData.head;
+            homeVillager3DScene.add(homeVillagerGroup);
+
+            // 初始微微侧身 12 度，完美展现 3D 大鼻子和合抱双臂的立体层次
+            homeVillagerGroup.rotation.y = 0.22;
+
+            // 鼠标悬浮互动：村民目光随指针微微转动
+            let targetRotY = 0.22;
+            let targetHeadRotX = 0;
+            let targetHeadRotY = 0;
+
+            const villagerWrapper = document.getElementById('homeVillagerNpc');
+            if (villagerWrapper) {
+                villagerWrapper.addEventListener('mousemove', (e) => {
+                    const rect = canvas.getBoundingClientRect();
+                    const mouseX = (e.clientX - (rect.left + rect.width / 2)) / rect.width;
+                    const mouseY = (e.clientY - (rect.top + rect.height / 2)) / rect.height;
+                    targetRotY = 0.22 + mouseX * 0.45;
+                    targetHeadRotY = mouseX * 0.55;
+                    targetHeadRotX = mouseY * 0.35;
+                });
+
+                villagerWrapper.addEventListener('mouseleave', () => {
+                    targetRotY = 0.22;
+                    targetHeadRotY = 0;
+                    targetHeadRotX = 0;
+                });
+            }
+
+            // 动画渲染循环：平缓呼吸与目光交互
+            const startTime = performance.now();
+            function renderLoop() {
+                requestAnimationFrame(renderLoop);
+
+                const wrapper = document.getElementById('homeVillagerNpc');
+                if (!wrapper || wrapper.offsetParent === null || wrapper.style.display === 'none') {
+                    return; // 未展示时跳过渲染，节约性能
+                }
+
+                const elapsed = (performance.now() - startTime) * 0.001;
+
+                // 待机呼吸微动
+                homeVillagerGroup.position.y = Math.sin(elapsed * 2.2) * 0.025;
+
+                // 旋转平滑过渡
+                homeVillagerGroup.rotation.y += (targetRotY - homeVillagerGroup.rotation.y) * 0.08;
+                if (homeVillagerHead) {
+                    const idleHeadY = Math.sin(elapsed * 0.85) * 0.06;
+                    homeVillagerHead.rotation.y += (targetHeadRotY + idleHeadY - homeVillagerHead.rotation.y) * 0.1;
+                    homeVillagerHead.rotation.x += (targetHeadRotX - homeVillagerHead.rotation.x) * 0.1;
+                }
+
+                homeVillager3DRenderer.render(homeVillager3DScene, homeVillager3DCamera);
+            }
+            renderLoop();
+        }
 
         function backToHome() {
             canvas.style.pointerEvents = 'auto';
@@ -10921,8 +11288,19 @@
             const modeDisplay = document.getElementById('modeDisplayBtn');
             if (modeDisplay) modeDisplay.textContent = mText;
             document.querySelector('.home-buttons button[onclick="openInstructionsModal()"]').innerHTML = "📖 游戏说明";
-            const vBtn = document.getElementById('villagerHomeBtn');
-            if (vBtn) vBtn.innerHTML = "🧑‍🌾 村民交易";
+
+            // ⭐ 首页 3D 原版村民仅在我的世界主题（Mode 3）下显示在游戏说明按钮旁，其他模式隐藏
+            const homeVillager = document.getElementById('homeVillagerNpc');
+            if (homeVillager) {
+                if (mode === 3) {
+                    homeVillager.style.display = 'flex';
+                    if (typeof initHomeVillager3D === 'function') {
+                        initHomeVillager3D();
+                    }
+                } else {
+                    homeVillager.style.display = 'none';
+                }
+            }
 
             if (mode === 3) {
                 // 进入“我的世界”主题
@@ -10939,7 +11317,6 @@
                 }
                 document.querySelector('.home-buttons button[onclick="openInstructionsModal()"]').innerHTML = 
                     '<span class="mc-icon icon-diamond"></span> 游戏说明';
-                if (vBtn) vBtn.innerHTML = '<span style="display:inline-block; font-size:16px; margin-right:4px;">🟢</span> 村民交易';
             } else if (mode === 4) {
                 // 进入“俄罗斯方块”主题
                 screen.classList.add('tetris-theme');

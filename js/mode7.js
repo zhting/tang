@@ -1491,8 +1491,46 @@
             updateLevel10Trap(dt);
         }
 
-        // 1. 趴下状态控制（下键触发）
-        const wantCrouch = m7.keys.down;
+        // ===== 药水效果时效衰减 =====
+        const isDev = (typeof isDevMode !== 'undefined' && isDevMode);
+        if (m7.potionEffects) {
+            if (m7.potionEffects.speed.timer > 0) {
+                m7.potionEffects.speed.timer -= dt;
+                if (m7.potionEffects.speed.timer <= 0) {
+                    m7.potionEffects.speed.timer = 0;
+                    m7.potionEffects.speed.active = false;
+                }
+            }
+            if (m7.potionEffects.jump.timer > 0) {
+                m7.potionEffects.jump.timer -= dt;
+                if (m7.potionEffects.jump.timer <= 0) {
+                    m7.potionEffects.jump.timer = 0;
+                    m7.potionEffects.jump.active = false;
+                }
+            }
+            if (m7.potionEffects.levitation.timer > 0) {
+                m7.potionEffects.levitation.timer -= dt;
+                if (m7.potionEffects.levitation.timer <= 0) {
+                    m7.potionEffects.levitation.timer = 0;
+                    m7.potionEffects.levitation.active = false;
+                }
+            }
+        }
+
+        const hasLevitation = (m7.potionEffects && m7.potionEffects.levitation.timer > 0);
+        const hasSpeedPotion = (m7.potionEffects && m7.potionEffects.speed.timer > 0) || isDev;
+        const hasJumpBoost = (m7.potionEffects && m7.potionEffects.jump.timer > 0) || isDev;
+
+        // 动态更新控制按键提示（悬浮药水激活时：跳跃/下蹲变更为往上/往下按键）
+        updateM7ControlButtons(hasLevitation);
+
+        // 1. 趴下状态控制（下键触发；悬浮药水激活时，下键为【向下移动】，禁用趴下爬行姿势）
+        const wantCrouch = m7.keys.down && !hasLevitation;
+        if (hasLevitation && p.isCrouching) {
+            p.isCrouching = false;
+            p.y -= (p.standH - p.crouchH);
+            p.h = p.standH;
+        }
 
         // 如果想站起来，必须在地面上且头顶无方块阻挡
         if (!wantCrouch && p.isCrouching) {
@@ -1538,34 +1576,7 @@
             playSound('crouch');
         }
 
-        // ===== 药水效果时效衰减 =====
-        const isDev = (typeof isDevMode !== 'undefined' && isDevMode);
-        if (m7.potionEffects) {
-            if (m7.potionEffects.speed.timer > 0) {
-                m7.potionEffects.speed.timer -= dt;
-                if (m7.potionEffects.speed.timer <= 0) {
-                    m7.potionEffects.speed.timer = 0;
-                    m7.potionEffects.speed.active = false;
-                }
-            }
-            if (m7.potionEffects.jump.timer > 0) {
-                m7.potionEffects.jump.timer -= dt;
-                if (m7.potionEffects.jump.timer <= 0) {
-                    m7.potionEffects.jump.timer = 0;
-                    m7.potionEffects.jump.active = false;
-                }
-            }
-            if (m7.potionEffects.levitation.timer > 0) {
-                m7.potionEffects.levitation.timer -= dt;
-                if (m7.potionEffects.levitation.timer <= 0) {
-                    m7.potionEffects.levitation.timer = 0;
-                    m7.potionEffects.levitation.active = false;
-                }
-            }
-        }
-
         // 2. 水平速度计算（关闭旧加速键：只有在村民处购买并饮用【加速药水】或开发者模式下，才激活冲刺加速！）
-        const hasSpeedPotion = (m7.potionEffects && m7.potionEffects.speed.timer > 0) || isDev;
         let currentSpeed = MOVE_SPEED;
         if (p.isCrouching) {
             // 爬行基础速度 2.2，加速药水生效时达到 5.1（极速冲刺爬行）
@@ -1603,16 +1614,37 @@
             });
         }
 
-        // 3. 跳跃（上键 / 空格，在未趴下且着地或悬浮时）
-        const hasJumpBoost = (m7.potionEffects && m7.potionEffects.jump.timer > 0) || isDev;
-        const hasLevitation = (m7.potionEffects && m7.potionEffects.levitation.timer > 0);
-
-        if (m7.keys.up && (p.isGrounded || hasLevitation) && !p.isCrouching) {
-            if (hasLevitation) {
-                // 悬浮药水：按上键缓缓浮升
-                p.vy = -3.5;
+        // 3. 垂直移动与重力/悬浮飞行逻辑
+        if (hasLevitation) {
+            // ⭐ 悬浮药水精准操作：
+            // 1. 往上：会直接漂浮到上面（按上键直接在空中稳健升空）
+            // 2. 往下：是从漂浮点向下，不穿透方块（按下键向下平稳降落，垂直碰撞检测确保完美踏在地面/方块上）
+            // 3. 不按键：精准稳定滞空悬停在当前高度！左右键保持水平飞行漫步！
+            if (m7.keys.up) {
+                p.vy = -4.6;
+            } else if (m7.keys.down) {
+                p.vy = 4.6;
             } else {
-                // 跳跃提升药水：跳跃力度达到 -17.5，跳到自身高度两倍以上 (高度达 260px)
+                p.vy = 0; // 悬浮滞空！
+            }
+            p.isGrounded = true; // 悬浮状态下可自由在空中漫步跨越一切深渊障碍
+
+            // 悬浮青白色潜影旋转气泡粒子
+            if (Math.random() < 0.4) {
+                const angle = performance.now() * 0.008;
+                m7.particles.push({
+                    x: p.x + p.w / 2 + Math.cos(angle) * 14,
+                    y: p.y + p.h - 6 + Math.sin(angle) * 4,
+                    vx: (Math.random() - 0.5) * 0.6,
+                    vy: (m7.keys.up ? -1.8 : (m7.keys.down ? 1.5 : -0.5)),
+                    life: 0.8,
+                    color: Math.random() < 0.5 ? '#E0F7FA' : '#00E5FF',
+                    size: 3 + Math.random() * 2
+                });
+            }
+        } else {
+            // 普通重力与跳跃逻辑
+            if (m7.keys.up && p.isGrounded && !p.isCrouching) {
                 p.vy = hasJumpBoost ? (JUMP_FORCE * 1.48) : JUMP_FORCE;
                 p.isGrounded = false;
                 playSound('jump');
@@ -1630,31 +1662,6 @@
                     });
                 }
             }
-        }
-
-        // 4. 重力应用（悬浮药水：在空中悬浮 10 秒，完全免疫重力，自由空中漫步）
-        if (hasLevitation) {
-            if (m7.keys.down) {
-                p.vy = 3.2; // 按下键缓降
-            } else if (!m7.keys.up) {
-                p.vy = 0; // 滞空悬停！
-            }
-            p.isGrounded = true; // 悬浮状态下可自由空中漫步跨越一切深渊！
-
-            // 悬浮青白色潜影旋转气泡粒子
-            if (Math.random() < 0.35) {
-                const angle = performance.now() * 0.008;
-                m7.particles.push({
-                    x: p.x + p.w / 2 + Math.cos(angle) * 14,
-                    y: p.y + p.h - 6 + Math.sin(angle) * 4,
-                    vx: (Math.random() - 0.5) * 0.6,
-                    vy: -0.6 - Math.random() * 0.8,
-                    life: 0.8,
-                    color: Math.random() < 0.5 ? '#E0F7FA' : '#00E5FF',
-                    size: 3 + Math.random() * 2
-                });
-            }
-        } else {
             p.vy += GRAVITY;
             if (p.vy > 14) p.vy = 14;
         }
@@ -2634,32 +2641,37 @@
         ctx.textAlign = 'center';
         ctx.fillText('💎', 0, -18);
 
-        // 村民标签背景
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.68)';
-        if (ctx.roundRect) ctx.roundRect(-46, -14, 92, 20, 6);
-        else ctx.fillRect(-46, -14, 92, 20);
-        ctx.fill();
-        ctx.strokeStyle = '#4CAF50';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
+        // 村民标签背景 (经典 Minecraft 方形像素边框)
+        ctx.fillStyle = '#C6C6C6';
+        ctx.fillRect(-45, -14, 90, 20);
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-45, -14, 90, 20);
 
-        ctx.fillStyle = '#A5D6A7';
+        ctx.fillStyle = '#111111';
         ctx.font = 'bold 11px sans-serif';
         ctx.fillText('🧑‍🌾 村民交易', 0, 0);
 
-        // 玩家靠近时的气泡提示
+        // 玩家靠近时的气泡提示 (方方正正的对话框，全中文纯正提示)
         const distToPlayer = Math.abs(m7.player.x - v.x);
         if (distToPlayer < 95) {
-            ctx.fillStyle = 'rgba(255, 235, 59, 0.95)';
-            ctx.strokeStyle = '#F57F17';
-            ctx.lineWidth = 1;
-            if (ctx.roundRect) ctx.roundRect(-65, -44, 130, 22, 6);
-            else ctx.fillRect(-65, -44, 130, 22);
+            ctx.fillStyle = '#C6C6C6';
+            ctx.fillRect(-70, -46, 140, 24);
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(-70, -46, 140, 24);
+
+            // 下指方尖角
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.moveTo(-5, -22);
+            ctx.lineTo(5, -22);
+            ctx.lineTo(0, -17);
             ctx.fill();
-            ctx.stroke();
-            ctx.fillStyle = '#3E2723';
+
+            ctx.fillStyle = '#212121';
             ctx.font = 'bold 11px sans-serif';
-            ctx.fillText('Hrrr~ 点击或按E交易', 0, -29);
+            ctx.fillText('点击或按E键交易药水', 0, -30);
         }
         ctx.restore();
     }
@@ -2921,6 +2933,45 @@
         }
 
         updatePotionButtonsUI();
+    }
+
+    // ⭐ 悬浮药水激活时：跳跃/下蹲按键自动动态变更为往上/往下按键
+    function updateM7ControlButtons(hasLevitation) {
+        const btnUp = document.getElementById('m7BtnUp');
+        const btnDown = document.getElementById('m7BtnDown');
+        if (!btnUp || !btnDown) return;
+
+        if (hasLevitation) {
+            if (!btnUp.dataset.isLevitation) {
+                btnUp.dataset.isLevitation = 'true';
+                btnUp.innerHTML = '▲往上';
+                btnUp.style.background = 'linear-gradient(135deg, #00ACC1 0%, #00838F 100%)';
+                btnUp.style.borderColor = '#80DEEA';
+                btnUp.style.boxShadow = '0 0 14px rgba(0, 229, 255, 0.7)';
+            }
+            if (!btnDown.dataset.isLevitation) {
+                btnDown.dataset.isLevitation = 'true';
+                btnDown.innerHTML = '▼往下';
+                btnDown.style.background = 'linear-gradient(135deg, #0097A7 0%, #006064 100%)';
+                btnDown.style.borderColor = '#80DEEA';
+                btnDown.style.boxShadow = '0 0 14px rgba(0, 229, 255, 0.5)';
+            }
+        } else {
+            if (btnUp.dataset.isLevitation) {
+                delete btnUp.dataset.isLevitation;
+                btnUp.innerHTML = '▲跳跃';
+                btnUp.style.background = 'rgba(27, 94, 32, 0.85)';
+                btnUp.style.borderColor = '#81C784';
+                btnUp.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
+            }
+            if (btnDown.dataset.isLevitation) {
+                delete btnDown.dataset.isLevitation;
+                btnDown.innerHTML = '▼趴下';
+                btnDown.style.background = 'rgba(56, 142, 60, 0.88)';
+                btnDown.style.borderColor = '#C8E6C9';
+                btnDown.style.boxShadow = '0 4px 10px rgba(0,0,0,0.35)';
+            }
+        }
     }
 
     function updatePotionButtonsUI() {
