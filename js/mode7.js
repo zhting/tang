@@ -127,6 +127,46 @@
                 gain.connect(ctx.destination);
                 osc.start(now);
                 osc.stop(now + 0.25);
+            } else if (type === 'electric_off') {
+                // 电源切断消散音
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(460, now);
+                osc.frequency.exponentialRampToValueAtTime(50, now + 0.35);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            } else if (type === 'slam') {
+                // 栅栏/巨柱插地撞击声
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(35, now + 0.2);
+                gain.gain.setValueAtTime(0.32, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'teleport') {
+                // 末影传送音效
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.18);
+                osc.frequency.exponentialRampToValueAtTime(240, now + 0.38);
+                gain.gain.setValueAtTime(0.28, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.38);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.38);
             } else if (type === 'win') {
                 // 通关和弦欢呼音
                 [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
@@ -158,9 +198,10 @@
         collapseTraps: [],   // [{ x, y, w, h, state, timer, vy, dropDelay, color, topColor, solid, shakeOffset }]
         movingBlocks: [],    // [{ x, y, w, h, minX, maxX, dir, speed, type, color, topColor, solid }]
         level10Trap: null,   // 第10关双坑联动与往复推挤地坑专属机关
-        levers: [],          // [{ x, y, state: 'left'|'right', animProgress: 0, targetDoorId }]
+        fenceTrap: null,     // 第25关大柱子与4连动升降栅栏机关
+        levers: [],          // [{ x, y, state: 'left'|'right', animProgress: 0, targetDoorId, targetElectricId }]
         doors: [],           // [{ id, x, y, w, h, isOpen: false, openProgress: 0 }]
-        electrics: [],       // [{ x, y, w, h, animTimer: 0 }]
+        electrics: [],       // [{ id, x, y, w, h, animTimer: 0, disabled: false }]
         goal: { x: 0, y: 0, w: 40, h: 60, reached: false },
         signs: [],           // [{ x, y, text, subText }]
         particles: [],
@@ -1080,47 +1121,85 @@
             m7.goal.y = groundY - 80;
 
         } else if (lvl === 25) {
-            // 🏆【第 25 关：终极大闯关·普通难度巅峰】
-            endX = 2500;
-            addGround(0, 320, groundY, 'grass');
-            addGround(460, 130, groundY, 'stone');
-            addGround(740, 240, groundY, 'grass');
+            // 🏆【第 25 关：普通难度终极关卡·电网拉杆与升降四栅栏】
+            endX = 2100;
 
-            m7.level10Trap = {
-                pit1: { x: 320, w: 140 },
-                midPlatform: { x: 460, w: 130 },
-                pit2: { x: 590, w: 140 },
-                pitCover: {
-                    x: 590, y: groundY, currentY: groundY, w: 140, h: 160, solid: true, color: '#795548', topColor: '#8D6E63'
-                },
-                wall: {
-                    initialX: 740, x: 740, targetX: 486, y: groundY - 140, w: 52, h: 140, solid: false, active: false, visible: false
-                },
-                leftWall: {
-                    x: 434, targetY: groundY - 140, currentY: groundY, w: 28, h: 140, solid: false, visible: false
-                },
-                state: 'idle',
-                timer: 0,
-                triggerRangeX: 535
-            };
+            // 1. 起点与出生平台
+            addGround(0, 380, groundY, 'grass');
 
-            m7.electrics.push({ x: 980, y: groundY - 30, w: 260, h: 30, animTimer: 0 });
-            addCollapseTrap(1030, groundY - 80, 75, 24, 320, 'wood');
-            addCollapseTrap(1140, groundY - 120, 75, 24, 320, 'wood');
-
-            addGround(1240, 200, groundY, 'grass');
-            addBlock(1440, groundY - 80, 90, 240, 'stone');
-            addBlock(1530, groundY - 150, 120, 310, 'gold');
-            m7.levers.push({
-                x: 1580, y: groundY - 180, w: 32, h: 30, state: 'left', animProgress: 0, targetDoorId: 'door_lvl25_norm'
+            // 2. 机关一：致命高压电网 + 地下电闸拉杆
+            // 地表走廊：地面石桥 + 顶部防跳跃顶棚 + 致命电流
+            addBlock(380, groundY, 340, 20, 'stone');
+            addBlock(380, groundY - 130, 340, 30, 'brick'); // 顶部阻挡，防止直接起跳越过
+            m7.electrics.push({
+                id: 'elec_lvl25',
+                x: 420,
+                y: groundY - 30,
+                w: 260,
+                h: 30,
+                animTimer: 0,
+                disabled: false
             });
 
-            addGround(1700, 850, groundY, 'grass');
-            addBlock(2000, groundY - 220, 60, 140, 'brick');
-            m7.doors.push({ id: 'door_lvl25_norm', x: 2000, y: groundY - 80, w: 60, h: 80, isOpen: false, openProgress: 0 });
+            // 地下暗室通道：左侧台阶下行进入地下室
+            addBlock(340, groundY + 30, 40, 130, 'stone');  // 阶梯 1
+            addBlock(380, groundY + 60, 40, 100, 'stone');  // 阶梯 2
+            addBlock(380, groundY + 90, 260, 70, 'tunnel'); // 地下室行走地面
+            // 地下室末端死胡同实心黑曜石阻挡墙
+            addBlock(640, groundY + 20, 40, 140, 'obsidian');
 
-            m7.signs.push({ x: 180, y: groundY - 60, text: '🏆 第 25 关：普通难度终极巅峰', subText: '突破连环机关，赢得无上荣耀！' });
-            m7.goal.x = endX;
+            // 地下室电闸拉杆（拉动后切断 elec_lvl25 电流）
+            m7.levers.push({
+                x: 520,
+                y: groundY + 58,
+                w: 32,
+                h: 30,
+                state: 'left',
+                animProgress: 0,
+                targetElectricId: 'elec_lvl25'
+            });
+
+            m7.signs.push({
+                x: 300,
+                y: groundY - 60,
+                text: '高压电网与地下电闸',
+                subText: '进入地下暗室拉动电闸，方可切断上方致命电流！'
+            });
+
+            // 3. 中间过渡地面
+            addGround(720, 280, groundY, 'grass');
+
+            // 4. 机关二告示牌（严格按照用户要求立牌："四个栅栏会有两个先伸出来"）
+            m7.signs.push({
+                x: 920,
+                y: groundY - 60,
+                text: '四个栅栏会有两个先伸出来',
+                subText: '2/4号先伸出，趁升起间隙在下方避难！触碰将传送回起点'
+            });
+
+            // 5. 机关二：大柱子与 4 个升降栅栏
+            addGround(1000, 600, groundY, 'stone');
+            m7.fenceTrap = {
+                x: 1000,
+                w: 560,
+                groundY: groundY,
+                minY: 120, // 升起状态：底部位于 Y=380，留出 100px 安全通行与避难净空
+                maxY: 220, // 降下状态：底部位于 Y=480，严密插在地上封死通道
+                fences: [
+                    { id: 1, x: 1080, w: 40, h: 260, currentY: 120, num: '①' },
+                    { id: 2, x: 1200, w: 40, h: 260, currentY: 220, num: '②' },
+                    { id: 3, x: 1320, w: 40, h: 260, currentY: 120, num: '③' },
+                    { id: 4, x: 1440, w: 40, h: 260, currentY: 220, num: '④' }
+                ],
+                state: 'phase1_pause', // 初始阶段：2号与4号先插在地上
+                timer: 0,
+                pauseDuration: 2000,   // 停止 2 秒
+                moveDuration: 1800     // 缓缓升起/下落 1.8 秒
+            };
+
+            // 6. 终点区域
+            addGround(1600, 500, groundY, 'grass');
+            m7.goal.x = 1880;
             m7.goal.y = groundY - 80;
         }
 
@@ -1140,6 +1219,7 @@
         m7.collapseTraps = [];
         m7.movingBlocks = [];
         m7.level10Trap = null;
+        m7.fenceTrap = null;
 
         const groundY = 480; // 地面基础高度
         let endX = 1400;
@@ -1470,6 +1550,141 @@
         }
     }
 
+    function updateFenceTrap(dt) {
+        const ft = m7.fenceTrap;
+        if (!ft) return;
+        const p = m7.player;
+
+        ft.timer += dt;
+
+        // 阶段状态机运转
+        if (ft.state === 'phase1_pause') {
+            // 2号和4号插在地上，1号和3号升起；停止 2 秒
+            ft.fences[0].currentY = ft.minY;
+            ft.fences[1].currentY = ft.maxY;
+            ft.fences[2].currentY = ft.minY;
+            ft.fences[3].currentY = ft.maxY;
+
+            if (ft.timer >= ft.pauseDuration) {
+                ft.state = 'phase1_move';
+                ft.timer = 0;
+                playSound('slide');
+            }
+        } else if (ft.state === 'phase1_move') {
+            // 2号和4号缓缓升起，同时1号和3号缓缓下落 (耗时 1.8秒)
+            const progress = Math.min(1, ft.timer / ft.moveDuration);
+            const eased = 0.5 - 0.5 * Math.cos(progress * Math.PI); // 平滑余弦插值
+
+            // 2 & 4 升起 (maxY -> minY)
+            ft.fences[1].currentY = ft.maxY - (ft.maxY - ft.minY) * eased;
+            ft.fences[3].currentY = ft.maxY - (ft.maxY - ft.minY) * eased;
+            // 1 & 3 下落 (minY -> maxY)
+            ft.fences[0].currentY = ft.minY + (ft.maxY - ft.minY) * eased;
+            ft.fences[2].currentY = ft.minY + (ft.maxY - ft.minY) * eased;
+
+            if (progress >= 1) {
+                ft.state = 'phase2_pause';
+                ft.timer = 0;
+                playSound('slam'); // 1号与3号落地砸向地面
+            }
+        } else if (ft.state === 'phase2_pause') {
+            // 1号和3号插在地上，2号和4号升起；停止 2 秒（玩家在2/4号下方避险）
+            ft.fences[0].currentY = ft.maxY;
+            ft.fences[1].currentY = ft.minY;
+            ft.fences[2].currentY = ft.maxY;
+            ft.fences[3].currentY = ft.minY;
+
+            if (ft.timer >= ft.pauseDuration) {
+                ft.state = 'phase2_move';
+                ft.timer = 0;
+                playSound('slide');
+            }
+        } else if (ft.state === 'phase2_move') {
+            // 1号和3号缓缓升起，同时2号和4号缓缓下落 (耗时 1.8秒)
+            const progress = Math.min(1, ft.timer / ft.moveDuration);
+            const eased = 0.5 - 0.5 * Math.cos(progress * Math.PI);
+
+            // 1 & 3 升起 (maxY -> minY)
+            ft.fences[0].currentY = ft.maxY - (ft.maxY - ft.minY) * eased;
+            ft.fences[2].currentY = ft.maxY - (ft.maxY - ft.minY) * eased;
+            // 2 & 4 下落 (minY -> maxY)
+            ft.fences[1].currentY = ft.minY + (ft.maxY - ft.minY) * eased;
+            ft.fences[3].currentY = ft.minY + (ft.maxY - ft.minY) * eased;
+
+            if (progress >= 1) {
+                ft.state = 'phase1_pause';
+                ft.timer = 0;
+                playSound('slam'); // 2号与4号落地砸向地面
+            }
+        }
+
+        // 碰撞检测：玩家碰到任何栅栏，立即传送回出生点！
+        if (!p.isDead && !p.isTeleporting) {
+            for (const f of ft.fences) {
+                // 给予适度容错判定内缩
+                const fenceBox = {
+                    x: f.x + 3,
+                    y: f.currentY,
+                    w: f.w - 6,
+                    h: f.h
+                };
+                if (isColliding(p, fenceBox)) {
+                    teleportPlayerToSpawn();
+                    break;
+                }
+            }
+        }
+    }
+
+    function teleportPlayerToSpawn() {
+        const p = m7.player;
+        if (p.isDead || p.isTeleporting) return;
+        p.isTeleporting = true;
+
+        playSound('teleport');
+
+        // 在被传送的原位置产生末影传送粒子
+        for (let i = 0; i < 24; i++) {
+            m7.particles.push({
+                x: p.x + p.w / 2,
+                y: p.y + p.h / 2,
+                vx: (Math.random() - 0.5) * 6,
+                vy: (Math.random() - 0.5) * 6,
+                life: 1,
+                color: Math.random() < 0.5 ? '#A855F7' : '#E879F9',
+                size: 4
+            });
+        }
+
+        // 传送回出生点 (x=80, y=300)
+        p.x = 80;
+        p.y = 300;
+        p.vx = 0;
+        p.vy = 0;
+        p.isGrounded = false;
+
+        // 在出生点产生出现粒子
+        for (let i = 0; i < 24; i++) {
+            m7.particles.push({
+                x: p.x + p.w / 2,
+                y: p.y + p.h / 2,
+                vx: (Math.random() - 0.5) * 6,
+                vy: (Math.random() - 0.5) * 6,
+                life: 1,
+                color: Math.random() < 0.5 ? '#9C27B0' : '#BA68C8',
+                size: 4
+            });
+        }
+
+        if (typeof showMessage === 'function') {
+            showMessage('🌀 触碰机关栅栏！已传送回出生点！', window.innerWidth / 2, window.innerHeight * 0.35);
+        }
+
+        setTimeout(() => {
+            p.isTeleporting = false;
+        }, 350);
+    }
+
     // ==========================================
     // 物理与碰撞处理
     // ==========================================
@@ -1489,6 +1704,9 @@
         updateMovingBlocks(dt);
         if (m7.level10Trap) {
             updateLevel10Trap(dt);
+        }
+        if (m7.fenceTrap) {
+            updateFenceTrap(dt);
         }
 
         // ===== 药水效果时效衰减 =====
@@ -1699,6 +1917,7 @@
 
         // 8. 致命电流碰撞检测
         for (const e of m7.electrics) {
+            if (e.disabled) continue;
             if (isColliding(p, e)) {
                 triggerElectricDeath();
                 return;
@@ -2026,6 +2245,34 @@
                     }
                 }
             }
+
+            // 切断对应电流机关
+            if (lev.targetElectricId) {
+                let foundElec = false;
+                for (const e of m7.electrics) {
+                    if (e.id === lev.targetElectricId) {
+                        e.disabled = true;
+                        foundElec = true;
+                    }
+                }
+                if (foundElec) {
+                    playSound('electric_off');
+                    for (let i = 0; i < 25; i++) {
+                        m7.particles.push({
+                            x: lev.x + (Math.random() - 0.5) * 80,
+                            y: lev.y - Math.random() * 40,
+                            vx: (Math.random() - 0.5) * 6,
+                            vy: -Math.random() * 4,
+                            life: 1.2,
+                            color: Math.random() < 0.5 ? '#00E5FF' : '#FFEA00',
+                            size: 3
+                        });
+                    }
+                    if (typeof showMessage === 'function') {
+                        showMessage('⚡ 电闸已拉下！上方致命电流已切断消失！', window.innerWidth / 2, window.innerHeight * 0.35);
+                    }
+                }
+            }
         }
     }
 
@@ -2335,6 +2582,11 @@
             }
         }
 
+        // A5. 渲染第 25 关大柱子与升降四栅栏机关
+        if (m7.fenceTrap) {
+            renderFenceTrap(ctx, dt);
+        }
+
         // B. 渲染提示木牌
         m7.signs.forEach(s => {
             // 木桩
@@ -2419,6 +2671,29 @@
 
         // E. 渲染致命电流网
         m7.electrics.forEach(e => {
+            if (e.disabled) {
+                // 电流已切断：渲染熄灭的电闸底座与绿色安全指示灯
+                ctx.save();
+                ctx.fillStyle = '#1c252a';
+                ctx.fillRect(e.x, e.y, e.w, e.h);
+                ctx.strokeStyle = '#37474f';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(e.x, e.y, e.w, e.h);
+                // 绿色安全灯
+                ctx.fillStyle = '#00E676';
+                for (let lx = e.x + 18; lx < e.x + e.w; lx += 36) {
+                    ctx.beginPath();
+                    ctx.arc(lx, e.y + e.h / 2, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.fillStyle = 'rgba(76, 175, 80, 0.9)';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚡ 电流已切断 [安全通行]', e.x + e.w / 2, e.y + e.h / 2 + 4);
+                ctx.restore();
+                return;
+            }
+
             e.animTimer += dt * 0.01;
             // 电流底座
             ctx.fillStyle = '#263238';
@@ -2500,6 +2775,167 @@
 
         // 6. 顶部模式专有 HUD
         renderMode7HUD(ctx, width, height);
+    }
+
+    function renderFenceTrap(ctx, dt) {
+        const ft = m7.fenceTrap;
+        if (!ft) return;
+        const groundY = ft.groundY;
+
+        ctx.save();
+
+        // 1. 渲染大石柱门框 (Pillar Frame)
+        // 门头横梁 (Ceiling Lintel)
+        ctx.fillStyle = '#37474F';
+        ctx.fillRect(ft.x - 30, ft.minY - 40, ft.w + 60, 50);
+        ctx.fillStyle = '#546E7A';
+        ctx.fillRect(ft.x - 30, ft.minY - 40, ft.w + 60, 8); // 顶沿高光
+
+        // 黄黑警示斑马斜纹装饰带
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(ft.x - 20, ft.minY + 2, ft.w + 40, 8);
+        ctx.clip();
+        for (let sx = ft.x - 50; sx < ft.x + ft.w + 50; sx += 20) {
+            ctx.fillStyle = '#FFD600';
+            ctx.fillRect(sx, ft.minY + 2, 10, 8);
+            ctx.fillStyle = '#212121';
+            ctx.fillRect(sx + 10, ft.minY + 2, 10, 8);
+        }
+        ctx.restore();
+
+        // 机关门楣铭牌
+        ctx.fillStyle = '#ECEFF1';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚡ 连动升降栅栏机关 ⚡', ft.x + ft.w / 2, ft.minY - 14);
+
+        // 左右巨型立柱 (Left & Right Pillars)
+        // 左立柱
+        ctx.fillStyle = '#263238';
+        ctx.fillRect(ft.x - 30, ft.minY - 40, 40, groundY - (ft.minY - 40));
+        ctx.fillStyle = '#455A64';
+        ctx.fillRect(ft.x - 30, ft.minY - 40, 8, groundY - (ft.minY - 40));
+        // 右立柱
+        ctx.fillStyle = '#263238';
+        ctx.fillRect(ft.x + ft.w - 10, ft.minY - 40, 40, groundY - (ft.minY - 40));
+        ctx.fillStyle = '#455A64';
+        ctx.fillRect(ft.x + ft.w + 22, ft.minY - 40, 8, groundY - (ft.minY - 40));
+
+        // 2. 渲染 4 个升降栅栏
+        ft.fences.forEach(f => {
+            const fx = f.x;
+            const fy = f.currentY;
+            const fw = f.w;
+            const fh = f.h;
+
+            // 栅栏顶端滑轨滑块
+            ctx.fillStyle = '#78909C';
+            ctx.fillRect(fx - 4, fy - 6, fw + 8, 8);
+
+            // 栅栏主体金属深灰色底色
+            ctx.fillStyle = '#212121';
+            ctx.fillRect(fx, fy, fw, fh);
+
+            // 垂直金属格栅条
+            ctx.fillStyle = '#424242';
+            const barW = 6;
+            ctx.fillRect(fx + 4, fy, barW, fh);
+            ctx.fillRect(fx + fw / 2 - 3, fy, barW, fh);
+            ctx.fillRect(fx + fw - 10, fy, barW, fh);
+
+            // 水平横撑与加固铆钉
+            for (let hy = fy + 20; hy < fy + fh; hy += 45) {
+                ctx.fillStyle = '#616161';
+                ctx.fillRect(fx, hy, fw, 6);
+                ctx.fillStyle = '#B0BEC5';
+                ctx.fillRect(fx + 6, hy + 1, 4, 4);
+                ctx.fillRect(fx + fw - 10, hy + 1, 4, 4);
+            }
+
+            // 底部尖锐地刺/锁桩
+            ctx.fillStyle = '#CFD8DC';
+            ctx.beginPath();
+            ctx.moveTo(fx + 2, fy + fh);
+            ctx.lineTo(fx + fw / 4, fy + fh + 8);
+            ctx.lineTo(fx + fw / 2, fy + fh);
+            ctx.lineTo(fx + (fw * 3) / 4, fy + fh + 8);
+            ctx.lineTo(fx + fw - 2, fy + fh);
+            ctx.fill();
+
+            // 栅栏中央醒目编号牌（① ② ③ ④）
+            const badgeY = fy + 40;
+            ctx.beginPath();
+            ctx.arc(fx + fw / 2, badgeY, 14, 0, Math.PI * 2);
+            ctx.fillStyle = (f.id === 2 || f.id === 4) ? '#E65100' : '#1565C0';
+            ctx.fill();
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 15px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(f.num, fx + fw / 2, badgeY);
+
+            // 状态文字提示 (升起时提示安全避险区)
+            const isFullyUp = (fy <= ft.minY + 15);
+            const isFullyDown = (fy >= ft.maxY - 15);
+            if (isFullyUp) {
+                ctx.fillStyle = '#00E676';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillText('避险区', fx + fw / 2, groundY - 62);
+                ctx.fillText('▼', fx + fw / 2, groundY - 48);
+            } else if (isFullyDown) {
+                ctx.fillStyle = '#FF1744';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillText('封死', fx + fw / 2, fy + fh - 20);
+            }
+        });
+
+        // 3. 渲染机关当前状态实时指示浮标（顶部居中）
+        let statusText = '';
+        let statusColor = '#FFEA00';
+        if (ft.state === 'phase1_pause') {
+            const remain = Math.max(0, (ft.pauseDuration - ft.timer) / 1000).toFixed(1);
+            statusText = `⏳ 2/4号插地锁定中 (${remain}s) - 准备升起`;
+            statusColor = '#FF9100';
+        } else if (ft.state === 'phase1_move') {
+            statusText = '⚙️ 2/4号升起 ↑，1/3号下落 ↓！快到2/4号下躲避！';
+            statusColor = '#00E676';
+        } else if (ft.state === 'phase2_pause') {
+            const remain = Math.max(0, (ft.pauseDuration - ft.timer) / 1000).toFixed(1);
+            statusText = `🛡️ 2/4号升起避难中 (${remain}s) - 1/3号封锁地面`;
+            statusColor = '#00E5FF';
+        } else if (ft.state === 'phase2_move') {
+            statusText = '⚙️ 1/3号升起 ↑，2/4号下落 ↓！向前冲！';
+            statusColor = '#FFD600';
+        }
+
+        const bannerX = ft.x + ft.w / 2;
+        const bannerY = ft.minY - 55;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        if (typeof ctx.roundRect === 'function') {
+            ctx.beginPath();
+            ctx.roundRect(bannerX - 170, bannerY - 14, 340, 24, 6);
+            ctx.fill();
+            ctx.strokeStyle = statusColor;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        } else {
+            ctx.fillRect(bannerX - 170, bannerY - 14, 340, 24);
+            ctx.strokeStyle = statusColor;
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(bannerX - 170, bannerY - 14, 340, 24);
+        }
+        ctx.fillStyle = statusColor;
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(statusText, bannerX, bannerY - 2);
+
+        ctx.restore();
     }
 
     function renderPlayer(ctx, dt) {
@@ -2940,6 +3376,8 @@
         const btnUp = document.getElementById('m7BtnUp');
         const btnDown = document.getElementById('m7BtnDown');
         if (!btnUp || !btnDown) return;
+        if (!btnUp.dataset) btnUp.dataset = {};
+        if (!btnDown.dataset) btnDown.dataset = {};
 
         if (hasLevitation) {
             if (!btnUp.dataset.isLevitation) {
