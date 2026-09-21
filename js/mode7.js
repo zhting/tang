@@ -2018,6 +2018,65 @@
             m7.goal.reached = true;
             handleLevelVictory();
         }
+
+        // ===== 11. 村民 5 秒原版哼叫声与按住甩动彩蛋 =====
+        if (m7.villager) {
+            const v = m7.villager;
+            // 每隔 5 秒发出原版村民“哼”叫一声
+            v.soundTimer = (v.soundTimer || 0) + dt;
+            if (v.soundTimer >= 5000) {
+                v.soundTimer = 0;
+                playSound('villager_huh');
+            }
+
+            // 甩动检测与每隔 30 秒掉落彩蛋
+            if (v.isHeld) {
+                const now = performance.now();
+                const isMovingRecently = (now - (v.lastMoveTime || 0)) < 250;
+                if (isMovingRecently && v.isShaking) {
+                    v.activeShakeTimer = (v.activeShakeTimer || 0) + dt;
+                    if (v.activeShakeTimer >= 30000) {
+                        v.activeShakeTimer = 0;
+                        dropVillagerEasterEggItem(v);
+                    }
+                }
+            } else {
+                // 释放后弹性回弹
+                v.visualX += (v.baseX - v.visualX) * 0.22;
+                v.visualY += (v.baseY - v.visualY) * 0.22;
+                v.rotation += (0 - v.rotation) * 0.25;
+                v.x = v.baseX;
+                v.y = v.baseY;
+            }
+        }
+
+        // ===== 12. 掉落物品物理与拾取 =====
+        if (m7.droppedItems && m7.droppedItems.length > 0) {
+            const groundLimitY = (m7.groundY || 480) - 12;
+            for (let i = m7.droppedItems.length - 1; i >= 0; i--) {
+                const it = m7.droppedItems[i];
+                it.vy += 0.35; // 重力
+                it.x += it.vx;
+                it.y += it.vy;
+                it.rot = (it.rot || 0) + (it.vRot || 0);
+                it.life = (it.life || 0) + dt;
+
+                // 地面反弹
+                if (it.y >= groundLimitY) {
+                    it.y = groundLimitY;
+                    it.vy = -it.vy * 0.5;
+                    it.vx *= 0.8;
+                    if (Math.abs(it.vy) < 0.6) it.vy = 0;
+                }
+
+                // 玩家接近自动吸收拾取，或经过6秒自动吸附
+                const distP = Math.hypot((it.x - (p.x + p.w / 2)), (it.y - (p.y + p.h / 2)));
+                if (distP < 38 || it.life > 6000) {
+                    collectDroppedItem(it);
+                    m7.droppedItems.splice(i, 1);
+                }
+            }
+        }
     }
 
     function isColliding(r1, r2) {
@@ -2247,65 +2306,6 @@
                     p.y = airGroundY - p.h;
                     p.vy = 0;
                     p.isGrounded = true;
-                }
-            }
-        }
-
-        // ===== 村民 5 秒原版哼叫声与按住甩动彩蛋 =====
-        if (m7.villager) {
-            const v = m7.villager;
-            // 每隔 5 秒发出原版村民“哼”叫一声
-            v.soundTimer = (v.soundTimer || 0) + dt;
-            if (v.soundTimer >= 5000) {
-                v.soundTimer = 0;
-                playSound('villager_huh');
-            }
-
-            // 甩动检测与每隔 30 秒掉落彩蛋
-            if (v.isHeld) {
-                const now = performance.now();
-                const isMovingRecently = (now - (v.lastMoveTime || 0)) < 250;
-                if (isMovingRecently && v.isShaking) {
-                    v.activeShakeTimer = (v.activeShakeTimer || 0) + dt;
-                    if (v.activeShakeTimer >= 30000) {
-                        v.activeShakeTimer = 0;
-                        dropVillagerEasterEggItem(v);
-                    }
-                }
-            } else {
-                // 释放后弹性回弹
-                v.visualX += (v.baseX - v.visualX) * 0.22;
-                v.visualY += (v.baseY - v.visualY) * 0.22;
-                v.rotation += (0 - v.rotation) * 0.25;
-                v.x = v.baseX;
-                v.y = v.baseY;
-            }
-        }
-
-        // ===== 掉落物品物理与拾取 =====
-        if (m7.droppedItems && m7.droppedItems.length > 0) {
-            const groundLimitY = (m7.groundY || 480) - 12;
-            for (let i = m7.droppedItems.length - 1; i >= 0; i--) {
-                const it = m7.droppedItems[i];
-                it.vy += 0.35; // 重力
-                it.x += it.vx;
-                it.y += it.vy;
-                it.rot = (it.rot || 0) + (it.vRot || 0);
-                it.life = (it.life || 0) + dt;
-
-                // 地面反弹
-                if (it.y >= groundLimitY) {
-                    it.y = groundLimitY;
-                    it.vy = -it.vy * 0.5;
-                    it.vx *= 0.8;
-                    if (Math.abs(it.vy) < 0.6) it.vy = 0;
-                }
-
-                // 玩家接近自动吸收拾取，或经过6秒自动吸附
-                const distP = Math.hypot((it.x - (p.x + p.w / 2)), (it.y - (p.y + p.h / 2)));
-                if (distP < 38 || it.life > 6000) {
-                    collectDroppedItem(it);
-                    m7.droppedItems.splice(i, 1);
                 }
             }
         }
