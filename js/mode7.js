@@ -3228,9 +3228,23 @@
 
     // ==========================================
     let villagerSpriteImg = null;
+    let villagerSpriteLoaded = false;
+    let villagerSpriteFailed = false;
+
     function getVillagerSprite() {
         if (!villagerSpriteImg) {
             villagerSpriteImg = new Image();
+            villagerSpriteImg.onload = function() {
+                villagerSpriteLoaded = true;
+                villagerSpriteFailed = false;
+            };
+            villagerSpriteImg.onerror = function() {
+                if (typeof window !== 'undefined' && villagerSpriteImg.src && !villagerSpriteImg.src.endsWith('assets/villager_front.png')) {
+                    villagerSpriteImg.src = 'assets/villager_front.png';
+                } else {
+                    villagerSpriteFailed = true;
+                }
+            };
             if (typeof window !== 'undefined' && window.MC_VILLAGER_FRONT_BASE64) {
                 villagerSpriteImg.src = window.MC_VILLAGER_FRONT_BASE64;
             } else {
@@ -3239,6 +3253,13 @@
         }
         return villagerSpriteImg;
     }
+
+    // 预先加载村民贴图
+    try {
+        if (typeof window !== 'undefined') {
+            getVillagerSprite();
+        }
+    } catch (e) {}
 
     // ==========================================
     // 关卡常驻村民 NPC 渲染 (原版 Minecraft 像素贴图)
@@ -3266,7 +3287,7 @@
         if ('msImageSmoothingEnabled' in ctx) ctx.msImageSmoothingEnabled = false;
 
         const sprite = getVillagerSprite();
-        if (sprite && sprite.complete && sprite.naturalWidth > 0) {
+        if (sprite && sprite.complete && sprite.naturalWidth > 0 && !villagerSpriteFailed) {
             ctx.drawImage(sprite, -v.w / 2, -v.h / 2, v.w, v.h);
         } else {
             // 贴图加载期间备用像素渲染
