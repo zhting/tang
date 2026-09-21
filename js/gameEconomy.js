@@ -36,28 +36,66 @@
             if (!ctx) return;
             const now = ctx.currentTime;
 
-            if (type === 'villager_hrrr') {
-                // 原汁原味村民 "Hrrr~" 哼鸣音效 (三段低音滑音)
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(140, now);
-                osc.frequency.exponentialRampToValueAtTime(170, now + 0.12);
-                osc.frequency.exponentialRampToValueAtTime(120, now + 0.35);
+            if (type === 'villager_hrrr' || type === 'villager_huh') {
+                // 原版村民标志性鼻音与喉音 "Huh~ / Hrrrm" 哼叫音效
+                const osc1 = ctx.createOscillator();
+                const osc2 = ctx.createOscillator();
+                osc1.type = 'sawtooth';
+                osc2.type = 'square';
 
+                // 音高滑落：158Hz -> 124Hz (鼻音微降)
+                osc1.frequency.setValueAtTime(158, now);
+                osc1.frequency.exponentialRampToValueAtTime(124, now + 0.38);
+                osc2.frequency.setValueAtTime(158.8, now);
+                osc2.frequency.exponentialRampToValueAtTime(124.6, now + 0.38);
+
+                // 喉音小颤音 LFO (14Hz 微振)
+                const lfo = ctx.createOscillator();
+                const lfoGain = ctx.createGain();
+                lfo.frequency.setValueAtTime(14, now);
+                lfoGain.gain.setValueAtTime(6.5, now);
+                lfo.connect(osc1.frequency);
+                lfo.connect(osc2.frequency);
+
+                // 鼻腔带通滤波共振腔 (中心频率 720Hz -> 650Hz，Q=4.2 还原村民标志鼻音)
                 const filter = ctx.createBiquadFilter();
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(450, now);
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(720, now);
+                filter.frequency.exponentialRampToValueAtTime(650, now + 0.38);
+                filter.Q.setValueAtTime(4.2, now);
 
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.linearRampToValueAtTime(0.25, now + 0.1);
+                const gain = ctx.createGain();
+                gain.gain.setValueAtTime(0.01, now);
+                gain.gain.linearRampToValueAtTime(0.28, now + 0.04);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
 
-                osc.connect(filter);
+                osc1.connect(filter);
+                osc2.connect(filter);
                 filter.connect(gain);
                 gain.connect(ctx.destination);
+
+                lfo.start(now);
+                osc1.start(now);
+                osc2.start(now);
+
+                lfo.stop(now + 0.38);
+                osc1.stop(now + 0.38);
+                osc2.stop(now + 0.38);
+
+            } else if (type === 'item_pop') {
+                // 物品掉落清脆弹出音
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(480, now);
+                osc.frequency.exponentialRampToValueAtTime(840, now + 0.04);
+                osc.frequency.exponentialRampToValueAtTime(320, now + 0.12);
+                gain.gain.setValueAtTime(0.22, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
                 osc.start(now);
-                osc.stop(now + 0.4);
+                osc.stop(now + 0.12);
 
             } else if (type === 'villager_no') {
                 // 村民否定音效 "Hrr-hrr"
@@ -317,6 +355,19 @@
             playSound('trade_success');
             this.notifyChange();
             return { success: true, count: pots[type] };
+        },
+
+        // 获得/增加指定药水
+        addPotion: function (type, count) {
+            if (!POTION_TYPES[type]) return false;
+            count = Math.max(1, count || 1);
+            const pots = this.getPotions();
+            pots[type] = (pots[type] || 0) + count;
+            try {
+                localStorage.setItem('game_potions', JSON.stringify(pots));
+            } catch (e) {}
+            this.notifyChange();
+            return pots[type];
         },
 
         // 双击消耗 1 瓶药水

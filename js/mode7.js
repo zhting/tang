@@ -181,6 +181,61 @@
                     osc.start(now + i * 0.08);
                     osc.stop(now + i * 0.08 + 0.4);
                 });
+            } else if (type === 'villager_huh' || type === 'villager_hrrr') {
+                // 原版村民标志性鼻音与喉音 "Huh~ / Hrrrm" 哼叫音效
+                const osc1 = ctx.createOscillator();
+                const osc2 = ctx.createOscillator();
+                osc1.type = 'sawtooth';
+                osc2.type = 'square';
+                osc1.frequency.setValueAtTime(158, now);
+                osc1.frequency.exponentialRampToValueAtTime(124, now + 0.38);
+                osc2.frequency.setValueAtTime(158.8, now);
+                osc2.frequency.exponentialRampToValueAtTime(124.6, now + 0.38);
+
+                const lfo = ctx.createOscillator();
+                const lfoGain = ctx.createGain();
+                lfo.frequency.setValueAtTime(14, now);
+                lfoGain.gain.setValueAtTime(6.5, now);
+                lfo.connect(osc1.frequency);
+                lfo.connect(osc2.frequency);
+
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(720, now);
+                filter.frequency.exponentialRampToValueAtTime(650, now + 0.38);
+                filter.Q.setValueAtTime(4.2, now);
+
+                const gain = ctx.createGain();
+                gain.gain.setValueAtTime(0.01, now);
+                gain.gain.linearRampToValueAtTime(0.28, now + 0.04);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+
+                osc1.connect(filter);
+                osc2.connect(filter);
+                filter.connect(gain);
+                gain.connect(ctx.destination);
+
+                lfo.start(now);
+                osc1.start(now);
+                osc2.start(now);
+                lfo.stop(now + 0.38);
+                osc1.stop(now + 0.38);
+                osc2.stop(now + 0.38);
+
+            } else if (type === 'item_pop') {
+                // 物品弹出清脆音
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(480, now);
+                osc.frequency.exponentialRampToValueAtTime(840, now + 0.04);
+                osc.frequency.exponentialRampToValueAtTime(320, now + 0.12);
+                gain.gain.setValueAtTime(0.22, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.12);
             }
         } catch (e) {
             console.warn('Audio play error:', e);
@@ -205,6 +260,8 @@
         goal: { x: 0, y: 0, w: 40, h: 60, reached: false },
         signs: [],           // [{ x, y, text, subText }]
         particles: [],
+        droppedItems: [],    // [{ type, x, y, vx, vy, rot, vRot, life, collected }]
+        groundY: 480,
 
         // 玩家实体
         player: {
@@ -1299,12 +1356,34 @@
         m7.player.isCrouching = false;
         m7.goal.reached = false;
 
-        // 起点常驻村民 NPC (供玩家交易兑换药水)
+        // 记录当前关卡地面 Y
+        m7.groundY = groundY;
+        m7.droppedItems = [];
+
+        // 起点常驻村民 NPC (供玩家交易兑换药水，且支持鼠标按住甩动掉落彩蛋)
         m7.villager = {
             x: 25,
-            y: groundY - 52,
-            w: 26,
-            h: 52
+            y: groundY - 56,
+            w: 28,
+            h: 56,
+            baseX: 25,
+            baseY: groundY - 56,
+            visualX: 25,
+            visualY: groundY - 56,
+            rotation: 0,
+            soundTimer: 0,
+            isHeld: false,
+            isShaking: false,
+            activeShakeTimer: 0,
+            pointerStartX: 0,
+            pointerStartY: 0,
+            pointerDownTime: 0,
+            totalDragDist: 0,
+            lastMoveX: 0,
+            lastMoveY: 0,
+            lastMoveTime: 0,
+            lastDirX: 0,
+            dirReversals: 0
         };
 
         if (m7.difficulty === 'normal') {
@@ -2171,6 +2250,129 @@
                 }
             }
         }
+
+        // ===== 村民 5 秒原版哼叫声与按住甩动彩蛋 =====
+        if (m7.villager) {
+            const v = m7.villager;
+            // 每隔 5 秒发出原版村民“哼”叫一声
+            v.soundTimer = (v.soundTimer || 0) + dt;
+            if (v.soundTimer >= 5000) {
+                v.soundTimer = 0;
+                playSound('villager_huh');
+            }
+
+            // 甩动检测与每隔 30 秒掉落彩蛋
+            if (v.isHeld) {
+                const now = performance.now();
+                const isMovingRecently = (now - (v.lastMoveTime || 0)) < 250;
+                if (isMovingRecently && v.isShaking) {
+                    v.activeShakeTimer = (v.activeShakeTimer || 0) + dt;
+                    if (v.activeShakeTimer >= 30000) {
+                        v.activeShakeTimer = 0;
+                        dropVillagerEasterEggItem(v);
+                    }
+                }
+            } else {
+                // 释放后弹性回弹
+                v.visualX += (v.baseX - v.visualX) * 0.22;
+                v.visualY += (v.baseY - v.visualY) * 0.22;
+                v.rotation += (0 - v.rotation) * 0.25;
+                v.x = v.baseX;
+                v.y = v.baseY;
+            }
+        }
+
+        // ===== 掉落物品物理与拾取 =====
+        if (m7.droppedItems && m7.droppedItems.length > 0) {
+            const groundLimitY = (m7.groundY || 480) - 12;
+            for (let i = m7.droppedItems.length - 1; i >= 0; i--) {
+                const it = m7.droppedItems[i];
+                it.vy += 0.35; // 重力
+                it.x += it.vx;
+                it.y += it.vy;
+                it.rot = (it.rot || 0) + (it.vRot || 0);
+                it.life = (it.life || 0) + dt;
+
+                // 地面反弹
+                if (it.y >= groundLimitY) {
+                    it.y = groundLimitY;
+                    it.vy = -it.vy * 0.5;
+                    it.vx *= 0.8;
+                    if (Math.abs(it.vy) < 0.6) it.vy = 0;
+                }
+
+                // 玩家接近自动吸收拾取，或经过6秒自动吸附
+                const distP = Math.hypot((it.x - (p.x + p.w / 2)), (it.y - (p.y + p.h / 2)));
+                if (distP < 38 || it.life > 6000) {
+                    collectDroppedItem(it);
+                    m7.droppedItems.splice(i, 1);
+                }
+            }
+        }
+    }
+
+    // ==========================================
+    // 村民甩动彩蛋物品掉落与拾取
+    // ==========================================
+    function dropVillagerEasterEggItem(v) {
+        if (!m7.droppedItems) m7.droppedItems = [];
+        const pool = ['emerald', 'speed', 'jump', 'levitation', 'teleport'];
+        const chosenType = pool[Math.floor(Math.random() * pool.length)];
+
+        // 抛物线跳出
+        const item = {
+            type: chosenType,
+            x: (v.visualX !== undefined ? v.visualX : v.x) + v.w / 2,
+            y: (v.visualY !== undefined ? v.visualY : v.y) + 12,
+            vx: (Math.random() - 0.5) * 5,
+            vy: -5.5 - Math.random() * 2.5,
+            rot: 0,
+            vRot: (Math.random() - 0.5) * 0.25,
+            life: 0,
+            collected: false
+        };
+        m7.droppedItems.push(item);
+
+        playSound('item_pop');
+
+        // 掉落闪烁粒子
+        for (let i = 0; i < 14; i++) {
+            m7.particles.push({
+                x: item.x,
+                y: item.y,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 4,
+                life: 0.5,
+                color: chosenType === 'emerald' ? '#2ECC71' : '#FFD54F',
+                size: 3 + Math.random() * 3
+            });
+        }
+    }
+
+    function collectDroppedItem(item) {
+        if (item.collected) return;
+        item.collected = true;
+        if (window.GameEconomy) {
+            if (item.type === 'emerald') {
+                GameEconomy.addEmeralds(1);
+            } else {
+                GameEconomy.addPotion(item.type, 1);
+            }
+        }
+        playSound('item_pop');
+        // 收集闪烁粒子（彩蛋静默收集，不弹大横幅提示）
+        for (let i = 0; i < 12; i++) {
+            m7.particles.push({
+                x: item.x,
+                y: item.y,
+                vx: (Math.random() - 0.5) * 3.5,
+                vy: (Math.random() - 0.5) * 3.5,
+                life: 0.45,
+                color: item.type === 'emerald' ? '#00E676' : '#E040FB',
+                size: 3 + Math.random() * 3
+            });
+        }
+        updatePotionButtonsUI();
     }
 
     // 触发触电死亡
@@ -2763,6 +2965,9 @@
             renderVillagerNPC(ctx, m7.villager, dt);
         }
 
+        // H1.5. 渲染掉落彩蛋物品 (绿宝石 / 药水)
+        renderDroppedItems(ctx, dt);
+
         // H2. 渲染玩家角色（方块人，支持站立、跑动、趴下爬行、触电）
         renderPlayer(ctx, dt);
 
@@ -3022,56 +3227,72 @@
     }
 
     // ==========================================
-    // 关卡常驻村民 NPC 渲染
+    let villagerSpriteImg = null;
+    function getVillagerSprite() {
+        if (!villagerSpriteImg) {
+            villagerSpriteImg = new Image();
+            if (typeof window !== 'undefined' && window.MC_VILLAGER_FRONT_BASE64) {
+                villagerSpriteImg.src = window.MC_VILLAGER_FRONT_BASE64;
+            } else {
+                villagerSpriteImg.src = 'assets/villager_front.png';
+            }
+        }
+        return villagerSpriteImg;
+    }
+
+    // ==========================================
+    // 关卡常驻村民 NPC 渲染 (原版 Minecraft 像素贴图)
     // ==========================================
     function renderVillagerNPC(ctx, v, dt) {
         ctx.save();
-        const bobbing = Math.sin(performance.now() * 0.003) * 1.5;
-        ctx.translate(v.x, v.y + bobbing);
+        const drawX = v.visualX !== undefined ? v.visualX : v.x;
+        const drawY = v.visualY !== undefined ? v.visualY : v.y;
+        const bobbing = v.isHeld ? 0 : Math.sin(performance.now() * 0.003) * 1.5;
 
-        // 1. 村民腿部 / 袍底 (18x12, 深棕色)
-        ctx.fillStyle = '#4E342E';
-        ctx.fillRect(4, 40, 18, 12);
+        ctx.translate(drawX + v.w / 2, drawY + v.h / 2 + bobbing);
+        if (v.rotation) ctx.rotate(v.rotation);
 
-        // 2. 村民长袍身体 (20x24, 经典棕色)
-        ctx.fillStyle = '#795548';
-        ctx.fillRect(3, 18, 20, 24);
+        // 甩动时的弹性挤压与拉伸形变
+        if (v.isHeld && v.isShaking) {
+            const shakeFreq = performance.now() * 0.035;
+            const stretch = Math.sin(shakeFreq) * 0.14;
+            ctx.scale(1 + stretch, 1 - stretch);
+        }
 
-        // 3. 交叉双手 (经典抱胸姿势, 22x10, 深棕色袖子 + 肤色双手)
-        ctx.fillStyle = '#5D4037';
-        ctx.fillRect(2, 24, 22, 10);
-        ctx.fillStyle = '#D7CCC8';
-        ctx.fillRect(9, 27, 8, 6);
+        // 禁用平滑插值，保证《我的世界》原版像素锐利无模糊
+        ctx.imageSmoothingEnabled = false;
+        if ('mozImageSmoothingEnabled' in ctx) ctx.mozImageSmoothingEnabled = false;
+        if ('webkitImageSmoothingEnabled' in ctx) ctx.webkitImageSmoothingEnabled = false;
+        if ('msImageSmoothingEnabled' in ctx) ctx.msImageSmoothingEnabled = false;
 
-        // 4. 村民头部 (18x18, 肤色 #D7CCC8)
-        ctx.fillStyle = '#D7CCC8';
-        ctx.fillRect(4, 0, 18, 18);
-
-        // 5. 经典一字眉 (#3E2723)
-        ctx.fillStyle = '#3E2723';
-        ctx.fillRect(4, 5, 18, 3);
-
-        // 6. 绿色眼睛 (#2E7D32)
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(6, 8, 4, 4);
-        ctx.fillRect(16, 8, 4, 4);
-        ctx.fillStyle = '#2E7D32';
-        ctx.fillRect(8, 8, 2, 4);
-        ctx.fillRect(16, 8, 2, 4);
-
-        // 7. 村民标志性大鼻子 (#BCAAA4)
-        ctx.fillStyle = '#BCAAA4';
-        ctx.fillRect(11, 10, 4, 9);
-        ctx.strokeStyle = '#8D6E63';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(11, 10, 4, 9);
+        const sprite = getVillagerSprite();
+        if (sprite && sprite.complete && sprite.naturalWidth > 0) {
+            ctx.drawImage(sprite, -v.w / 2, -v.h / 2, v.w, v.h);
+        } else {
+            // 贴图加载期间备用像素渲染
+            ctx.fillStyle = '#4E342E';
+            ctx.fillRect(-v.w / 2 + 3, v.h / 2 - 12, v.w - 6, 12);
+            ctx.fillStyle = '#795548';
+            ctx.fillRect(-v.w / 2 + 2, -v.h / 2 + 18, v.w - 4, v.h - 30);
+            ctx.fillStyle = '#5D4037';
+            ctx.fillRect(-v.w / 2 + 1, -v.h / 2 + 24, v.w - 2, 10);
+            ctx.fillStyle = '#C69680';
+            ctx.fillRect(-v.w / 2 + 3, -v.h / 2, v.w - 6, 18);
+            ctx.fillStyle = '#3E2723';
+            ctx.fillRect(-v.w / 2 + 4, -v.h / 2 + 5, v.w - 8, 3);
+            ctx.fillStyle = '#2E7D32';
+            ctx.fillRect(-v.w / 2 + 6, -v.h / 2 + 8, 3, 4);
+            ctx.fillRect(-v.w / 2 + 15, -v.h / 2 + 8, 3, 4);
+            ctx.fillStyle = '#BD8B72';
+            ctx.fillRect(-2, -v.h / 2 + 9, 4, 9);
+        }
 
         ctx.restore();
 
-        // 8. 漂浮在头顶的绿宝石与商铺标签
+        // 8. 漂浮在头顶的绿宝石与商铺标签 (随村民平移，但不随倾斜旋转以保证文字易读)
         ctx.save();
         const pulse = Math.sin(performance.now() * 0.005) * 3;
-        ctx.translate(v.x + v.w / 2, v.y - 12 + pulse);
+        ctx.translate(drawX + v.w / 2, drawY - 12 + pulse);
 
         ctx.font = 'bold 16px sans-serif';
         ctx.textAlign = 'center';
@@ -3089,8 +3310,8 @@
         ctx.fillText('🧑‍🌾 村民交易', 0, 0);
 
         // 玩家靠近时的气泡提示 (方方正正的对话框，全中文纯正提示)
-        const distToPlayer = Math.abs(m7.player.x - v.x);
-        if (distToPlayer < 95) {
+        const distToPlayer = Math.abs(m7.player.x - drawX);
+        if (distToPlayer < 95 && !v.isHeld) {
             ctx.fillStyle = '#C6C6C6';
             ctx.fillRect(-70, -46, 140, 24);
             ctx.strokeStyle = '#000000';
@@ -3108,6 +3329,80 @@
             ctx.fillStyle = '#212121';
             ctx.font = 'bold 11px sans-serif';
             ctx.fillText('点击或按E键交易药水', 0, -30);
+        }
+        ctx.restore();
+    }
+
+    // ==========================================
+    // 渲染掉落的彩蛋物品 (绿宝石 / 药水)
+    // ==========================================
+    function renderDroppedItems(ctx, dt) {
+        if (!m7.droppedItems || m7.droppedItems.length === 0) return;
+        ctx.save();
+        for (const item of m7.droppedItems) {
+            ctx.save();
+            ctx.translate(item.x, item.y);
+            if (item.rot) ctx.rotate(item.rot);
+
+            // 地面阴影
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+            ctx.beginPath();
+            ctx.ellipse(0, 10, 8, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (item.type === 'emerald') {
+                // 绘制原版像素绿宝石
+                ctx.fillStyle = '#00E676';
+                ctx.beginPath();
+                ctx.moveTo(0, -9);
+                ctx.lineTo(7, -2);
+                ctx.lineTo(0, 9);
+                ctx.lineTo(-7, -2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#1B5E20';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // 晶体高光
+                ctx.fillStyle = '#E8F5E9';
+                ctx.beginPath();
+                ctx.moveTo(0, -7);
+                ctx.lineTo(3, -2);
+                ctx.lineTo(0, 4);
+                ctx.lineTo(-3, -2);
+                ctx.closePath();
+                ctx.fill();
+            } else {
+                // 绘制药水瓶
+                const potColors = {
+                    speed: '#00E5FF',
+                    jump: '#76FF03',
+                    levitation: '#EA80FC',
+                    teleport: '#D500F9'
+                };
+                const col = potColors[item.type] || '#FFFFFF';
+
+                // 玻璃瓶身
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(0, 2, 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // 药水液体
+                ctx.fillStyle = col;
+                ctx.beginPath();
+                ctx.arc(0, 3, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 软木塞
+                ctx.fillStyle = '#8D6E63';
+                ctx.fillRect(-2.5, -8, 5, 4);
+            }
+            ctx.restore();
         }
         ctx.restore();
     }
@@ -3471,18 +3766,51 @@
             canvas._m7InteractionBound = true;
         }
 
-        // 鼠标悬停跟踪
+        // 鼠标悬停跟踪与甩动村民
         canvas.addEventListener('pointermove', (e) => {
             if (typeof gameState === 'undefined' || gameState.mode !== 7 || !gameState.isPlaying) return;
             const rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: canvas.width || 800, height: canvas.height || 600 };
             const scaleX = rect.width ? (canvas.width / rect.width) : 1;
             const scaleY = rect.height ? (canvas.height / rect.height) : 1;
+            const cx = (e.clientX - rect.left) * scaleX;
+            const cy = (e.clientY - rect.top) * scaleY;
             m7.mouseCanvasPos = {
-                x: (e.clientX - rect.left) * scaleX,
-                y: (e.clientY - rect.top) * scaleY
+                x: cx,
+                y: cy
             };
+
+            // 村民按住甩动逻辑
+            if (m7.villager && m7.villager.isHeld) {
+                const v = m7.villager;
+                const now = performance.now();
+                const dx = cx - v.lastMoveX;
+                const dy = cy - v.lastMoveY;
+                const dist = Math.hypot(dx, dy);
+                v.totalDragDist = (v.totalDragDist || 0) + dist;
+
+                // 统计左右变向次数（甩动判定）
+                const dirX = Math.sign(dx);
+                if (dirX !== 0 && v.lastDirX !== 0 && dirX !== v.lastDirX && Math.abs(dx) > 3) {
+                    v.dirReversals = (v.dirReversals || 0) + 1;
+                }
+                if (dirX !== 0) v.lastDirX = dirX;
+
+                if (dist > 3) {
+                    v.isShaking = true;
+                    v.lastMoveTime = now;
+                }
+
+                v.visualX += dx;
+                v.visualY += dy;
+                v.rotation = Math.max(-0.6, Math.min(0.6, dx * 0.05));
+                v.lastMoveX = cx;
+                v.lastMoveY = cy;
+            }
+
             if (m7.potionEffects && m7.potionEffects.teleport.armed) {
                 canvas.style.cursor = 'crosshair';
+            } else if (m7.villager && m7.villager.isHeld) {
+                canvas.style.cursor = 'grabbing';
             } else {
                 canvas.style.cursor = 'default';
             }
@@ -3490,6 +3818,32 @@
 
         canvas.addEventListener('pointerleave', () => {
             m7.mouseCanvasPos = null;
+        });
+
+        // 释放按键或鼠标移出窗口时结束拖拽甩动
+        window.addEventListener('pointerup', () => {
+            if (m7.villager && m7.villager.isHeld) {
+                const v = m7.villager;
+                v.isHeld = false;
+                v.isShaking = false;
+                canvas.style.cursor = 'default';
+                // 若仅为轻微点击（位移小于 12px 且按压时间少于 350ms），则视为正常打开交易面板
+                const dragDist = v.totalDragDist || 0;
+                const pressDuration = performance.now() - (v.pointerDownTime || 0);
+                if (dragDist < 12 && pressDuration < 350) {
+                    if (typeof openVillagerModal === 'function') {
+                        openVillagerModal();
+                    }
+                }
+            }
+        });
+
+        window.addEventListener('pointercancel', () => {
+            if (m7.villager && m7.villager.isHeld) {
+                m7.villager.isHeld = false;
+                m7.villager.isShaking = false;
+                canvas.style.cursor = 'default';
+            }
         });
 
         canvas.addEventListener('pointerdown', (e) => {
@@ -3514,11 +3868,24 @@
             const worldX = cx + m7.camera.x;
             const worldY = cy + m7.camera.y;
 
-            // 2. 检查是否点击了关卡内的常驻村民 NPC
+            // 2. 检查是否点击/按住关卡内的常驻村民 NPC (支持鼠标甩动彩蛋)
             if (m7.villager) {
                 const v = m7.villager;
-                if (worldX >= v.x - 15 && worldX <= v.x + v.w + 15 && worldY >= v.y - 20 && worldY <= v.y + v.h + 10) {
-                    if (typeof openVillagerModal === 'function') openVillagerModal();
+                const vx = v.visualX !== undefined ? v.visualX : v.x;
+                const vy = v.visualY !== undefined ? v.visualY : v.y;
+                if (worldX >= vx - 18 && worldX <= vx + v.w + 18 && worldY >= vy - 24 && worldY <= vy + v.h + 16) {
+                    v.isHeld = true;
+                    v.pointerStartX = cx;
+                    v.pointerStartY = cy;
+                    v.pointerDownTime = performance.now();
+                    v.totalDragDist = 0;
+                    v.lastMoveX = cx;
+                    v.lastMoveY = cy;
+                    v.lastMoveTime = performance.now();
+                    v.isShaking = false;
+                    v.lastDirX = 0;
+                    v.dirReversals = 0;
+                    canvas.style.cursor = 'grabbing';
                     return;
                 }
             }

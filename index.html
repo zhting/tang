@@ -2064,7 +2064,7 @@
             <button class="btn-home" onclick="openModeModal()">⚙️ 选择模式 (<span id="modeDisplayBtn">一</span>)</button>
             <button class="btn-home" onclick="openInstructionsModal()">📖 游戏说明</button>
             <!-- 3D 我的世界原版村民 NPC（仅在我的世界主题模式下显示，立于游戏说明按钮旁） -->
-            <div id="homeVillagerNpc" class="home-villager-wrapper" onclick="openVillagerModal()" title="点击与村民交易药水">
+            <div id="homeVillagerNpc" class="home-villager-wrapper" title="点击与村民交易药水">
                 <div class="mc-square-dialogue">
                     <div>点击我交易神奇药水！</div>
                     <div style="font-size: 10px; color: #555; margin-top: 2px;">（加速 · 跳跃 · 悬浮 · 瞬移）</div>
@@ -2953,13 +2953,13 @@
 
     <!-- 引入 Socket.IO 客户端 -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <script src="assets/mc_textures.js?v=1.0.1"></script>
+    <script src="assets/mc_textures.js?v=20260921_v101"></script>
     <script src="assets/c418_bgm.js?v=1.0.1"></script>
     <script src="assets/bamboo_door_open.js?v=1.0.1"></script>
     <script src="js/presetSamples_river.js?v=1.0.1"></script>
-    <script src="js/gameEconomy.js?v=20260919_v101"></script>
+    <script src="js/gameEconomy.js?v=20260921_v101"></script>
     <script src="js/mcPaintingStudio.js?v=1.0.1"></script>
-    <script src="js/mode7.js?v=20260920_lvl25_v3"></script>
+    <script src="js/mode7.js?v=20260921_v101"></script>
     <script src="js/mode8.js?v=1.0.0"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -4938,14 +4938,28 @@
             // 初始微微侧身 12 度，完美展现 3D 大鼻子和合抱双臂的立体层次
             homeVillagerGroup.rotation.y = 0.22;
 
-            // 鼠标悬浮互动：村民目光随指针微微转动
+            // 鼠标悬浮与拖拽甩动互动
             let targetRotY = 0.22;
             let targetHeadRotX = 0;
             let targetHeadRotY = 0;
 
+            let isVillagerHeld = false;
+            let pointerDownTime = 0;
+            let totalDragDist = 0;
+            let lastMoveX = 0;
+            let lastMoveY = 0;
+            let lastMoveTime = 0;
+            let lastDirX = 0;
+            let dirReversals = 0;
+            let isShaking = false;
+            let activeShakeTimer = 0;
+            let homeSoundTimer = 0;
+            let lastLoopTime = performance.now();
+
             const villagerWrapper = document.getElementById('homeVillagerNpc');
             if (villagerWrapper) {
                 villagerWrapper.addEventListener('mousemove', (e) => {
+                    if (isVillagerHeld) return;
                     const rect = canvas.getBoundingClientRect();
                     const mouseX = (e.clientX - (rect.left + rect.width / 2)) / rect.width;
                     const mouseY = (e.clientY - (rect.top + rect.height / 2)) / rect.height;
@@ -4955,13 +4969,73 @@
                 });
 
                 villagerWrapper.addEventListener('mouseleave', () => {
+                    if (isVillagerHeld) return;
                     targetRotY = 0.22;
                     targetHeadRotY = 0;
                     targetHeadRotX = 0;
                 });
+
+                villagerWrapper.addEventListener('pointerdown', (e) => {
+                    isVillagerHeld = true;
+                    pointerDownTime = performance.now();
+                    totalDragDist = 0;
+                    lastMoveX = e.clientX;
+                    lastMoveY = e.clientY;
+                    lastMoveTime = performance.now();
+                    lastDirX = 0;
+                    dirReversals = 0;
+                    isShaking = false;
+                    villagerWrapper.style.cursor = 'grabbing';
+                });
+
+                window.addEventListener('pointermove', (e) => {
+                    if (!isVillagerHeld) return;
+                    const now = performance.now();
+                    const dx = e.clientX - lastMoveX;
+                    const dy = e.clientY - lastMoveY;
+                    const dist = Math.hypot(dx, dy);
+                    totalDragDist += dist;
+
+                    const dirX = Math.sign(dx);
+                    if (dirX !== 0 && lastDirX !== 0 && dirX !== lastDirX && Math.abs(dx) > 3) {
+                        dirReversals++;
+                    }
+                    if (dirX !== 0) lastDirX = dirX;
+
+                    if (dist > 3) {
+                        isShaking = true;
+                        lastMoveTime = now;
+                    }
+
+                    if (homeVillagerGroup) {
+                        homeVillagerGroup.rotation.z = Math.max(-0.5, Math.min(0.5, dx * 0.05));
+                    }
+
+                    lastMoveX = e.clientX;
+                    lastMoveY = e.clientY;
+                });
+
+                window.addEventListener('pointerup', () => {
+                    if (!isVillagerHeld) return;
+                    isVillagerHeld = false;
+                    isShaking = false;
+                    if (villagerWrapper) villagerWrapper.style.cursor = 'pointer';
+
+                    const pressDuration = performance.now() - pointerDownTime;
+                    if (totalDragDist < 12 && pressDuration < 350) {
+                        if (typeof openVillagerModal === 'function') openVillagerModal();
+                    }
+                });
+
+                window.addEventListener('pointercancel', () => {
+                    if (!isVillagerHeld) return;
+                    isVillagerHeld = false;
+                    isShaking = false;
+                    if (villagerWrapper) villagerWrapper.style.cursor = 'pointer';
+                });
             }
 
-            // 动画渲染循环：平缓呼吸与目光交互
+            // 动画渲染循环：平缓呼吸与目光交互、5秒原版哼叫、30秒甩动掉落
             const startTime = performance.now();
             function renderLoop() {
                 requestAnimationFrame(renderLoop);
@@ -4971,7 +5045,45 @@
                     return; // 未展示时跳过渲染，节约性能
                 }
 
-                const elapsed = (performance.now() - startTime) * 0.001;
+                const currentNow = performance.now();
+                const dt = currentNow - lastLoopTime;
+                lastLoopTime = currentNow;
+
+                // 1. 每 5 秒自动发出原版村民“哼”叫一声
+                homeSoundTimer += dt;
+                if (homeSoundTimer >= 5000) {
+                    homeSoundTimer = 0;
+                    if (window.GameEconomy) {
+                        GameEconomy.playAudio('villager_huh');
+                    }
+                }
+
+                // 2. 甩动检测与每隔 30 秒掉落彩蛋物品
+                if (isVillagerHeld) {
+                    const isMovingRecently = (currentNow - lastMoveTime) < 250;
+                    if (isMovingRecently && isShaking) {
+                        activeShakeTimer += dt;
+                        if (activeShakeTimer >= 30000) {
+                            activeShakeTimer = 0;
+                            const pool = ['emerald', 'speed', 'jump', 'levitation', 'teleport'];
+                            const chosen = pool[Math.floor(Math.random() * pool.length)];
+                            if (window.GameEconomy) {
+                                if (chosen === 'emerald') {
+                                    GameEconomy.addEmeralds(1);
+                                } else {
+                                    GameEconomy.addPotion(chosen, 1);
+                                }
+                                GameEconomy.playAudio('item_pop');
+                            }
+                        }
+                    }
+                } else {
+                    if (homeVillagerGroup) {
+                        homeVillagerGroup.rotation.z += (0 - homeVillagerGroup.rotation.z) * 0.2;
+                    }
+                }
+
+                const elapsed = (currentNow - startTime) * 0.001;
 
                 // 待机呼吸微动
                 homeVillagerGroup.position.y = Math.sin(elapsed * 2.2) * 0.025;
@@ -6488,14 +6600,18 @@
                 gameState.currentLevelCollected += linesCleared;
                 gameState.score += linesCleared;
 
+                // 俄罗斯方块模式：只要消除一行就可以获得一个奖杯
+                if (window.GameEconomy) {
+                    GameEconomy.addTrophies(linesCleared);
+                }
+
                 const msgs = ["单行清除", "双行清除", "三行消除", "俄罗斯方块!"];
                 const msg = msgs[Math.min(linesCleared - 1, 3)];
-                showMessage(`✨ ${msg} +${linesCleared} 行`, width / 2, height / 2);
+                showMessage(`✨ ${msg} +${linesCleared} 行 🏆 获得奖杯 +${linesCleared}`, width / 2, height / 2);
 
                 gameState.timeLeft = Math.min(90, gameState.timeLeft + linesCleared * 8);
 
-                const isMode4 = gameState.mode === 4 || (gameState.mode === 'mp_pvp' && gameState.mpGameMode === 4);
-                if (!isMode4 && gameState.currentLevelCollected >= gameState.targetCount) {
+                if (gameState.currentLevelCollected >= gameState.targetCount) {
                     collectShape({ isCollected: false });
                 }
             }
@@ -11534,13 +11650,33 @@
                         gameState.isPlaying = false;
                         unlockNextMode(gameState.mode);
                         saveToLeaderboard(gameState.level, gameState.score);
+                        // 第一、第二模式第 50 关通关再得一次奖杯
+                        if (window.GameEconomy) {
+                            GameEconomy.addTrophies(1);
+                        }
                         setTimeout(() => showVictoryScreen(), 500);
                         return;
                     }
 
                     const savedLevelId = gameState.levelId;
-                    if (window.GameEconomy) GameEconomy.addTrophies(1);
-                    showMessage("✨ 关卡完成！🏆 获得奖杯 +1", width / 2, height / 2);
+                    let gotTrophy = false;
+                    // 第一、第二模式只要过 25 关就可以得到一个奖杯，第 50 关再得一次
+                    if (gameState.mode === 1 || gameState.mode === 2) {
+                        if (gameState.level === 25) {
+                            if (window.GameEconomy) GameEconomy.addTrophies(1);
+                            gotTrophy = true;
+                        }
+                    } else if (gameState.mode !== 4) {
+                        // 其它非俄罗斯方块模式保持正常关卡奖杯（俄罗斯方块模式已改为消行奖励）
+                        if (window.GameEconomy) GameEconomy.addTrophies(1);
+                        gotTrophy = true;
+                    }
+
+                    if (gotTrophy) {
+                        showMessage("✨ 关卡完成！🏆 获得奖杯 +1", width / 2, height / 2);
+                    } else {
+                        showMessage("✨ 关卡完成！", width / 2, height / 2);
+                    }
                     setTimeout(() => {
                         // 如果关卡已被指令切换，不再自动跳关
                         if (savedLevelId !== gameState.levelId) return;
