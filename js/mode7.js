@@ -2354,9 +2354,9 @@
         item.collected = true;
         if (window.GameEconomy) {
             if (item.type === 'emerald') {
-                GameEconomy.addEmeralds(1);
+                window.GameEconomy.addEmeralds(1);
             } else {
-                GameEconomy.addPotion(item.type, 1);
+                window.GameEconomy.addPotion(item.type, 1);
             }
         }
         playSound('item_pop');
@@ -2482,7 +2482,7 @@
     function handleLevelVictory() {
         playSound('win');
         if (window.GameEconomy) {
-            GameEconomy.addTrophies(1);
+            window.GameEconomy.addTrophies(1);
         }
         const isNormal = (m7.difficulty === 'normal');
         const diffText = isNormal ? '普通模式' : '简单模式';
@@ -2539,6 +2539,7 @@
     // 渲染系统 (以清新绿色为基调)
     // ==========================================
     function render(ctx, width, height, dt) {
+        if (!m7 || !m7.player) return;
         // 1. 镜头平滑跟踪
         const targetCamX = m7.player.x - width * 0.38;
         const targetCamY = m7.player.y - height * 0.55;
@@ -3331,7 +3332,7 @@
         ctx.fillText('🧑‍🌾 村民交易', 0, 0);
 
         // 玩家靠近时的气泡提示 (方方正正的对话框，全中文纯正提示)
-        const distToPlayer = Math.abs(m7.player.x - drawX);
+        const distToPlayer = (m7.player) ? Math.abs(m7.player.x - drawX) : 999;
         if (distToPlayer < 95 && !v.isHeld) {
             ctx.fillStyle = '#C6C6C6';
             ctx.fillRect(-70, -46, 140, 24);
@@ -3504,9 +3505,9 @@
         ctx.fillText(`第七音 · 第 ${m7.level} / ${m7.maxLevels} 关 (${diffText})`, width / 2, 35);
 
         // 2. 左上角：奖杯与绿宝石资产栏
-        const trophies = window.GameEconomy ? GameEconomy.getTrophies() : 0;
-        const emeralds = window.GameEconomy ? GameEconomy.getEmeralds() : 0;
-        const isDev = window.GameEconomy && GameEconomy.isDevMode();
+        const trophies = window.GameEconomy ? window.GameEconomy.getTrophies() : 0;
+        const emeralds = window.GameEconomy ? window.GameEconomy.getEmeralds() : 0;
+        const isDev = window.GameEconomy && window.GameEconomy.isDevMode();
 
         ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
         ctx.beginPath();
@@ -3640,24 +3641,24 @@
         } else {
             // 第一次单按：记录时间，弹出双击提示
             lastPotionClicks[type] = now;
-            const pName = window.GameEconomy ? GameEconomy.POTION_TYPES[type].name : type;
+            const pName = window.GameEconomy ? window.GameEconomy.POTION_TYPES[type].name : type;
             showPotionTip(type, `💡 双击饮用【${pName}】`);
         }
     }
 
     function drinkPotion(type) {
         if (!window.GameEconomy) return;
-        const res = GameEconomy.consumePotion(type);
+        const res = window.GameEconomy.consumePotion(type);
         if (!res.success) {
-            GameEconomy.playAudio('villager_no');
+            window.GameEconomy.playAudio('villager_no');
             if (typeof showMessage === 'function') {
                 showMessage(res.msg, window.innerWidth / 2, window.innerHeight * 0.4);
             }
             return;
         }
 
-        GameEconomy.playPotionDrinkSound();
-        const pName = GameEconomy.POTION_TYPES[type].name;
+        window.GameEconomy.playPotionDrinkSound();
+        const pName = window.GameEconomy.POTION_TYPES[type].name;
 
         if (type === 'speed') {
             m7.potionEffects.speed.timer = 10.0;
@@ -3730,8 +3731,8 @@
 
     function updatePotionButtonsUI() {
         if (!window.GameEconomy) return;
-        const isDev = GameEconomy.isDevMode();
-        const potions = GameEconomy.getPotions();
+        const isDev = window.GameEconomy.isDevMode();
+        const potions = window.GameEconomy.getPotions();
 
         ['speed', 'jump', 'levitation', 'teleport'].forEach(type => {
             const btn = document.getElementById('m7PotionBtn_' + type);
@@ -3949,7 +3950,7 @@
                 }
 
                 if (window.GameEconomy) {
-                    GameEconomy.playTeleportSound();
+                    window.GameEconomy.playTeleportSound();
                 }
 
                 if (typeof showMessage === 'function') {
@@ -4233,11 +4234,16 @@
     window.startMode7Level = startMode7Level;
 
     window.loopMode7 = function (t, dt) {
-        updatePhysics(dt);
-        const canvas = document.getElementById('gameCanvas');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        render(ctx, canvas.width, canvas.height, dt);
+        if (!m7 || !m7.player) return;
+        try {
+            updatePhysics(dt);
+            const canvas = document.getElementById('gameCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            render(ctx, canvas.width, canvas.height, dt);
+        } catch (err) {
+            console.error('Mode 7 loop error:', err);
+        }
     };
 
     window.stopMode7 = function () {

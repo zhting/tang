@@ -2953,13 +2953,13 @@
 
     <!-- 引入 Socket.IO 客户端 -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <script src="assets/mc_textures.js?v=20260921_v105"></script>
+    <script src="assets/mc_textures.js?v=20260924_v107"></script>
     <script src="assets/c418_bgm.js?v=1.0.1"></script>
     <script src="assets/bamboo_door_open.js?v=1.0.1"></script>
     <script src="js/presetSamples_river.js?v=1.0.1"></script>
-    <script src="js/gameEconomy.js?v=20260921_v105"></script>
+    <script src="js/gameEconomy.js?v=20260924_v107"></script>
     <script src="js/mcPaintingStudio.js?v=1.0.1"></script>
-    <script src="js/mode7.js?v=20260921_v105"></script>
+    <script src="js/mode7.js?v=20260924_v107"></script>
     <script src="js/mode8.js?v=1.0.0"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -4027,10 +4027,66 @@
                 return;
             }
 
+            // 切换/启动第七音普通难度 (支持 "普通"、"普通25"、"普通第25关" 等)
+            if (/普通|normal/.test(cmd)) {
+                localStorage.setItem('mode7_easy_completed', 'true');
+                localStorage.setItem('creator_mode_active', 'true');
+                const lvl = num || (gameState.mode === 7 ? gameState.level : 1) || 1;
+                gameState.mode = 7;
+                gameState.mode7Difficulty = 'normal';
+                currentMode7Difficulty = 'normal';
+                if (typeof launchMode7Level === 'function') {
+                    launchMode7Level('normal', lvl);
+                } else if (typeof startMode7Level === 'function') {
+                    startMode7Level(lvl, 'normal');
+                }
+                devLog(`🎵 已切换至第七音 [普通难度] 第 ${lvl} 关`);
+                return;
+            }
+
+            // 切换/启动第七音简单模式
+            if (/简单|easy/.test(cmd)) {
+                const lvl = num || (gameState.mode === 7 ? gameState.level : 1) || 1;
+                gameState.mode = 7;
+                gameState.mode7Difficulty = 'easy';
+                currentMode7Difficulty = 'easy';
+                if (typeof launchMode7Level === 'function') {
+                    launchMode7Level('easy', lvl);
+                } else if (typeof startMode7Level === 'function') {
+                    startMode7Level(lvl, 'easy');
+                }
+                devLog(`🎵 已切换至第七音 [简单模式] 第 ${lvl} 关`);
+                return;
+            }
+
+            // 启动模式七
+            if (/模式7|第七模式|第七音|mode\s*7|m7/.test(cmd)) {
+                localStorage.setItem('mode7_easy_completed', 'true');
+                localStorage.setItem('creator_mode_active', 'true');
+                const diff = gameState.mode7Difficulty || 'normal';
+                const lvl = num || 1;
+                gameState.mode = 7;
+                if (typeof launchMode7Level === 'function') {
+                    launchMode7Level(diff, lvl);
+                } else if (typeof startMode7Level === 'function') {
+                    startMode7Level(lvl, diff);
+                }
+                devLog(`🎵 已启动第七音 [${diff === 'normal' ? '普通难度' : '简单模式'}] 第 ${lvl} 关`);
+                return;
+            }
+
             // 跳关
             if (/跳关|level|第.*关|关卡|去第|到第|切换关/.test(cmd)) {
-                if (!gameState.isPlaying) { devLog('请先开始游戏！', 'error'); return; }
                 if (num === null || num < 1) { devLog('请指定关卡数，例如：跳到第99关', 'error'); return; }
+                if (!gameState.isPlaying) {
+                    if (gameState.mode === 7 && typeof launchMode7Level === 'function') {
+                        launchMode7Level(gameState.mode7Difficulty || 'normal', num);
+                        devLog(`⏩ 已启动第七音并跳到第 ${num} 关`);
+                        return;
+                    }
+                    devLog('请先开始游戏！', 'error');
+                    return;
+                }
                 if (gameState.mode === 1) startMode1Level(num);
                 else if (gameState.mode === 2) startMode2Level(num);
                 else if (gameState.mode === 3) startMode3Level(num);
@@ -4039,15 +4095,6 @@
                 else if (gameState.mode === 7 && typeof startMode7Level === 'function') startMode7Level(num, gameState.mode7Difficulty || 'normal');
                 else if (gameState.mode === 8 && typeof startMode8Level === 'function') startMode8Level(num);
                 devLog(`⏩ 已跳到第 ${num} 关`);
-                return;
-            }
-
-            // 切换第七音难度
-            if (/普通|normal|简单|easy/.test(cmd) && gameState.mode === 7) {
-                const diff = /普通|normal/.test(cmd) ? 'normal' : 'easy';
-                gameState.mode7Difficulty = diff;
-                if (typeof startMode7Level === 'function') startMode7Level(gameState.level || 1, diff);
-                devLog(`🎵 已切换至第七音 [${diff === 'normal' ? '普通难度' : '简单模式'}]`);
                 return;
             }
 
@@ -4117,6 +4164,7 @@
 
             devLog(`没理解你的意思，输入 帮助 查看可用指令`, 'error');
         }
+        window.executeDevCommand = executeDevCommand;
 
         function handleDevSubmit() {
             if (!isDevMode) return; // 没有开启开发者模式时，输入命令的功能完全不存在
@@ -5588,8 +5636,8 @@
         function createSplash(x, y) { for (let i = 0; i < 8; i++) gameState.effects.push(new Effect('splash', x, y)); }
 
         function drawScene() {
-            if (gameState.mode === 3 || gameState.mpGameMode === 3) {
-                // 我的世界 3D 渲染在 Canvas 底层，2D Canvas 必须保持透明以显示 3D WebGL！
+            if (gameState.mode === 3 || gameState.mpGameMode === 3 || gameState.mode === 7 || gameState.mode === 8) {
+                // 我的世界 3D、第七音、模式八等拥有独立的专属全屏渲染体系，跳过 2D 默认天空背景
                 return;
             }
             const grad = ctx.createLinearGradient(0, 0, 0, height);
@@ -11405,10 +11453,10 @@
             if (modeDisplay) modeDisplay.textContent = mText;
             document.querySelector('.home-buttons button[onclick="openInstructionsModal()"]').innerHTML = "📖 游戏说明";
 
-            // ⭐ 首页 3D 原版村民仅在我的世界主题（Mode 3）下显示在游戏说明按钮旁，其他模式隐藏
+            // ⭐ 首页 3D 原版村民在我的世界主题（Mode 3）与第七音（Mode 7）下均显示在游戏说明按钮旁
             const homeVillager = document.getElementById('homeVillagerNpc');
             if (homeVillager) {
-                if (mode === 3) {
+                if (mode === 3 || mode === 7) {
                     homeVillager.style.display = 'flex';
                     if (typeof initHomeVillager3D === 'function') {
                         initHomeVillager3D();
@@ -11551,7 +11599,13 @@
                     gameState.mode7Difficulty = 'easy';
                     currentMode7Difficulty = 'easy';
                 }
-                openMode7SetupModal();
+                const diff = (gameState.mode7Difficulty === 'normal' && isMode7NormalUnlocked()) ? 'normal' : 'easy';
+                const p = (gameState.mode7Progress && gameState.mode7Progress[diff]) || (gameState.sessionLevels[7] || 1);
+                if (typeof launchMode7Level === 'function') {
+                    launchMode7Level(diff, p);
+                } else if (typeof window.startMode7Level === 'function') {
+                    window.startMode7Level(p, diff);
+                }
                 return;
             } else if (mode === 8) {
                 if (typeof window.startMode8Level === 'function') {
