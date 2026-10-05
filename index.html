@@ -75,6 +75,12 @@
             transition: margin-top 0.3s ease;
         }
 
+        /* 当处于第九模式(机械迷城)时，下移左侧按钮避免遮挡顶部状态与物品栏 */
+        .mode-9-active .header-left {
+            margin-top: 60px;
+            transition: margin-top 0.3s ease;
+        }
+
                 .status-box {
             background: rgba(255, 255, 255, 0.95);
             padding: 8px 16px;
@@ -1504,6 +1510,118 @@
             font-size: 12px !important;
         }
 
+        /* 模式六：功能选项切换按钮 (生成像素画 vs 绘画头像) */
+        .mc-studio-tabs {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background: #16171d;
+            padding: 4px;
+            border: 2px solid;
+            border-color: #111215 #585966 #585966 #111215;
+            border-radius: 4px;
+        }
+
+        .mc-studio-tab-btn {
+            background: #252630;
+            border: 2px solid #444552;
+            border-radius: 3px;
+            color: #a4b0be;
+            padding: 7px 16px;
+            font-family: 'Minecraft', monospace;
+            font-size: 13px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-shadow: 1px 1px 0 #000;
+            transition: all 0.15s ease;
+        }
+
+        .mc-studio-tab-btn:hover {
+            background: #353644;
+            color: #fff;
+            border-color: #777;
+        }
+
+        .mc-studio-tab-btn.active {
+            background: #3a3b47 !important;
+            border-color: #55ff55 !important;
+            color: #55ff55 !important;
+            font-weight: bold;
+            box-shadow: inset 1px 1px #6b6c7a, 0 0 10px rgba(85,255,85,0.4) !important;
+        }
+
+        /* 绘画头像 5x5 色块与调色板 */
+        .avatar-5x5-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 54px);
+            grid-template-rows: repeat(5, 54px);
+            gap: 4px;
+            background: #101114;
+            padding: 6px;
+            border: 2px solid #000;
+            image-rendering: pixelated;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .avatar-cell-block {
+            width: 54px;
+            height: 54px;
+            border: 1px solid rgba(0,0,0,0.3);
+            box-shadow: inset 1px 1px 0 rgba(255,255,255,0.25), inset -1px -1px 0 rgba(0,0,0,0.25);
+            cursor: pointer;
+            box-sizing: border-box;
+            transition: transform 0.08s ease, box-shadow 0.08s ease;
+            user-select: none;
+            border-radius: 2px;
+        }
+
+        .avatar-cell-block:hover {
+            transform: scale(1.08);
+            z-index: 5;
+            box-shadow: 0 0 10px rgba(255,255,255,0.6);
+        }
+
+        .avatar-palette-chip {
+            width: 100%;
+            height: 38px;
+            border: 2px solid #2b2c36;
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: inset 1px 1px 0 rgba(255,255,255,0.3), 0 2px 4px rgba(0,0,0,0.4);
+            box-sizing: border-box;
+            transition: transform 0.1s, border-color 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .avatar-palette-chip:hover {
+            transform: scale(1.1);
+            border-color: #fff;
+            z-index: 2;
+        }
+
+        .avatar-palette-chip.selected {
+            border-color: #ffaa00 !important;
+            box-shadow: 0 0 8px #ffaa00, inset 1px 1px 0 rgba(255,255,255,0.6) !important;
+            transform: scale(1.08);
+        }
+
+        @media (max-width: 600px) {
+            .avatar-cell-block {
+                width: 44px !important;
+                height: 44px !important;
+            }
+            .avatar-5x5-grid {
+                grid-template-columns: repeat(5, 44px) !important;
+                grid-template-rows: repeat(5, 44px) !important;
+            }
+        }
+
         .minecraft-painting-studio .bgm-pill-toggle {
             position: absolute;
             top: -10px;
@@ -2029,8 +2147,8 @@
                     <span>🏆</span> 排行榜
                 </button>
                 <!-- 🟢 显示玩家昵称 -->
-                <div class="status-box" id="playerUsernameBox" style="background: rgba(255, 255, 255, 0.95); font-weight: 800;" onclick="changeUsernamePrompt()">
-                    <span>👤</span> <span id="playerUsernameDisplay">玩家</span>
+                <div class="status-box" id="playerUsernameBox" style="background: rgba(255, 255, 255, 0.95); font-weight: 800; display: inline-flex; align-items: center; gap: 6px;" onclick="changeUsernamePrompt()">
+                    <span id="playerAvatarIcon" style="display:inline-flex; align-items:center;">👤</span> <span id="playerUsernameDisplay">玩家</span>
                 </div>
             </div>
 
@@ -2318,7 +2436,7 @@
                     <!-- 动态生成的模式按钮会放在这里 -->
                 </div>
                 <div id="modeScrollHint" style="font-size: 12px; color: #888; padding: 4px 0 2px 0; text-align: center; pointer-events: none; opacity: 0.85;">
-                    ↕ 上下滑动可选择更多模式 (模式七、模式八)
+                    ↕ 上下滑动可选择更多模式 (模式七、模式八、模式九)
                 </div>
             </div>
             <button class="btn-secondary" onclick="closeModeModal()">关闭</button>
@@ -2625,6 +2743,16 @@
           </div>
         </div>
         
+        <!-- 模式六功能选项切换：生成像素画 vs 绘画头像 -->
+        <div class="mc-studio-tabs" id="mcStudioTabs">
+          <button class="mc-studio-tab-btn active" id="tabPhotoPainting" onclick="switchStudioTab('photo')">
+            <span>🖼️</span> 生成像素画
+          </button>
+          <button class="mc-studio-tab-btn" id="tabAvatarPainter" onclick="switchStudioTab('avatar')">
+            <span>🎨</span> 绘画头像
+          </button>
+        </div>
+
         <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
           <button class="mc-btn" id="mcStudioBackHomeBtn" style="background: #c0392b; border-color: #e74c3c #962d22 #962d22 #e74c3c; color: white;">
             <span>🏠</span> 返回首页
@@ -2635,8 +2763,8 @@
         </div>
       </header>
 
-      <!-- 主体工作区 -->
-      <main class="app-container">
+      <!-- 主体工作区 1：生成像素画 -->
+      <main class="app-container" id="mcPhotoPaintingWorkspace">
 
         <!-- 左侧控制面板 -->
         <aside class="sidebar-controls">
@@ -2875,6 +3003,139 @@
 
       </main>
 
+      <!-- 主体工作区 2：绘画头像 (5x5 像素画布 + 左侧调色选色 + 实时预览 + 使用头像) -->
+      <main class="avatar-painter-workspace hidden" id="mcAvatarPainterWorkspace" style="display: none; flex: 1; max-width: 1100px; width: 100%; margin: 0 auto; padding: 20px 16px; flex-direction: column; align-items: center; box-sizing: border-box;">
+        
+        <div class="mc-panel" style="width: 100%; box-sizing: border-box;">
+          
+          <!-- 面板头部标题与说明 -->
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid rgba(255, 255, 255, 0.08); padding-bottom: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 28px;">🎨</span>
+              <div>
+                <h2 style="font-family: 'Minecraft', monospace; font-size: 17px; color: #ffaa00; margin: 0; text-shadow: 1px 1px 0 #000;">
+                  5×5 像素头像画板
+                </h2>
+                <div style="font-size: 12px; color: #a4b0be; margin-top: 2px;">
+                  左侧调色选色，右侧 25 个方格点一下即可上色；画好后点击下方“使用头像”
+                </div>
+              </div>
+            </div>
+            
+            <!-- 经典参考预设 -->
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <span style="font-size: 12px; color: #ffaa00; font-family: 'Minecraft', monospace;">快速预设:</span>
+              <button class="mc-btn" onclick="loadAvatarTemplate('steve')" style="padding: 5px 10px; font-size: 11px;" title="填入经典史蒂夫头像">🧔 史蒂夫</button>
+              <button class="mc-btn" onclick="loadAvatarTemplate('creeper')" style="padding: 5px 10px; font-size: 11px;" title="填入苦力怕头像">💥 苦力怕</button>
+              <button class="mc-btn" onclick="loadAvatarTemplate('heart')" style="padding: 5px 10px; font-size: 11px;" title="填入红石爱心">❤️ 爱心</button>
+              <button class="mc-btn" onclick="loadAvatarTemplate('chick')" style="padding: 5px 10px; font-size: 11px;" title="填入可爱小鸡">🐥 小鸡</button>
+              <button class="mc-btn" onclick="clearAvatarGrid()" style="padding: 5px 10px; font-size: 11px; background: #552222; border-color: #883333 #221111 #221111 #883333;" title="清空白底">🗑️ 清空</button>
+            </div>
+          </div>
+
+          <!-- 双栏主体：左边调色选色，右边 25 个色块 5x5 正方形画布 -->
+          <div style="display: flex; gap: 32px; justify-content: center; align-items: flex-start; flex-wrap: wrap;">
+            
+            <!-- 🟢 左边：调色、选择颜色的地方 -->
+            <div style="flex: 1; min-width: 300px; max-width: 440px; display: flex; flex-direction: column; gap: 16px;">
+              
+              <!-- 1. 当前画笔颜色指示器与自由拾色器 -->
+              <div style="background: #181920; border: 2px solid #353642; border-radius: 6px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 1px 1px 0 rgba(255,255,255,0.05);">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                  <div id="avatarCurrentColorSwatch" style="width: 50px; height: 50px; background: #1565c0; border: 3px solid #ffffff; box-shadow: inset 2px 2px 0 rgba(255,255,255,0.4), 0 4px 10px rgba(0,0,0,0.5); border-radius: 4px; transition: background 0.15s ease; flex-shrink: 0;"></div>
+                  <div>
+                    <div style="font-family: 'Minecraft', monospace; font-size: 12px; color: #ffaa00; text-shadow: 1px 1px 0 #000;">当前画笔颜色</div>
+                    <div id="avatarCurrentColorHex" style="font-family: monospace; font-size: 15px; color: #fff; font-weight: bold; margin-top: 3px; letter-spacing: 1px;">#1565C0</div>
+                  </div>
+                </div>
+                
+                <label style="position: relative; display: inline-flex; align-items: center; gap: 6px; background: #353642; padding: 8px 14px; border: 2px solid; border-color: #656778 #22232a #22232a #656778; cursor: pointer; border-radius: 4px; font-size: 12px; font-family: 'Minecraft', monospace; color: #fff; text-shadow: 1px 1px 0 #000;">
+                  <span>🌈 自由调色</span>
+                  <input type="color" id="avatarColorPickerInput" value="#1565c0" onchange="onCustomColorPick(this.value)" style="position: absolute; opacity: 0; width: 100%; height: 100%; left: 0; top: 0; cursor: pointer;">
+                </label>
+              </div>
+
+              <!-- 2. Minecraft 原版经典 24 色调色板 -->
+              <div>
+                <div style="font-family: 'Minecraft', monospace; font-size: 12px; color: #a4b0be; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                  <span>🎨 经典像素染料调色盘:</span>
+                  <span id="paletteColorNameHint" style="color: #ffaa00; font-size: 11px;">青金石蓝</span>
+                </div>
+                <div id="avatarPaletteGrid" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; background: #181920; border: 2px solid #353642; padding: 10px; border-radius: 6px;">
+                  <!-- 动态渲染 24 个调色板按钮 -->
+                </div>
+              </div>
+
+              <!-- 3. 操作指引提示 -->
+              <div style="background: rgba(85, 255, 85, 0.08); border-left: 3px solid #55ff55; padding: 12px 14px; font-size: 12px; color: #b8e994; line-height: 1.6; border-radius: 0 4px 4px 0;">
+                💡 <b>绘制步骤：</b><br>
+                1. 在左侧选择或微调颜色；<br>
+                2. 往右侧方格一点（或按住拖拽连续涂抹），方格立即变为所选颜色；<br>
+                3. 完成后点击<b>“使用头像”</b>，游戏中名字旁的头像将立刻更新！
+              </div>
+
+            </div>
+
+            <!-- 🟢 右边：25 个色块，是一个 5×5 的正方形画布 -->
+            <div style="flex: 1; min-width: 320px; display: flex; flex-direction: column; align-items: center; gap: 18px;">
+              
+              <!-- 5x5 正方形画布 (带原木画框边框) -->
+              <div style="background: #181920; padding: 16px; border: 4px solid; border-color: #585966 #111215 #111215 #585966; box-shadow: 0 10px 30px rgba(0,0,0,0.6); border-radius: 6px; display: inline-flex; flex-direction: column; align-items: center;">
+                
+                <div style="font-family: 'Minecraft', monospace; font-size: 12px; color: #ffaa00; margin-bottom: 12px; text-shadow: 1px 1px 0 #000; letter-spacing: 1px;">
+                  🖼️ 5×5 像素画布 (共 25 个色块)
+                </div>
+
+                <!-- 5x5 像素格子 (25 个色块) -->
+                <div id="avatar5x5Grid" class="avatar-5x5-grid">
+                  <!-- 动态生成 25 个可涂色色块 -->
+                </div>
+
+              </div>
+
+              <!-- 实时效果预览（第二幅图名字旁边的头像效果） -->
+              <div style="background: #181920; border: 2px solid #353642; border-radius: 6px; padding: 14px 18px; width: 100%; max-width: 360px; box-sizing: border-box;">
+                <div style="font-family: 'Minecraft', monospace; font-size: 12px; color: #ffaa00; margin-bottom: 10px; text-shadow: 1px 1px 0 #000;">
+                  👀 效果预览（将在游戏中如下显示）：
+                </div>
+                
+                <!-- 模拟第二幅图：在线玩家列表条目 -->
+                <div style="font-size: 11px; color: #888; margin-bottom: 5px;">在线玩家列表中效果（第二幅图）：</div>
+                <div class="online-user-item" style="background: #F8F9FA; border-left: 4px solid #4CAF50; border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; color: #333; margin-bottom: 12px;">
+                  <canvas id="avatarPreviewSmallCanvas" width="24" height="24" style="width: 24px; height: 24px; border-radius: 4px; image-rendering: pixelated; border: 1.5px solid rgba(0,0,0,0.2); box-shadow: 0 1px 3px rgba(0,0,0,0.1); flex-shrink: 0;"></canvas>
+                  <span id="avatarPreviewOnlineName" style="font-weight: bold; font-size: 14px;">青靓</span>
+                  <span style="color: #4caf50; font-size: 11px; margin-left: 4px;">(空闲)</span>
+                </div>
+
+                <!-- 模拟游戏顶栏效果 -->
+                <div style="font-size: 11px; color: #888; margin-bottom: 5px;">游戏顶部状态栏效果：</div>
+                <div style="background: rgba(255, 255, 255, 0.95); padding: 5px 12px; border-radius: 16px; display: inline-flex; align-items: center; gap: 6px; color: #333; font-weight: 800; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                  <canvas id="avatarPreviewHeaderCanvas" width="20" height="20" style="width: 20px; height: 20px; border-radius: 3px; image-rendering: pixelated; border: 1px solid rgba(0,0,0,0.2); flex-shrink: 0;"></canvas>
+                  <span id="avatarPreviewHeaderName">青靓</span>
+                </div>
+              </div>
+
+              <!-- 🟢 核心操作按钮：“使用头像” -->
+              <div style="display: flex; gap: 12px; justify-content: center; width: 100%; flex-wrap: wrap;">
+                <button class="mc-btn" id="btnApplyAvatar" onclick="applyUserPixelAvatar()" style="background: #2e7d32; border-color: #4caf50 #1b5e20 #1b5e20 #4caf50; font-size: 15px; font-weight: bold; padding: 12px 32px; color: white; box-shadow: 0 4px 14px rgba(46, 125, 50, 0.5); cursor: pointer;">
+                  <span>✨</span> 使用头像
+                </button>
+                <button class="mc-btn" onclick="exportUserAvatarPng()" style="padding: 12px 18px; font-size: 13px;">
+                  <span>💾</span> 导出头像图片
+                </button>
+                <button class="mc-btn" onclick="clearAvatarGrid()" style="padding: 12px 16px; font-size: 13px; background: #444;">
+                  <span>🗑️</span> 重置画布
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </main>
+
       <!-- C418 背景音乐独立硬件播放节点 -->
       <audio id="c418-bgm-audio-player" loop preload="auto" playsinline style="display:none;"></audio>
 
@@ -2958,9 +3219,10 @@
     <script src="assets/bamboo_door_open.js?v=1.0.1"></script>
     <script src="js/presetSamples_river.js?v=1.0.1"></script>
     <script src="js/gameEconomy.js?v=20260924_v107"></script>
-    <script src="js/mcPaintingStudio.js?v=1.0.1"></script>
+    <script src="js/mcPaintingStudio.js?v=20261001_v108"></script>
     <script src="js/mode7.js?v=20260924_v107"></script>
     <script src="js/mode8.js?v=1.0.0"></script>
+    <script src="js/mode9.js?v=1.0.0"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -3014,6 +3276,7 @@
             scores: {},
             players: []
         };
+        window.gameState = gameState;
 
         let width, height;
         let basketPos = { x: 0, y: 0 };
@@ -3034,11 +3297,15 @@
                 
                 socket.on('connect', () => {
                     console.log('Successfully connected to server!');
-                    // 注册当前玩家昵称
+                    // 注册当前玩家昵称与头像
                     const savedName = localStorage.getItem('brick_game_username');
+                    const savedAvatar = localStorage.getItem('user_pixel_avatar');
                     if (savedName) {
-                        socket.emit('register_name', savedName);
+                        socket.emit('register_name', { username: savedName, avatar: savedAvatar });
                         document.getElementById('playerUsernameDisplay').textContent = savedName;
+                    }
+                    if (savedAvatar) {
+                        updatePlayerAvatarDisplay(savedAvatar);
                     }
                 });
 
@@ -3046,18 +3313,7 @@
                 socket.on('online_list_update', (data) => {
                     document.getElementById('onlineCount').textContent = data.count;
                     activeOnlineUsers = data.users; // 缓存最新在线状态
-                    
-                    const playersList = document.getElementById('onlinePlayersList');
-                    playersList.innerHTML = '';
-                    
-                    data.users.forEach(p => {
-                        const name = p.username || p;
-                        const roomStatus = p.inRoom ? '<span style="color: #ff9800; font-size: 11px; margin-left: 8px;">(对战中)</span>' : '<span style="color: #4caf50; font-size: 11px; margin-left: 8px;">(空闲)</span>';
-                        const div = document.createElement('div');
-                        div.className = 'online-user-item';
-                        div.innerHTML = `<span>👤</span> <span>${name}</span> ${roomStatus}`;
-                        playersList.appendChild(div);
-                    });
+                    renderOnlinePlayersList(data.users);
                 });
 
                 // 房间被成功创建或更新
@@ -3332,18 +3588,69 @@
             
             // 触发 socket 注册
             connectSocket();
-            // 在左上角显示名称
+            // 在左上角显示名称与头像
             document.getElementById('playerUsernameDisplay').textContent = name;
+            const currentSavedAvatar = localStorage.getItem('user_pixel_avatar');
+            if (socket) {
+                socket.emit('register_name', { username: name, avatar: currentSavedAvatar });
+            }
+            updatePlayerAvatarDisplay(currentSavedAvatar);
         }
+
+        function updatePlayerAvatarDisplay(avatarUrl) {
+            const avatar = avatarUrl || localStorage.getItem('user_pixel_avatar');
+            const avatarIcon = document.getElementById('playerAvatarIcon');
+            if (avatarIcon) {
+                if (avatar) {
+                    avatarIcon.innerHTML = `<img src="${avatar}" style="width: 22px; height: 22px; border-radius: 4px; image-rendering: pixelated; object-fit: cover; border: 1.5px solid rgba(0,0,0,0.25); vertical-align: middle; display: inline-block;" alt="头像">`;
+                } else {
+                    avatarIcon.innerHTML = '👤';
+                }
+            }
+        }
+        window.updatePlayerAvatarDisplay = updatePlayerAvatarDisplay;
+
+        function renderOnlinePlayersList(users) {
+            const playersList = document.getElementById('onlinePlayersList');
+            if (!playersList) return;
+            playersList.innerHTML = '';
+            
+            const myName = localStorage.getItem('brick_game_username') || '青靓';
+            const myAvatar = localStorage.getItem('user_pixel_avatar') || null;
+            
+            let list = (users && users.length > 0) ? users : [{ id: (socket ? socket.id : 'me'), username: myName, inRoom: false, avatar: myAvatar }];
+            
+            list.forEach(p => {
+                const name = p.username || p;
+                const isMe = (socket && p.id === socket.id) || (name === myName);
+                const avatar = (isMe && myAvatar) ? myAvatar : (p.avatar || null);
+                const roomStatus = p.inRoom ? '<span style="color: #ff9800; font-size: 11px; margin-left: 8px;">(对战中)</span>' : '<span style="color: #4caf50; font-size: 11px; margin-left: 8px;">(空闲)</span>';
+                
+                let avatarHtml = '<span style="font-size: 16px; line-height: 1;">👤</span>';
+                if (avatar) {
+                    avatarHtml = `<img src="${avatar}" class="player-avatar-img" style="width: 24px; height: 24px; border-radius: 4px; image-rendering: pixelated; object-fit: cover; border: 1.5px solid rgba(0,0,0,0.18); box-shadow: 0 1px 3px rgba(0,0,0,0.12); vertical-align: middle; flex-shrink: 0;" alt="头像">`;
+                }
+                
+                const div = document.createElement('div');
+                div.className = 'online-user-item';
+                div.style = "display: flex; align-items: center; gap: 10px;";
+                div.innerHTML = `${avatarHtml} <span style="font-weight: bold; color: #333;">${name}</span> ${roomStatus}`;
+                playersList.appendChild(div);
+            });
+        }
+        window.renderOnlinePlayersList = renderOnlinePlayersList;
 
         function changeUsernamePrompt() {
             const newName = prompt('输入新的名称：', localStorage.getItem('brick_game_username') || '');
             if (newName && newName.trim()) {
                 localStorage.setItem('brick_game_username', newName.trim());
                 document.getElementById('playerUsernameDisplay').textContent = newName.trim();
+                const savedAvatar = localStorage.getItem('user_pixel_avatar');
                 if (socket) {
-                    socket.emit('register_name', newName.trim());
+                    socket.emit('register_name', { username: newName.trim(), avatar: savedAvatar });
                 }
+                updatePlayerAvatarDisplay(savedAvatar);
+                renderOnlinePlayersList(activeOnlineUsers || []);
             }
         }
 
@@ -3504,6 +3811,7 @@
 
         function openOnlineListModal() {
             document.getElementById('onlineListModal').classList.remove('hidden');
+            renderOnlinePlayersList(activeOnlineUsers || []);
             if (socket) {
                 socket.emit('get_online_list');
             }
@@ -3525,10 +3833,17 @@
             } else {
                 otherIdlePlayers.forEach(p => {
                     const name = p.username;
+                    const avatar = p.avatar;
+                    let avatarTag = '<span>👤</span>';
+                    if (avatar) {
+                        avatarTag = `<img src="${avatar}" style="width: 22px; height: 22px; border-radius: 3px; image-rendering: pixelated; object-fit: cover; border: 1px solid rgba(0,0,0,0.2); vertical-align: middle;">`;
+                    }
                     const div = document.createElement('div');
                     div.style = "display: flex; justify-content: space-between; align-items: center; padding: 8px; background: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 5px;";
                     div.innerHTML = `
-                        <span style="font-weight: bold; color: #333;">👤 ${name}</span>
+                        <span style="font-weight: bold; color: #333; display: flex; align-items: center; gap: 8px;">
+                            ${avatarTag} <span>${name}</span>
+                        </span>
                         <button class="btn-primary" onclick="sendGameInvite('${p.id}')" style="margin: 0; padding: 4px 10px; width: auto; font-size: 12px; height: auto;">邀请</button>
                     `;
                     listContainer.appendChild(div);
@@ -4075,6 +4390,18 @@
                 return;
             }
 
+            // 启动模式九：机械迷城
+            if (/模式9|第九模式|机械迷城|machinarium|mode\s*9|m9/.test(cmd)) {
+                const lvl = num || 1;
+                gameState.mode = 9;
+                updateHomeTheme();
+                if (typeof window.startMode9Level === 'function') {
+                    window.startMode9Level(lvl);
+                }
+                devLog(`🤖 已启动机械迷城 第 ${lvl} 关`);
+                return;
+            }
+
             // 跳关
             if (/跳关|level|第.*关|关卡|去第|到第|切换关/.test(cmd)) {
                 if (num === null || num < 1) { devLog('请指定关卡数，例如：跳到第99关', 'error'); return; }
@@ -4094,6 +4421,7 @@
                 else if (gameState.mode === 5) startMode5Level(num);
                 else if (gameState.mode === 7 && typeof startMode7Level === 'function') startMode7Level(num, gameState.mode7Difficulty || 'normal');
                 else if (gameState.mode === 8 && typeof startMode8Level === 'function') startMode8Level(num);
+                else if (gameState.mode === 9 && typeof startMode9Level === 'function') startMode9Level(num);
                 devLog(`⏩ 已跳到第 ${num} 关`);
                 return;
             }
@@ -4198,7 +4526,7 @@
         const PROGRESS_KEY = 'brick_game_mode_progress';
 
         function getUnlockedMode() {
-            return 8; // 默认解锁全部模式，方便立即体验！
+            return 9; // 默认解锁全部模式，方便立即体验！
         }
 
         function unlockNextMode(currentMode) {
@@ -4382,7 +4710,8 @@
                 { id: 6, name: '模式六：我的世界图画', icon: '🖼️', color: 'linear-gradient(135deg, #795548 0%, #8D6E63 100%)', text: 'white' },
                 { id: 7, name: '模式七：第七音 (简单模式)', icon: '🟢', color: 'linear-gradient(135deg, #1b5e20 0%, #43a047 100%)', text: 'white', diff: 'easy' },
                 { id: 7.5, name: '模式七：第七音 (普通模式)', icon: '🟠', color: 'linear-gradient(135deg, #e65100 0%, #ffa000 100%)', text: 'white', diff: 'normal' },
-                { id: 8, name: '模式八：坚果保龄球 (种植版)', icon: '🌰', color: 'linear-gradient(135deg, #5D4037 0%, #388E3C 100%)', text: 'white' }
+                { id: 8, name: '模式八：坚果保龄球 (种植版)', icon: '🌰', color: 'linear-gradient(135deg, #5D4037 0%, #388E3C 100%)', text: 'white' },
+                { id: 9, name: '模式九：机械迷城', icon: '🤖', color: 'linear-gradient(135deg, #4b382a 0%, #8d6e63 100%)', text: 'white' }
             ];
 
             modes.forEach(m => {
@@ -4456,11 +4785,12 @@
                 }
             }
             updateHomeTheme();
-            const modeNames = ["一", "二", "三", "四", "五", "六", "七", "八"];
+            const modeNames = ["一", "二", "三", "四", "五", "六", "七", "八", "九"];
             document.getElementById('modeDisplayBtn').textContent = modeNames[modeId - 1] || modeId;
 
             closeModeModal();
         }
+        window.selectMode = selectMode;
 
         // 新增：游戏说明弹窗控制逻辑
         function openInstructionsModal() { 
@@ -4574,6 +4904,27 @@
                     </p>
                     <p style="margin-bottom: 8px; color: #FFF;"><b>【防线守护】</b></p>
                     <p style="margin-bottom: 0;">5 条车道均配备除草机小推车，僵尸突破防线时将自动启动横扫整行！</p>
+                `;
+            } else if (mode === 9) {
+                content.innerHTML = `
+                    <p style="margin-bottom: 8px; color: #FFF;"><b>【玩法：机械迷城（Machinarium）】</b></p>
+                    <p style="margin-bottom: 12px;">致敬经典蒸汽朋克解谜巨作！完整收录全 16 大章节与经典谜题！</p>
+                    <p style="margin-bottom: 8px; color: #FFF;"><b>【主角约瑟夫操控】</b></p>
+                    <p style="margin-bottom: 12px;">
+                        ⬆️ <b>拉长身体 (W / ↑)：</b> 伸长脖子与躯干触碰高处开关或伪装高个卫兵。<br>
+                        ⬇️ <b>蹲下压缩 (S / ↓)：</b> 压缩身体钻过矮管或调查贴地线索。<br>
+                        ⏸️ <b>正常高度 (Space / Ctrl)：</b> 恢复标准体态正常行走。<br>
+                        🎒 <b>顶部物品栏：</b> 收集齿轮、磁铁、绳索、蓝漆并点击合成与使用。
+                    </p>
+                    <p style="margin-bottom: 8px; color: #FFF;"><b>【手绘通关秘籍与核心密码】</b></p>
+                    <p style="margin-bottom: 0;">
+                        📖 点击右上角<b>【秘籍】</b>随时翻阅手绘图解攻略与章节速查！<br>
+                        • 牢房荧光密码锁：<b>04:45</b><br>
+                        • 室内大电梯回路：<b>1-6-3-2-7-1</b><br>
+                        • 核心炸弹剪线顺序：<b>D - B - E - A - C</b><br>
+                        • 大脑电梯九宫格：<b>1-4-7-2-5-8-3-6-1</b><br>
+                        • 顶楼天台收音机与琴键：<b>7.0:108 / 1-4-2-3-5-2-3</b>
+                    </p>
                 `;
             } else {
                 content.innerHTML = `
@@ -5192,6 +5543,13 @@
             document.body.classList.remove('mode-8-active');
             document.getElementById("uiLayer").classList.remove('mode-8-active');
 
+            // 隐藏并停止模式九：机械迷城
+            if (typeof window.stopMode9 === 'function') {
+                window.stopMode9();
+            }
+            document.body.classList.remove('mode-9-active');
+            document.getElementById("uiLayer").classList.remove('mode-9-active');
+
             gameState.mcWorld = null;
             mc3D.scene = null;
 
@@ -5636,8 +5994,8 @@
         function createSplash(x, y) { for (let i = 0; i < 8; i++) gameState.effects.push(new Effect('splash', x, y)); }
 
         function drawScene() {
-            if (gameState.mode === 3 || gameState.mpGameMode === 3 || gameState.mode === 7 || gameState.mode === 8) {
-                // 我的世界 3D、第七音、模式八等拥有独立的专属全屏渲染体系，跳过 2D 默认天空背景
+            if (gameState.mode === 3 || gameState.mpGameMode === 3 || gameState.mode === 7 || gameState.mode === 8 || gameState.mode === 9) {
+                // 我的世界 3D、第七音、模式八、模式九等拥有独立的专属全屏渲染体系，跳过 2D 默认天空背景
                 return;
             }
             const grad = ctx.createLinearGradient(0, 0, 0, height);
@@ -9850,6 +10208,7 @@
             }
             requestAnimationFrame(loop);
         }
+        window.launchMode7Level = launchMode7Level;
 
         function startMode3Level(n) {
             if (typeof THREE === 'undefined') {
@@ -11436,14 +11795,18 @@
             screen.classList.remove('mc-theme', 'tetris-theme'); uiLayer.classList.remove('mc-theme');
             uiLayer.classList.toggle('mode-8-active', mode === 8);
             document.body.classList.toggle('mode-8-active', mode === 8);
+            uiLayer.classList.toggle('mode-9-active', mode === 9);
+            document.body.classList.toggle('mode-9-active', mode === 9);
             startBtn.style.background = ""; 
             startBtn.style.color = "";
+            title.style.color = "";
+            title.style.textShadow = "";
             if (mpBtn) {
                 mpBtn.style.background = "";
                 mpBtn.style.color = "";
             }
             
-            const mText = (mode === 1 ? '一' : (mode === 2 ? '二' : (mode === 3 ? '三' : (mode === 4 ? '四' : (mode === 5 ? '五' : (mode === 6 ? '六' : (mode === 7 ? '七' : '八')))))));
+            const mText = (mode === 1 ? '一' : (mode === 2 ? '二' : (mode === 3 ? '三' : (mode === 4 ? '四' : (mode === 5 ? '五' : (mode === 6 ? '六' : (mode === 7 ? '七' : (mode === 8 ? '八' : '九'))))))));
             
             // 恢复原始图标
             startBtn.innerHTML = "▶ 开始游戏";
@@ -11538,6 +11901,15 @@
                 startBtn.style.background = "linear-gradient(135deg, #2e7d32 0%, #8d6e63 100%)";
                 startBtn.style.color = "#ffffff";
                 startBtn.innerHTML = "▶ 开启保龄球 (模式八)";
+            } else if (mode === 9) {
+                // 进入“机械迷城”主题
+                title.textContent = "机械迷城";
+                title.style.color = "#ffe082";
+                title.style.textShadow = "0 4px 12px rgba(0, 0, 0, 0.9), 0 0 25px rgba(255, 179, 0, 0.6)";
+                screen.style.background = "linear-gradient(135deg, #2b1f17 0%, #4a3828 50%, #1e150f 100%)";
+                startBtn.style.background = "linear-gradient(135deg, #8d6e63 0%, #4e342e 100%)";
+                startBtn.style.color = "#ffffff";
+                startBtn.innerHTML = "▶ 开启冒险 (模式九)";
             } else {
                 // 默认“积木小院”主题
                 title.textContent = "积木小院";
@@ -11611,10 +11983,15 @@
                 if (typeof window.startMode8Level === 'function') {
                     startMode8Level(startLevel);
                 }
+            } else if (mode === 9) {
+                if (typeof window.startMode9Level === 'function') {
+                    startMode9Level(startLevel);
+                }
             }
 
             requestAnimationFrame(loop);
         }
+        window.startGame = startGame;
 
         function gameOver(reason) {
             gameState.isPlaying = false; const modal = document.getElementById('gameOverModal');
@@ -11649,7 +12026,7 @@
                 document.getElementById('scoreDisplay').textContent = `${gameState.currentLevelCollected} / ${gameState.targetCount}`;
             }
 
-            const isNoTimerMode = gameState.mode === 4 || gameState.mode === 6 || gameState.mode === 7 || gameState.mode === 8 || (gameState.mode === 'mp_pvp' && gameState.mpGameMode === 4);
+            const isNoTimerMode = gameState.mode === 4 || gameState.mode === 6 || gameState.mode === 7 || gameState.mode === 8 || gameState.mode === 9 || (gameState.mode === 'mp_pvp' && gameState.mpGameMode === 4);
             if (isNoTimerMode) {
                 document.getElementById('timerBox').classList.add('hidden');
                 document.getElementById('basket').classList.add('hidden');
@@ -11965,6 +12342,7 @@
                 else if (activeMode === 5) loopMode5(t, dt);
                 else if (activeMode === 7 && typeof loopMode7 === 'function') loopMode7(t, dt);
                 else if (activeMode === 8 && typeof loopMode8 === 'function') loopMode8(t, dt);
+                else if (activeMode === 9 && typeof loopMode9 === 'function') loopMode9(t, dt);
 
                 for (let i = gameState.effects.length - 1; i >= 0; i--) {
                     if (gameState.effects[i].update()) gameState.effects.splice(i, 1); else gameState.effects[i].draw(ctx);
@@ -12111,6 +12489,7 @@
         gameState.sessionLevels[6] = 1;
         gameState.sessionLevels[7] = 1;
         gameState.sessionLevels[8] = 1;
+        gameState.sessionLevels[9] = 1;
 
         function makeIconsTransparent() {
             const img = new Image();
@@ -12154,6 +12533,10 @@
 
         // 🟢 自动检测并提醒输入名称，激活 Socket 通信
         const savedUsername = localStorage.getItem('brick_game_username');
+        const savedAvatar = localStorage.getItem('user_pixel_avatar');
+        if (savedAvatar) {
+            updatePlayerAvatarDisplay(savedAvatar);
+        }
         if (savedUsername) {
             document.getElementById('usernameModal').classList.add('hidden');
             document.getElementById('playerUsernameDisplay').textContent = savedUsername;

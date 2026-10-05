@@ -1319,7 +1319,390 @@
     }
   };
 
+  // ==========================================
+  // 5. 绘画头像专属 5×5 像素画布与头像应用引擎
+  // ==========================================
+  let currentAvatarColor = '#1565C0';
+  let avatarGridColors = Array(25).fill('#FFFFFF');
+  let isAvatarPainting = false;
+  let isAvatarPainterInitialized = false;
+
+  const AVATAR_PALETTE_COLORS = [
+    // 基础黑白灰
+    { name: '纯白 (羊毛)', hex: '#FFFFFF' },
+    { name: '骨粉白 (骨块)', hex: '#E4E4E4' },
+    { name: '浅灰 (安山岩)', hex: '#9E9E9E' },
+    { name: '深灰 (深层岩)', hex: '#4A4A4A' },
+    { name: '纯黑 (黑曜石)', hex: '#111111' },
+    { name: '橡皮擦 (白色清空)', hex: '#FFFFFF', isEraser: true },
+
+    // 皮肤与泥土原木
+    { name: '浅肤色 (村民)', hex: '#FCE2C4' },
+    { name: '史蒂夫肤色', hex: '#C48A68' },
+    { name: '晒黑肤色', hex: '#9C6442' },
+    { name: '深棕发色', hex: '#4A2711' },
+    { name: '橡木原木', hex: '#966C3E' },
+    { name: '草方块泥土', hex: '#86562B' },
+
+    // 经典明亮染料
+    { name: '红石红 (羊毛)', hex: '#DD2E44' },
+    { name: '烈焰橙', hex: '#F47B20' },
+    { name: '黄金黄', hex: '#FFD600' },
+    { name: '苦力怕绿', hex: '#4CAF50' },
+    { name: '仙人掌绿', hex: '#2E7D32' },
+    { name: '钻石青', hex: '#00E5FF' },
+
+    // 华丽冷暖染料
+    { name: '天蓝色', hex: '#3BA3EC' },
+    { name: '青金石蓝', hex: '#1565C0' },
+    { name: '末影紫', hex: '#7B1FA2' },
+    { name: '品红色', hex: '#C2185B' },
+    { name: '潜影粉', hex: '#F06292' },
+    { name: '发光金黄', hex: '#FFAB00' }
+  ];
+
+  const AVATAR_TEMPLATES = {
+    steve: [
+      '#4A2711', '#4A2711', '#4A2711', '#4A2711', '#4A2711',
+      '#4A2711', '#C48A68', '#C48A68', '#C48A68', '#4A2711',
+      '#FFFFFF', '#1565C0', '#C48A68', '#FFFFFF', '#1565C0',
+      '#C48A68', '#C48A68', '#9C6442', '#C48A68', '#C48A68',
+      '#C48A68', '#4A2711', '#4A2711', '#4A2711', '#C48A68'
+    ],
+    creeper: [
+      '#4CAF50', '#4CAF50', '#4CAF50', '#4CAF50', '#4CAF50',
+      '#4CAF50', '#111111', '#4CAF50', '#111111', '#4CAF50',
+      '#4CAF50', '#4CAF50', '#111111', '#4CAF50', '#4CAF50',
+      '#4CAF50', '#111111', '#111111', '#111111', '#4CAF50',
+      '#4CAF50', '#111111', '#4CAF50', '#111111', '#4CAF50'
+    ],
+    heart: [
+      '#FFFFFF', '#DD2E44', '#FFFFFF', '#DD2E44', '#FFFFFF',
+      '#DD2E44', '#DD2E44', '#DD2E44', '#DD2E44', '#DD2E44',
+      '#DD2E44', '#DD2E44', '#DD2E44', '#DD2E44', '#DD2E44',
+      '#FFFFFF', '#DD2E44', '#DD2E44', '#DD2E44', '#FFFFFF',
+      '#FFFFFF', '#FFFFFF', '#DD2E44', '#FFFFFF', '#FFFFFF'
+    ],
+    chick: [
+      '#FFD600', '#FFD600', '#FFD600', '#FFD600', '#FFD600',
+      '#FFD600', '#111111', '#FFD600', '#111111', '#FFD600',
+      '#FFD600', '#FFD600', '#F47B20', '#FFD600', '#FFD600',
+      '#FFD600', '#FFD600', '#DD2E44', '#FFD600', '#FFD600',
+      '#FFD600', '#FFD600', '#FFD600', '#FFD600', '#FFD600'
+    ],
+    blank: Array(25).fill('#FFFFFF')
+  };
+
+  function playPopSound() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!window._avatarAudioCtx) window._avatarAudioCtx = new AudioCtx();
+      const ctx = window._avatarAudioCtx;
+      if (ctx.state === 'suspended') ctx.resume();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(480, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.04);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.04);
+    } catch (e) {}
+  }
+
+  function handleTouchPaint(e) {
+    if (!isAvatarPainting) return;
+    const touch = e.touches && e.touches[0];
+    if (!touch) return;
+    const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (elem && elem.dataset && elem.dataset.cellIndex !== undefined) {
+      const idx = parseInt(elem.dataset.cellIndex);
+      if (!isNaN(idx) && avatarGridColors[idx] !== currentAvatarColor) {
+        paintAvatarCell(idx);
+      }
+    }
+  }
+
+  window.addEventListener('mouseup', () => { isAvatarPainting = false; });
+  window.addEventListener('touchend', () => { isAvatarPainting = false; });
+
+  window.switchStudioTab = function(tab, playSound = true) {
+    if (playSound && window.sound && window.sound.playBambooDoorOpen) {
+      window.sound.playBambooDoorOpen();
+    }
+    localStorage.setItem('mc_studio_active_tab', tab);
+    
+    const photoTabBtn = document.getElementById('tabPhotoPainting');
+    const avatarTabBtn = document.getElementById('tabAvatarPainter');
+    const photoWorkspace = document.getElementById('mcPhotoPaintingWorkspace');
+    const avatarWorkspace = document.getElementById('mcAvatarPainterWorkspace');
+    const headerExportBtn = document.getElementById('header-export-btn');
+    
+    if (tab === 'avatar') {
+      if (photoTabBtn) photoTabBtn.classList.remove('active');
+      if (avatarTabBtn) avatarTabBtn.classList.add('active');
+      if (photoWorkspace) photoWorkspace.style.display = 'none';
+      if (avatarWorkspace) {
+        avatarWorkspace.classList.remove('hidden');
+        avatarWorkspace.style.display = 'flex';
+      }
+      if (headerExportBtn) headerExportBtn.style.display = 'none';
+      if (typeof window.initAvatarPainter === 'function') {
+        window.initAvatarPainter();
+      }
+    } else {
+      if (avatarTabBtn) avatarTabBtn.classList.remove('active');
+      if (photoTabBtn) photoTabBtn.classList.add('active');
+      if (avatarWorkspace) {
+        avatarWorkspace.classList.add('hidden');
+        avatarWorkspace.style.display = 'none';
+      }
+      if (photoWorkspace) photoWorkspace.style.display = 'flex';
+      if (headerExportBtn) headerExportBtn.style.display = 'inline-flex';
+    }
+  };
+
+  window.initAvatarPainter = function() {
+    // 1. 恢复之前保存过的 5x5 色块，若无则默认填入经典史蒂夫
+    const savedGrid = localStorage.getItem('user_pixel_avatar_grid');
+    if (savedGrid) {
+      try {
+        const parsed = JSON.parse(savedGrid);
+        if (Array.isArray(parsed) && parsed.length === 25) {
+          avatarGridColors = parsed;
+        }
+      } catch (e) {}
+    } else {
+      avatarGridColors = [...AVATAR_TEMPLATES.steve];
+    }
+
+    // 2. 渲染调色板色卡
+    const paletteContainer = document.getElementById('avatarPaletteGrid');
+    if (paletteContainer) {
+      paletteContainer.innerHTML = '';
+      AVATAR_PALETTE_COLORS.forEach(c => {
+        const btn = document.createElement('button');
+        const isCurrent = c.hex.toLowerCase() === currentAvatarColor.toLowerCase();
+        btn.className = 'avatar-palette-chip' + (isCurrent ? ' selected' : '');
+        btn.style.backgroundColor = c.hex;
+        btn.title = c.name + ' (' + c.hex + ')';
+        if (c.isEraser) {
+          btn.innerHTML = '<span style="font-size:16px; display:flex; align-items:center; justify-content:center; height:100%;">🧽</span>';
+        }
+        btn.onclick = () => {
+          selectAvatarColor(c.hex, c.name);
+        };
+        paletteContainer.appendChild(btn);
+      });
+    }
+
+    // 3. 渲染 5x5 像素格子 (共 25 个色块)
+    const gridContainer = document.getElementById('avatar5x5Grid');
+    if (gridContainer) {
+      gridContainer.innerHTML = '';
+      for (let i = 0; i < 25; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'avatar-cell-block';
+        cell.id = 'avatarCell_' + i;
+        cell.dataset.cellIndex = i;
+        cell.style.backgroundColor = avatarGridColors[i] || '#FFFFFF';
+        
+        cell.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          isAvatarPainting = true;
+          paintAvatarCell(i);
+        });
+        cell.addEventListener('mouseenter', () => {
+          if (isAvatarPainting) {
+            paintAvatarCell(i);
+          }
+        });
+        cell.addEventListener('touchstart', (e) => {
+          isAvatarPainting = true;
+          paintAvatarCell(i);
+        }, { passive: true });
+        cell.addEventListener('touchmove', handleTouchPaint, { passive: true });
+        
+        gridContainer.appendChild(cell);
+      }
+    }
+
+    // 4. 更新调色器和当前画笔颜色
+    updateColorUI();
+
+    // 5. 实时渲染效果预览
+    updateAvatarPreview();
+
+    isAvatarPainterInitialized = true;
+  };
+
+  window.selectAvatarColor = function(hex, name) {
+    currentAvatarColor = hex;
+    updateColorUI();
+    const hint = document.getElementById('paletteColorNameHint');
+    if (hint && name) hint.innerText = name;
+    playPopSound();
+  };
+
+  window.onCustomColorPick = function(val) {
+    currentAvatarColor = val;
+    updateColorUI();
+    const hint = document.getElementById('paletteColorNameHint');
+    if (hint) hint.innerText = '自定义调色 (' + val.toUpperCase() + ')';
+  };
+
+  function updateColorUI() {
+    const swatch = document.getElementById('avatarCurrentColorSwatch');
+    if (swatch) swatch.style.backgroundColor = currentAvatarColor;
+    
+    const hexLabel = document.getElementById('avatarCurrentColorHex');
+    if (hexLabel) hexLabel.innerText = currentAvatarColor.toUpperCase();
+    
+    const picker = document.getElementById('avatarColorPickerInput');
+    if (picker && currentAvatarColor.startsWith('#') && currentAvatarColor.length === 7) {
+      picker.value = currentAvatarColor;
+    }
+    
+    document.querySelectorAll('.avatar-palette-chip').forEach(chip => {
+      const chipTitle = chip.title || '';
+      if (chipTitle.toUpperCase().includes(currentAvatarColor.toUpperCase())) {
+        chip.classList.add('selected');
+      } else {
+        chip.classList.remove('selected');
+      }
+    });
+  }
+
+  window.paintAvatarCell = function(index) {
+    if (index < 0 || index >= 25) return;
+    avatarGridColors[index] = currentAvatarColor;
+    const cell = document.getElementById('avatarCell_' + index);
+    if (cell) {
+      cell.style.backgroundColor = currentAvatarColor;
+    }
+    playPopSound();
+    updateAvatarPreview();
+  };
+
+  window.updateAvatarPreview = function() {
+    const currentName = localStorage.getItem('brick_game_username') || '青靓';
+    
+    const onlineName = document.getElementById('avatarPreviewOnlineName');
+    if (onlineName) onlineName.innerText = currentName;
+    
+    const headerName = document.getElementById('avatarPreviewHeaderName');
+    if (headerName) headerName.innerText = currentName;
+
+    drawGridToCanvas('avatarPreviewSmallCanvas', 24, 24);
+    drawGridToCanvas('avatarPreviewHeaderCanvas', 20, 20);
+  };
+
+  function drawGridToCanvas(canvasId, w, h) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    
+    const cellW = w / 5;
+    const cellH = h / 5;
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        const idx = r * 5 + c;
+        ctx.fillStyle = avatarGridColors[idx] || '#FFFFFF';
+        ctx.fillRect(Math.floor(c * cellW), Math.floor(r * cellH), Math.ceil(cellW), Math.ceil(cellH));
+      }
+    }
+  }
+
+  window.loadAvatarTemplate = function(key) {
+    const tpl = AVATAR_TEMPLATES[key];
+    if (!tpl) return;
+    if (window.sound && window.sound.playBambooDoorOpen) {
+      window.sound.playBambooDoorOpen();
+    }
+    avatarGridColors = [...tpl];
+    for (let i = 0; i < 25; i++) {
+      const cell = document.getElementById('avatarCell_' + i);
+      if (cell) cell.style.backgroundColor = avatarGridColors[i];
+    }
+    updateAvatarPreview();
+  };
+
+  window.clearAvatarGrid = function() {
+    window.loadAvatarTemplate('blank');
+  };
+
+  window.generateAvatarDataUrl = function(colors) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 50;
+    canvas.height = 50;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    const arr = colors || avatarGridColors;
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        const idx = r * 5 + c;
+        ctx.fillStyle = arr[idx] || '#FFFFFF';
+        ctx.fillRect(c * 10, r * 10, 10, 10);
+      }
+    }
+    return canvas.toDataURL('image/png');
+  };
+
+  window.applyUserPixelAvatar = function() {
+    if (window.sound && window.sound.playBambooDoorOpen) {
+      window.sound.playBambooDoorOpen();
+    }
+    const dataUrl = window.generateAvatarDataUrl(avatarGridColors);
+    localStorage.setItem('user_pixel_avatar', dataUrl);
+    localStorage.setItem('user_pixel_avatar_grid', JSON.stringify(avatarGridColors));
+
+    if (window.gameState) {
+      window.gameState.userAvatar = dataUrl;
+    }
+
+    if (typeof window.updatePlayerAvatarDisplay === 'function') {
+      window.updatePlayerAvatarDisplay(dataUrl);
+    }
+
+    if (typeof window.renderOnlinePlayersList === 'function') {
+      window.renderOnlinePlayersList(window.activeOnlineUsers || []);
+    }
+
+    if (window.socket && window.socket.connected) {
+      window.socket.emit('update_profile', { avatar: dataUrl });
+      const myName = localStorage.getItem('brick_game_username') || '青靓';
+      window.socket.emit('register_name', { username: myName, avatar: dataUrl });
+    }
+
+    if (window.mcPaintingApp && window.mcPaintingApp.showToast) {
+      window.mcPaintingApp.showToast('🎉 头像使用成功！', '名字旁边的头像已更换为你画的专属头像！');
+    }
+  };
+
+  window.exportUserAvatarPng = function() {
+    if (window.sound && window.sound.playBambooDoorOpen) {
+      window.sound.playBambooDoorOpen();
+    }
+    const dataUrl = window.generateAvatarDataUrl(avatarGridColors);
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = 'minecraft_avatar_5x5.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   window.startMinecraftPaintingStudio = function() {
+    const devConsole = document.getElementById('devConsole');
+    if (devConsole) devConsole.style.display = 'none';
+
     const studio = document.getElementById('minecraftPaintingStudio');
     if (studio) {
       studio.classList.remove('hidden');
@@ -1332,9 +1715,25 @@
       window.mcPaintingApp.init();
       window.mcPaintingApp.updateArt();
     }
+    
+    // 初始化绘画头像画板
+    if (typeof window.initAvatarPainter === 'function') {
+      window.initAvatarPainter();
+    }
+    
+    // 恢复上次使用的标签选项
+    const activeTab = localStorage.getItem('mc_studio_active_tab') || 'photo';
+    if (typeof window.switchStudioTab === 'function') {
+      window.switchStudioTab(activeTab, false);
+    }
   };
 
   window.stopMinecraftPaintingStudio = function() {
+    const devConsole = document.getElementById('devConsole');
+    if (devConsole && (window.isDevMode || localStorage.getItem('creator_mode_active') === 'true')) {
+      devConsole.style.display = 'block';
+    }
+
     const studio = document.getElementById('minecraftPaintingStudio');
     if (studio) {
       studio.classList.add('hidden');

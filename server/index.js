@@ -52,6 +52,7 @@ function broadcastOnlineList() {
   const onlineList = Object.values(players).map(p => ({
     id: p.id,
     username: p.username,
+    avatar: p.avatar || null,
     inRoom: p.roomId !== null
   }));
   io.emit('online_list_update', {
@@ -89,11 +90,12 @@ io.on('connection', (socket) => {
   socket.on('update_profile', (data) => {
     if(players[socket.id]) {
         if (data.color) players[socket.id].color = data.color;
-        if (data.avatar) players[socket.id].avatar = data.avatar;
+        if (data.avatar !== undefined) players[socket.id].avatar = data.avatar;
         const roomId = players[socket.id].roomId;
         if (roomId && rooms[roomId]) {
             io.to(roomId).emit('room_update', getRoomInfo(rooms[roomId]));
         }
+        broadcastOnlineList();
     }
   });
 
@@ -111,6 +113,7 @@ io.on('connection', (socket) => {
     const onlineList = Object.values(players).map(p => ({
       id: p.id,
       username: p.username,
+      avatar: p.avatar || null,
       inRoom: p.roomId !== null
     }));
     socket.emit('online_list_update', {
