@@ -3219,10 +3219,10 @@
     <script src="assets/bamboo_door_open.js?v=1.0.1"></script>
     <script src="js/presetSamples_river.js?v=1.0.1"></script>
     <script src="js/gameEconomy.js?v=20260924_v107"></script>
-    <script src="js/mcPaintingStudio.js?v=20261001_v108"></script>
+    <script src="js/mcPaintingStudio.js?v=20261006_v110"></script>
     <script src="js/mode7.js?v=20260924_v107"></script>
     <script src="js/mode8.js?v=1.0.0"></script>
-    <script src="js/mode9.js?v=1.0.0"></script>
+    <script src="js/mode9.js?v=20261006_v110"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -4711,7 +4711,7 @@
                 { id: 7, name: '模式七：第七音 (简单模式)', icon: '🟢', color: 'linear-gradient(135deg, #1b5e20 0%, #43a047 100%)', text: 'white', diff: 'easy' },
                 { id: 7.5, name: '模式七：第七音 (普通模式)', icon: '🟠', color: 'linear-gradient(135deg, #e65100 0%, #ffa000 100%)', text: 'white', diff: 'normal' },
                 { id: 8, name: '模式八：坚果保龄球 (种植版)', icon: '🌰', color: 'linear-gradient(135deg, #5D4037 0%, #388E3C 100%)', text: 'white' },
-                { id: 9, name: '模式九：机械迷城', icon: '🤖', color: 'linear-gradient(135deg, #4b382a 0%, #8d6e63 100%)', text: 'white' }
+                { id: 9, name: '模式九：机械迷城', icon: '🤖', color: 'linear-gradient(135deg, #4b382a 0%, #8d6e63 100%)', text: 'white', isNew: true }
             ];
 
             modes.forEach(m => {
@@ -4730,12 +4730,19 @@
                     isUnlocked = false;
                 }
 
+                const isCurrentMode = (gameState.mode === reqId) && (m.id !== 7 || !m.diff || m.diff === gameState.mode7Difficulty);
+
                 if (isUnlocked) {
-                    btn.innerHTML = `${m.icon} ${m.name}`;
+                    const newBadge = m.isNew ? ` <span style="background: linear-gradient(135deg, #ff4757, #ff6b81); color: #fff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 8px; margin-left: 4px; vertical-align: middle; box-shadow: 0 2px 5px rgba(255,71,87,0.4);">NEW</span>` : '';
+                    const currentBadge = isCurrentMode ? ` <span style="font-size:12px; opacity:0.9; font-weight:normal;">(当前)</span>` : '';
+                    btn.innerHTML = `${m.icon} ${m.name}${newBadge}${currentBadge}`;
                     btn.onclick = () => selectMode(m.id, m.diff || null);
                     btn.style.opacity = '1';
                     btn.style.filter = 'none';
                     btn.disabled = false;
+                    if (isCurrentMode) {
+                        btn.style.boxShadow = '0 0 0 3px #ffffff, 0 6px 14px rgba(0,0,0,0.35)';
+                    }
                 } else {
                     const lockReason = (m.id === 7.5) ? '(需通关简单模式全部 25 关)' : `(需通关模式${reqId - 1}第 50 关)`;
                     btn.innerHTML = `🔒 ${m.name} <br><span style="font-size:12px;opacity:0.8;">${lockReason}</span>`;
