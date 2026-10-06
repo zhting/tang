@@ -6,7 +6,7 @@
     <title>《机械迷城》1:1 终极完全体独立离线保全拯救工程 - 大集合版</title>
     <style>
         body {
-            margin: 0; padding: 0; background-color: #060403;
+            margin: 0; padding: 0; background-color: #080503;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             min-height: 100vh; overflow-x: hidden; font-family: sans-serif; color: #8e7960; user-select: none;
             -webkit-user-select: none;
@@ -18,20 +18,20 @@
         }
         canvas {
             display: block;
-            filter: contrast(1.25) brightness(0.76) saturate(0.65) sepia(0.24);
+            filter: contrast(1.24) brightness(0.77) saturate(0.65) sepia(0.24);
             max-width: 100%;
             height: auto;
         }
-        #module-menu {
-            margin-top: 10px; display: flex; gap: 6px; justify-content: center; max-width: 1024px; flex-wrap: wrap;
-            padding: 0 10px;
+        #global-ui {
+            margin-top: 8px; display: flex; gap: 5px; justify-content: center; max-width: 1024px; flex-wrap: wrap;
+            padding: 0 8px;
         }
-        .m-btn {
+        .ui-btn {
             background: #261a11; border: 2px solid #3d2b1c; color: #9c856b;
-            padding: 5px 10px; cursor: pointer; font-weight: bold; font-size: 11px;
+            padding: 5px 9px; cursor: pointer; font-weight: bold; font-size: 11px;
             border-radius: 2px; transition: all 0.2s; text-decoration: none;
         }
-        .m-btn:hover, .m-btn.active {
+        .ui-btn:hover, .ui-btn.active {
             background: #3d2b1c; color: #fae0c2; border-color: #c48c4d;
         }
     </style>
@@ -41,19 +41,22 @@
 <div id="game-container">
     <canvas id="gameCanvas" width="1024" height="576"></canvas>
 </div>
-<div id="module-menu">
-    <button class="m-btn active" id="btn-menu" onclick="switchScene('menu')">🏠 0. 首页菜单 (飞虫AI/大标题)</button>
-    <button class="m-btn" id="btn-junkyard" onclick="switchScene('junkyard')">🔧 1. 垃圾场 (组装/踢桶多段回弹/绳荡)</button>
-    <button class="m-btn" id="btn-pole" onclick="switchScene('pole')">⚡ 2. 电线杆 (长高限制/九宫格/电击坠猫)</button>
-    <button class="m-btn" id="btn-bird" onclick="switchScene('bird')">🦅 3. 鸟与方块 (贪吃鸟俯冲AI/卡扣松脱下落)</button>
-    <button class="m-btn" id="btn-band" onclick="switchScene('band')">🎷 4. 流浪歌手 (萨克斯/铁桶/吉他合奏乐谱)</button>
-    <button class="m-btn" id="btn-gomoku" onclick="switchScene('gomoku')">🏁 5. 酒馆棋盘 (螺丝对战齿轮独立卡位AI)</button>
-    <button class="m-btn" id="btn-bubble" onclick="switchScene('bubble')">💭 6. 思维气泡 (全场景自适应发呆连环画)</button>
-    <button class="m-btn" id="btn-plug" onclick="switchScene('plug')">🧠 7. 博士插销 (最终脑部红绿矩阵解密)</button>
-    <button class="m-btn" id="btn-shoot" onclick="switchScene('shoot')">🎮 8. 街机打枪 (动态走道地图/飞虫防线弹幕)</button>
-    <button class="m-btn" id="btn-doctor_lore" onclick="switchScene('doctor_lore')">🎬 9. 博士讲述 (真空管发光/老胶片颤抖剧情)</button>
-    <button class="m-btn" id="btn-spider" onclick="triggerSpiderGame()">🕷️ 10. 蜘蛛射击 (通关秘籍专属小游戏)</button>
-    <a href="index.html" class="m-btn" style="background:#3d2416; color:#ffcc80;">⬅️ 返回积木小院</a>
+<div id="global-ui">
+    <button class="ui-btn active" id="btn-menu" onclick="changeEngineMode('menu')">🏠 0. 首页菜单 (小飞虫AI)</button>
+    <button class="ui-btn" id="btn-junkyard" onclick="changeEngineMode('junkyard')">🔧 1. 垃圾场 (组装/踢桶/绳荡)</button>
+    <button class="ui-btn" id="btn-pole" onclick="changeEngineMode('pole')">⚡ 2. 电线杆 (铜线拼图/电击坠猫)</button>
+    <button class="ui-btn" id="btn-bird" onclick="changeEngineMode('bird')">🦅 3. 鸟与方块 (贪吃鸟俯冲/卡扣下落)</button>
+    <button class="ui-btn" id="btn-fishing" onclick="changeEngineMode('fishing')">🎣 4. 水池抛竿 (物理钓鱼/鱼线阻尼)</button>
+    <button class="ui-btn" id="btn-fan_quiz" onclick="changeEngineMode('fan_quiz')">💨 5. 温室风扇 (大风扇3关图形解谜)</button>
+    <button class="ui-btn" id="btn-band" onclick="changeEngineMode('band')">🎷 6. 流浪歌手 (多声轨独立同步乐器合奏)</button>
+    <button class="ui-btn" id="btn-gomoku" onclick="changeEngineMode('gomoku')">🏁 7. 酒馆五子棋 (与老烟枪对弈完全AI)</button>
+    <button class="ui-btn" id="btn-bubble" onclick="changeEngineMode('bubble')">💭 8. 思维气泡 (全场景自适应连环画)</button>
+    <button class="ui-btn" id="btn-plug" onclick="changeEngineMode('plug')">🧠 9. 博士病毒插销 (红绿矩阵逻辑对调)</button>
+    <button class="ui-btn" id="btn-shoot" onclick="changeEngineMode('shoot')">🎮 10. 街机打枪 (CRT扫描线/飞虫弹幕)</button>
+    <button class="ui-btn" id="btn-spider" onclick="triggerSpiderGame()">🕷️ 11. 蜘蛛射击 (通关秘籍专属小游戏)</button>
+    <button class="ui-btn" id="btn-movie_gf" onclick="triggerLoreMovie('girlfriend')">🎬 电影A: 女友悲伤回忆连环画</button>
+    <button class="ui-btn" id="btn-movie_doc" onclick="triggerLoreMovie('meet_doctor')">🎬 电影B: 顶层老博士放映机交代</button>
+    <a href="index.html" class="ui-btn" style="background:#3d2416; color:#ffcc80;">⬅️ 返回积木小院</a>
 </div>
 
 <script>
@@ -61,61 +64,61 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 // ==========================================
-// 🔊 WEB AUDIO API 多声轨同步合成与环境音网络
+// 🔊 WEB AUDIO API 纯代码级多轨工业声场合成器
 // ==========================================
 let audioCtx = null;
-let ambientWind = null;
-let industryBuzz = null;
+let windNode = null;
+let buzzNode = null;
+let melodyInterval = null;
 
-function initAudioEngine() {
-    if (audioCtx) return;
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function initAudioContext() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     try {
-        let bufSize = 2 * audioCtx.sampleRate, buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate), out = buf.getChannelData(0);
-        let b0=0, b1=0, b2=0, b3=0, b4=0, b5=0, b6=0;
-        for (let i = 0; i < bufSize; i++) {
-            let white = Math.random() * 2 - 1;
-            b0 = 0.99886 * b0 + white * 0.0555179; b1 = 0.99332 * b1 + white * 0.0750759; b2 = 0.96900 * b2 + white * 0.1538520;
-            b3 = 0.86650 * b3 + white * 0.3104856; b4 = 0.55000 * b4 + white * 0.5329522; b5 = -0.7616 * b5 - white * 0.0168980;
-            out[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362; out[i] *= 0.12; b6 = white * 0.115926;
+        if (!windNode && audioCtx) {
+            let bufSize = 2 * audioCtx.sampleRate, buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate), out = buf.getChannelData(0);
+            let b0=0, b1=0, b2=0, b3=0, b4=0, b5=0, b6=0;
+            for (let i = 0; i < bufSize; i++) {
+                let white = Math.random() * 2 - 1;
+                b0 = 0.99886 * b0 + white * 0.0555179; b1 = 0.99332 * b1 + white * 0.0750759; b2 = 0.96900 * b2 + white * 0.1538520;
+                b3 = 0.86650 * b3 + white * 0.3104856; b4 = 0.55000 * b4 + white * 0.5329522; b5 = -0.7616 * b5 - white * 0.0168980;
+                out[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362; out[i] *= 0.12; b6 = white * 0.115926;
+            }
+            let src = audioCtx.createBufferSource(); src.buffer = buf; src.loop = true;
+            let lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(140, audioCtx.currentTime);
+            let gn = audioCtx.createGain(); gn.gain.setValueAtTime(0.18, audioCtx.currentTime);
+            src.connect(lp); lp.connect(gn); gn.connect(audioCtx.destination); src.start(); windNode = src;
         }
-        let src = audioCtx.createBufferSource(); src.buffer = buf; src.loop = true;
-        let lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(140, audioCtx.currentTime);
-        let gn = audioCtx.createGain(); gn.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        src.connect(lp); lp.connect(gn); gn.connect(audioCtx.destination); src.start(); ambientWind = src;
     } catch(e) {}
 }
 
-function playActionSound(type, vol=1.0, pitch=1.0) {
+function playProceduralSound(type, vol=1.0, pitch=1.0) {
     if (!audioCtx) return;
     try {
         let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
         if (type === 'thud') {
-            osc.type = 'triangle'; osc.frequency.setValueAtTime(115*pitch, audioCtx.currentTime);
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(120*pitch, audioCtx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(25, audioCtx.currentTime + 0.22);
             gain.gain.setValueAtTime(vol * 0.35, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.22);
         } else if (type === 'step') {
             osc.type = 'sine'; osc.frequency.setValueAtTime(340, audioCtx.currentTime);
-            osc.frequency.linearRampToValueAtTime(95, audioCtx.currentTime + 0.05);
+            osc.frequency.linearRampToValueAtTime(90, audioCtx.currentTime + 0.05);
             gain.gain.setValueAtTime(vol * 0.03, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
         } else if (type === 'hydraulic') {
             osc.type = 'sawtooth'; osc.frequency.setValueAtTime(85, audioCtx.currentTime);
             let filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.setValueAtTime(200, audioCtx.currentTime);
-            gain.gain.setValueAtTime(vol * 0.015, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.16);
+            gain.gain.setValueAtTime(vol * 0.02, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.16);
             osc.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.16); return;
         } else if (type === 'buzz') {
-            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800 + (Math.random()-0.5)*150, audioCtx.currentTime);
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(850 + (Math.random()-0.5)*150, audioCtx.currentTime);
             let hp = audioCtx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.setValueAtTime(1100, audioCtx.currentTime);
             gain.gain.setValueAtTime(vol * 0.01, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
             osc.connect(hp); hp.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.04); return;
-        } else if (type === 'laser') {
-            osc.type = 'square'; osc.frequency.setValueAtTime(450 * pitch, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(150, audioCtx.currentTime + 0.08); gain.gain.setValueAtTime(vol * 0.03, audioCtx.currentTime);
-        } else if (type === 'pop') {
-            osc.type = 'sine'; osc.frequency.setValueAtTime(300 * pitch, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.1); gain.gain.setValueAtTime(vol * 0.18, audioCtx.currentTime);
         } else if (type === 'shock') {
-            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(700, audioCtx.currentTime); gain.gain.setValueAtTime(vol * 0.08, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol * 0.1, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
         } else if (type === 'page') {
-            osc.type = 'triangle'; osc.frequency.setValueAtTime(90, audioCtx.currentTime); gain.gain.setValueAtTime(vol * 0.1, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(85*pitch, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol * 0.12, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
         } else if (type === 'sax') {
             osc.type = 'sawtooth'; osc.frequency.setValueAtTime(pitch, audioCtx.currentTime);
             let lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(450, audioCtx.currentTime);
@@ -124,69 +127,97 @@ function playActionSound(type, vol=1.0, pitch=1.0) {
         } else if (type === 'guitar') {
             osc.type = 'sine'; osc.frequency.setValueAtTime(pitch, audioCtx.currentTime);
             gain.gain.setValueAtTime(0.08*vol, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+        } else if (type === 'splash') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol * 0.1, audioCtx.currentTime);
+        } else if (type === 'laser') {
+            osc.type = 'square'; osc.frequency.setValueAtTime(450 * pitch, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(150, audioCtx.currentTime + 0.08);
+            gain.gain.setValueAtTime(vol * 0.03, audioCtx.currentTime);
+        } else if (type === 'pop') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(300 * pitch, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(vol * 0.18, audioCtx.currentTime);
         }
-        osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+        osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.5);
     } catch(e) {}
 }
 
-function toggleIndustryBuzz(enable) {
+function updateBuzzLoop(enable) {
     if(!audioCtx) return;
-    if(enable && !industryBuzz) {
+    if(enable && !buzzNode) {
         try {
             let osc = audioCtx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(50, audioCtx.currentTime);
             let lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(100, audioCtx.currentTime);
             let gn = audioCtx.createGain(); gn.gain.setValueAtTime(0.06, audioCtx.currentTime);
-            osc.connect(lp); lp.connect(gn); gn.connect(audioCtx.destination); osc.start(); industryBuzz = {o:osc, g:gn};
+            osc.connect(lp); lp.connect(gn); gn.connect(audioCtx.destination); osc.start(); buzzNode = {o:osc, g:gn};
         } catch(e) {}
-    } else if(!enable && industryBuzz) { try { industryBuzz.o.stop(); } catch(e){} industryBuzz = null; }
+    } else if(!enable && buzzNode) { try { buzzNode.o.stop(); } catch(e){} buzzNode = null; }
+}
+
+function startSignatureMelody() {
+    if(melodyInterval) return;
+    const riff = [523.25, 587.33, 659.25, 523.25, 659.25, 587.33, 392.00, 440.00]; let step = 0;
+    melodyInterval = setInterval(() => {
+        if(state.mode === 'menu') return;
+        let note = riff[step % riff.length];
+        if (step % 4 === 0) playProceduralSound('sax', 1.4, note);
+        else if (step % 4 === 1 || step % 4 === 2) playProceduralSound('sax', 0.8, note * 1.2);
+        else playProceduralSound('guitar', 0.1, 100);
+        step++;
+    }, 380);
 }
 
 // ==========================================
-// 🎨 1:1 图片资产级手绘纸张与铁锈生成算法
+// 🎨 1:1 离线像素级美术贴图生成器与手抖描边
 // ==========================================
-let paperPattern = null; let rustPattern = null;
-function generateTextures() {
-    let pCanvas = document.createElement('canvas'); pCanvas.width = 300; pCanvas.height = 300;
-    let pCtx = pCanvas.getContext('2d'); pCtx.fillStyle = '#211710'; pCtx.fillRect(0,0,300,300);
-    for(let i=0; i<25000; i++) {
+const tex = { paper: null, rust: null };
+function buildGraphicsPatterns() {
+    let pCanvas = document.createElement('canvas'); pCanvas.width = 256; pCanvas.height = 256;
+    let pCtx = pCanvas.getContext('2d'); pCtx.fillStyle = '#21160e'; pCtx.fillRect(0,0,256,256);
+    for(let i=0; i<20000; i++) {
         pCtx.fillStyle = `rgba(0,0,0,${Math.random()*0.09})`;
-        if(Math.random()<0.5) pCtx.fillRect(Math.random()*300, Math.random()*300, Math.random()*3+1, 1);
-        else pCtx.fillRect(Math.random()*300, Math.random()*300, 1, Math.random()*3+1);
+        if(Math.random()<0.5) pCtx.fillRect(Math.random()*256, Math.random()*256, Math.random()*3+1, 1);
+        else pCtx.fillRect(Math.random()*256, Math.random()*256, 1, Math.random()*3+1);
     }
-    paperPattern = ctx.createPattern(pCanvas, 'repeat');
+    tex.paper = ctx.createPattern(pCanvas, 'repeat');
 
     let rCanvas = document.createElement('canvas'); rCanvas.width = 128; rCanvas.height = 128;
-    let rCtx = rCanvas.getContext('2d'); rCtx.fillStyle = '#7a6650'; rCtx.fillRect(0,0,128,128);
+    let rCtx = rCanvas.getContext('2d'); rCtx.fillStyle = '#7a654d'; rCtx.fillRect(0,0,128,128);
     for(let i=0; i<350; i++) {
         let x=Math.random()*128, y=Math.random()*128, r=Math.random()*6+1;
-        let g = rCtx.createRadialGradient(x,y,0, x,y,r); g.addColorStop(0,'rgba(84,36,15,0.55)'); g.addColorStop(1,'rgba(0,0,0,0)');
+        let g = rCtx.createRadialGradient(x,y,0, x,y,r); g.addColorStop(0,'rgba(84,33,12,0.5)'); g.addColorStop(1,'rgba(0,0,0,0)');
         rCtx.fillStyle = g; rCtx.beginPath(); rCtx.arc(x,y,r,0,Math.PI*2); rCtx.fill();
     }
-    rustPattern = ctx.createPattern(rCanvas, 'repeat');
+    tex.rust = ctx.createPattern(rCanvas, 'repeat');
 }
 
-function drawWobblyLine(pts, close=false) {
+function drawHandDrawnShape(pts, close=false) {
     ctx.beginPath();
     for(let i=0; i<pts.length; i++) {
-        let devX = (Math.random()-0.5)*1.4; let devY = (Math.random()-0.5)*1.4;
-        if(i===0) ctx.moveTo(pts[i].x+devX, pts[i].y+devY); else ctx.lineTo(pts[i].x+devX, pts[i].y+devY);
+        let dx = (Math.random()-0.5)*1.4; let dy = (Math.random()-0.5)*1.4;
+        if(i===0) ctx.moveTo(pts[i].x+dx, pts[i].y+dy); else ctx.lineTo(pts[i].x+dx, pts[i].y+dy);
     }
     if(close) ctx.closePath(); ctx.stroke();
 }
 
 // ==========================================
-// ⚙️ 全局核心状态机与物理属性树
+// ⚙️ 全体核心组件状态机（离线数据仓库）
 // ==========================================
-const core = {
-    scene: 'menu',
+const state = {
+    mode: 'menu',
     inventory: { openY: -62, targetY: -62, items: [], selected: null },
-    ui: { bulb: { x: 920, y: 15, r: 18, active: false, timer: 0 }, book: { x: 965, y: 12, w: 34, h: 28, state: 'closed' } },
-    menuFlies: [
-        { x: 320, y: 160, homeX: 320, homeY: 160, vx: 0, vy: 0, state: 'idle', energy: 0, t: 0 },
-        { x: 512, y: 350, homeX: 512, homeY: 350, vx: 0, vy: 0, state: 'idle', energy: 0, t: 10 },
-        { x: 680, y: 460, homeX: 680, homeY: 460, vx: 0, vy: 0, state: 'idle', energy: 0, t: 20 }
+    ui: { bulb: { x: 920, y: 15, r: 18, active: false, timer: 0 }, book: { x: 965, y: 12, w: 34, h: 28, subState: 'closed' } },
+    flies: [
+        { x: 310, y: 150, homeX: 310, homeY: 150, vx: 0, vy: 0, state: 'idle', energy: 0, t: 0 },
+        { x: 512, y: 340, homeX: 512, homeY: 340, vx: 0, vy: 0, state: 'idle', energy: 0, t: 10 },
+        { x: 670, y: 450, homeX: 670, homeY: 450, vx: 0, vy: 0, state: 'idle', energy: 0, t: 20 }
     ],
-    josef: { x: 200, y: 445, targetX: 200, height: 80, baseHeight: 80, mode: 'normal', speed: 2.3, stepT: 0, kickCooldown: 0, isAssembled: false, isSwinging: false, swingP: 0, isDone: false, isShocked: false, shockTimer: 0 },
+    josef: {
+        x: 200, y: 445, targetX: 200, height: 80, baseHeight: 80, mode: 'normal', speed: 2.3, stepCount: 0,
+        isAssembled: false, isSwinging: false, swingP: 0, isDone: false, isShocked: false, shockT: 0,
+        headVy: 0, headOffsetY: 0, antennaAngle: 0, antennaAv: 0, idleTimer: 0, idleState: 'none', idleProgress: 0
+    },
     junkyard: {
         bathtub: { x: 130, y: 400, w: 100, h: 50, searched: false }, torso: { x: 160, y: 425, w: 30, h: 25, collected: false },
         wire: { x: 550, y: 440, w: 35, h: 30, collected: false }, magnet: { x: 800, y: 440, w: 25, h: 25, collected: false, visible: false },
@@ -194,242 +225,283 @@ const core = {
     },
     poleScene: { panelOpen: false, grid: [1, 0, 2, 3, 5, 4, 6, 7, 8], solved: false, cat: { y: 100, fallY: 100, shocked: false, dead: false } },
     birdScene: { bird: { x: 740, y: 90, status: 'idle', tBlock: null, p: 0 }, blocks: [ {x:630, y:300, w:32, h:32, lit:false, fall:false, vy:0}, {x:720, y:300, w:32, h:32, lit:false, fall:false, vy:0} ] },
-    gomoku: { board: Array(12).fill().map(()=>Array(12).fill(0)), playerTurn: true, winner: null },
-    bubbleLevel: 'junkyard',
-    plugGame: {
+    fishing: { state: 'idle', castProgress: 0, hookX: 200, hookY: 450, rodAngle: -Math.PI/4, targetAngle: -Math.PI/4, ripples: [], caughtItem: false },
+    fanQuiz: {
+        currentIndex: 0, solved: false, wrongTimer: 0, angerLevel: 0,
+        questions: [
+            { options: ["▲", "●", "■", "♦"], correct: 1 },
+            { options: ["⬆️", "⬇️", "⬅️", "➡️"], correct: 0 },
+            { options: ["⬢", "⬡", "★", "⯁"], correct: 2 }
+        ]
+    },
+    gomoku: { board: Array(12).fill().map(()=>Array(12).fill(0)), turn: true, winner: null },
+    plug: {
         nodes: [
-            { x: 420, y: 200, state: 'green', target: 'green' }, { x: 520, y: 200, state: 'red', target: 'green' }, { x: 620, y: 200, state: 'red', target: 'red' },
-            { x: 420, y: 300, state: 'red', target: 'green' },   { x: 520, y: 300, state: 'green', target: 'red' }, { x: 620, y: 300, state: 'green', target: 'red' },
-            { x: 420, y: 400, state: 'green', target: 'red' }, { x: 520, y: 400, state: 'red', target: 'green' }, { x: 620, y: 400, state: 'green', target: 'green' }
+            { x: 420, y: 200, s: 'green', t: 'green' }, { x: 520, y: 200, s: 'red', t: 'green' }, { x: 620, y: 200, s: 'red', t: 'red' },
+            { x: 420, y: 300, s: 'red', t: 'green' },   { x: 520, y: 300, s: 'green', t: 'red' }, { x: 620, y: 300, s: 'green', t: 'red' },
+            { x: 420, y: 400, s: 'green', t: 'red' }, { x: 520, y: 400, s: 'red', t: 'green' }, { x: 620, y: 400, s: 'green', t: 'green' }
         ],
         lines: [[0,1],[1,2],[3,4],[4,5],[6,7],[7,8],[0,3],[1,4],[2,5],[3,6],[4,7],[5,8]],
         selected: null, solved: false
     },
-    shootGame: { px: 420, py: 420, mazeX: 362, mazeY: 100, mw: 300, mh: 350, keyCollected: false, flies: [] },
+    shoot: { px: 420, py: 420, mx: 362, my: 100, mw: 300, mh: 350, key: false, flies: [] },
     spiderGame: { level: 1, player: { x: 512, y: 288, r: 12, speed: 4.5 }, bullets: [], spiders: [], spawnT: 0, required: 10, kills: 0, over: false },
-    movieFrame: 0, movieChapter: 0,
+    movie: { mode: 'none', timer: 0, chap: 0 },
     mouse: { x: 0, y: 0, hover: null }
 };
 
 // ==========================================
-// 🎨 各模块画布图层高保真重绘管线
+// 🎨 画布主渲染与动画绘制核心
 // ==========================================
 function drawBaseWorld() {
-    ctx.fillStyle = paperPattern; ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle = '#110b07'; ctx.fillRect(0,480,canvas.width,96);
-    ctx.strokeStyle = '#24170e'; ctx.lineWidth = 4; drawWobblyLine([{x:0,y:480}, {x:1024,y:480}]);
+    ctx.fillStyle = tex.paper; ctx.fillRect(0,0,canvas.width,canvas.height);
+    if(state.mode !== 'menu' && state.mode !== 'shoot' && state.mode !== 'plug' && !state.mode.startsWith('movie')) {
+        ctx.fillStyle = '#110b07'; ctx.fillRect(0,480,canvas.width,96);
+        ctx.strokeStyle = '#24170e'; ctx.lineWidth = 4; drawHandDrawnShape([{x:0,y:480}, {x:1024,y:480}]);
+    }
 }
 
-function drawMenuScene() {
-    ctx.fillStyle = paperPattern; ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.strokeStyle = '#140d08'; ctx.lineWidth = 3; drawWobblyLine([{x:60,y:0},{x:60,y:576}]); drawWobblyLine([{x:964,y:0},{x:964,y:576}]);
-    ctx.fillStyle = '#b39674'; ctx.font = 'bold 54px Courier New'; ctx.letterSpacing = "6px"; ctx.fillText("MACHINARIUM", 315, 160);
-    ctx.strokeStyle = '#423324'; ctx.lineWidth = 2.5; drawWobblyLine([{x:300,y:185},{x:730,y:185}]);
-    ctx.fillStyle = '#261b12'; ctx.strokeStyle = '#4a3625'; ctx.fillRect(387,310,250,42); ctx.strokeRect(387,310,250,42);
-    ctx.fillStyle = '#8a7761'; ctx.font = 'bold 12px monospace'; ctx.fillText("START GAME (请点击下方切换按钮体验模块)", 392, 336);
+function drawJosef() {
+    if (state.josef.isDone || state.mode === 'menu' || state.mode === 'shoot' || state.mode === 'plug' || state.mode.startsWith('movie')) return;
+    if (state.josef.isSwinging) {
+        let p = state.josef.swingP, sa = -Math.PI/3 + Math.sin(p * Math.PI) * (Math.PI/1.5);
+        ctx.save(); ctx.translate(state.junkyard.pole.x + 15, state.junkyard.pole.y + 55); ctx.rotate(sa);
+        ctx.strokeStyle = '#8a8a8a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,160); ctx.stroke();
+        ctx.translate(0,160); ctx.fillStyle = '#8c775e'; ctx.fillRect(-15,-40,30,40); ctx.translate(0,-55); drawJosefHead(); ctx.restore(); return;
+    }
+    if (state.mode === 'junkyard' && !state.josef.isAssembled) { ctx.save(); ctx.translate(320, 465); drawJosefHead(); ctx.restore(); return; }
+    let th = state.josef.baseHeight; if(state.josef.mode==='tall') th = 135; if(state.josef.mode==='short') th = 46;
+    let oldH = state.josef.height || 80; state.josef.height += (th - oldH) * 0.15;
+    ctx.save(); ctx.translate(state.josef.x, state.josef.y);
+    let lean = (state.mode==='fishing' && state.fishing.state==='casting') ? Math.sin(state.fishing.castProgress*Math.PI)*0.14 : 0; ctx.rotate(lean);
+    let swing = (state.josef.x !== state.josef.targetX) ? Math.sin(Date.now()*0.016)*13 : 0;
+    ctx.strokeStyle = '#382a1c'; ctx.lineWidth = 4; drawHandDrawnShape([{x:-10,y:0},{x:-10+swing,y:35}]); drawHandDrawnShape([{x:10,y:0},{x:10-swing,y:35}]);
+    ctx.fillStyle = tex.rust; ctx.strokeStyle = '#1a110a'; ctx.lineWidth = 3; ctx.fillRect(-16, -state.josef.height, 32, state.josef.height); ctx.strokeRect(-16, -state.josef.height, 32, state.josef.height);
+    ctx.save(); let hY = -state.josef.height - 14 + state.josef.headOffsetY, hR = state.josef.idleState==='looking_foot'?Math.sin(state.josef.idleProgress*Math.PI)*0.35:0; ctx.translate(0, hY+hR); ctx.rotate(hR);
+    drawJosefHead(); ctx.restore(); ctx.restore();
+}
 
-    core.menuFlies.forEach(fly => {
+function drawJosefHead() {
+    ctx.fillStyle = '#99846d'; ctx.strokeStyle = '#1a110a'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0,0,15,Math.PI,0); ctx.lineTo(12,14); ctx.lineTo(-12,14); ctx.closePath(); ctx.fill(); ctx.stroke();
+    if(state.josef.idleState==='blinking' && Math.sin(state.josef.idleProgress * Math.PI) > 0.4) {
+        ctx.strokeStyle='#1a120b'; ctx.lineWidth=3;
+        drawHandDrawnShape([{x:-10,y:2},{x:-2,y:2}]); drawHandDrawnShape([{x:2,y:2},{x:10,y:2}]);
+    } else {
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-5,2,4,0,Math.PI*2); ctx.arc(5,2,4,0,Math.PI*2); ctx.fill();
+        let eyeX = Math.sin(Date.now()*0.002) * 1.5; ctx.fillStyle = '#000'; ctx.beginPath();
+        ctx.arc(-5+eyeX,2,1.5,0,Math.PI*2); ctx.arc(5+eyeX,2,1.5,0,Math.PI*2); ctx.fill();
+    }
+    ctx.save(); ctx.rotate(state.josef.antennaAngle + (state.mode!=='menu'?Math.sin(Date.now()*0.016)*0.25:0));
+    ctx.strokeStyle = '#1a110a'; ctx.lineWidth = 2; drawHandDrawnShape([{x:0,y:-15},{x:0,y:-26}]);
+    ctx.fillStyle = '#b8341d'; ctx.beginPath(); ctx.arc(0,-26,3,0,Math.PI*2); ctx.fill(); ctx.restore();
+    if(state.josef.idleState==='scratching') {
+        let hw = Math.sin(Date.now()*0.04)*5; ctx.strokeStyle='#1a120b'; ctx.lineWidth=2.5;
+        drawHandDrawnShape([{x:14,y:10},{x:24,y:-10+hw},{x:12,y:-20+hw}]);
+    }
+}
+
+function drawMenuModule() {
+    ctx.fillStyle = '#b39674'; ctx.font = 'bold 52px Courier New'; ctx.fillText("MACHINARIUM", 315, 160);
+    ctx.strokeStyle = '#423324'; ctx.lineWidth = 2.5; drawHandDrawnShape([{x:300,y:185},{x:730,y:185}]);
+    ctx.fillStyle = '#261b12'; ctx.strokeStyle = '#4a3625'; ctx.fillRect(387,310,250,42); ctx.strokeRect(387,310,250,42);
+    ctx.fillStyle = '#8a7761'; ctx.font = 'bold 12px monospace'; ctx.fillText("START GAME (点击下方切换独立沙盒)", 396, 336);
+
+    state.flies.forEach(fly => {
         ctx.save(); ctx.translate(fly.x, fly.y);
-        let flap = fly.state === 'flying' ? Math.sin(Date.now() * 0.14) * 12 : Math.sin(Date.now() * 0.005 + fly.t) * 2;
-        ctx.strokeStyle = '#382b1d'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-2,0); ctx.lineTo(-6,4); ctx.moveTo(2,0); ctx.lineTo(6,4); ctx.stroke();
-        ctx.fillStyle = '#21150e'; ctx.beginPath(); ctx.ellipse(0,0,5,3,0,0,Math.PI * 2); ctx.fill();
-        ctx.fillStyle = 'rgba(217,186,147,0.45)'; ctx.strokeStyle = 'rgba(40,28,17,0.7)';
-        ctx.save(); ctx.rotate(-Math.PI/4 - flap * 0.04); ctx.beginPath(); ctx.ellipse(-6,-4,7,2.5,0,0,Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
-        ctx.save(); ctx.rotate(Math.PI/4 + flap * 0.04); ctx.beginPath(); ctx.ellipse(6,-4,7,2.5,0,0,Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
+        let flap = fly.state==='flying'?Math.sin(Date.now()*0.14)*12:Math.sin(Date.now()*0.005+fly.t)*2;
+        ctx.fillStyle='#21150e'; ctx.beginPath(); ctx.ellipse(0,0,5,3,0,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='rgba(217,186,147,0.4)'; ctx.strokeStyle='rgba(40,28,17,0.7)';
+        ctx.save(); ctx.rotate(-Math.PI/4 - flap*0.04); ctx.beginPath(); ctx.ellipse(-6,-4,7,2.5,0,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore();
+        ctx.save(); ctx.rotate(Math.PI/4 + flap*0.04); ctx.beginPath(); ctx.ellipse(6,-4,7,2.5,0,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore();
         ctx.restore();
     });
 }
 
-function drawJosef() {
-    if (core.josef.isDone || core.scene === 'menu' || core.scene === 'doctor_lore') return;
-    if (core.josef.isSwinging) {
-        let p = core.josef.swingP, sa = -Math.PI/3 + Math.sin(p * Math.PI) * (Math.PI/1.5);
-        ctx.save(); ctx.translate(core.junkyard.pole.x + 15, core.junkyard.pole.y + 55); ctx.rotate(sa);
-        ctx.strokeStyle = '#8a8a8a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,160); ctx.stroke();
-        ctx.translate(0,160); ctx.fillStyle = '#8c775e'; ctx.fillRect(-15,-40,30,40); ctx.translate(0,-55); drawJosefHead(); ctx.restore(); return;
-    }
-    if (!core.josef.isAssembled) { ctx.save(); ctx.translate(320, 465); drawJosefHead(); ctx.restore(); return; }
-    let th = core.josef.baseHeight; if(core.josef.mode==='tall') th = 135; if(core.josef.mode==='short') th = 46;
-    let oldH = core.josef.height || 80; core.josef.height += (th - oldH) * 0.15;
-    ctx.save(); ctx.translate(core.josef.x, core.josef.y);
-    if(core.josef.isShocked) {
-        ctx.translate((Math.random()-0.5)*9, (Math.random()-0.5)*9); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5;
-        for(let i=0; i<4; i++) { ctx.beginPath(); ctx.moveTo(0,-40); ctx.lineTo((Math.random()-0.5)*60, -40+(Math.random()-0.5)*60); ctx.stroke(); }
-    }
-    let swing = (core.josef.x !== core.josef.targetX) ? Math.sin(Date.now() * 0.016) * 13 : 0;
-    ctx.strokeStyle = '#382a1c'; ctx.lineWidth = 4; drawWobblyLine([{x:-10,y:0},{x:-10+swing,y:35}]); drawWobblyLine([{x:10,y:0},{x:10-swing,y:35}]);
-    ctx.fillStyle = rustPattern; ctx.strokeStyle = '#1a110a'; ctx.lineWidth = 3; ctx.fillRect(-16, -core.josef.height, 32, core.josef.height); ctx.strokeRect(-16, -core.josef.height, 32, core.josef.height);
-    ctx.translate(0, -core.josef.height - 14); drawJosefHead(); ctx.restore();
-}
-
-function drawJosefHead() {
-    ctx.fillStyle = '#99846d'; ctx.strokeStyle = '#1a110a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0,0,15,Math.PI,0); ctx.lineTo(12,14); ctx.lineTo(-12,14); ctx.closePath(); ctx.fill(); ctx.stroke();
-    let eyeX = Math.sin(Date.now() * 0.002) * 1.5; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-5,2,4,0,Math.PI * 2); ctx.arc(5,2,4,0,Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(-5+eyeX,2,1.5,0,Math.PI * 2); ctx.arc(5+eyeX,2,1.5,0,Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#1a110a'; ctx.lineWidth = 2; drawWobblyLine([{x:0,y:-15},{x:0,y:-26}]);
-    ctx.fillStyle = core.josef.isShocked ? '#fff' : '#b8341d'; ctx.beginPath(); ctx.arc(0,-26,3,0,Math.PI * 2); ctx.fill();
-}
-
-function drawJunkyardScene() {
-    let j = core.junkyard; ctx.strokeStyle = '#423322'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(j.pole.x, 480);
-    if(j.pole.bent) { ctx.lineTo(j.pole.x, j.pole.y+40); ctx.arc(j.pole.x+15, j.pole.y+40, 15, Math.PI, Math.PI * 0.5, true); } else { ctx.lineTo(j.pole.x, j.pole.y); } ctx.stroke();
-    if(!j.bathtub.searched) { ctx.fillStyle = '#423629'; ctx.strokeStyle = '#1c140e'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(j.bathtub.x+50, j.bathtub.y+25, 50, 25, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+function drawJunkyardModule() {
+    let j = state.junkyard; ctx.strokeStyle = '#423322'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(j.pole.x, 480);
+    if(j.pole.bent) { ctx.lineTo(j.pole.x, j.pole.y+40); ctx.arc(j.pole.x+15, j.pole.y+40, 15, Math.PI, Math.PI*0.5, true); } else { ctx.lineTo(j.pole.x, j.pole.y); } ctx.stroke();
+    if(!j.bathtub.searched) { ctx.fillStyle = '#423629'; ctx.strokeStyle = '#1c140e'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(j.bathtub.x+50, j.bathtub.y+25, 50, 25, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke(); }
     if(j.bathtub.searched && !j.torso.collected) { ctx.fillStyle = '#7a6753'; ctx.fillRect(j.torso.x, j.torso.y, j.torso.w, j.torso.h); }
-    if(j.magnet.visible && !j.magnet.collected) { ctx.fillStyle = '#8f2917'; ctx.fillRect(j.magnet.x, j.magnet.y, j.magnet.w, j.magnet.h); ctx.fillStyle = '#d1d1d1'; ctx.fillRect(j.magnet.x+14, j.magnet.y, 11, j.magnet.h); }
-    if(!j.wire.collected) { ctx.strokeStyle = '#5e4e3d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(j.wire.x+15, j.wire.y+15, 13, 0, Math.PI * 2); ctx.stroke(); }
-    let d = j.drum; ctx.save(); ctx.translate(d.x+18, d.y+50); if(d.wobble>0) ctx.rotate(Math.sin(d.wobble * 0.6) * 0.15); else ctx.rotate(d.rot);
-    ctx.fillStyle = rustPattern; ctx.strokeStyle = '#1a100a'; ctx.lineWidth = 3; ctx.fillRect(-18,-50,36,50); ctx.strokeRect(-18,-50,36,50); ctx.restore();
+    if(j.magnet.visible && !j.magnet.collected) { ctx.fillStyle = '#8f2917'; ctx.fillRect(j.magnet.x, j.magnet.y, j.magnet.w, j.magnet.h); ctx.fillStyle='#d1d1d1'; ctx.fillRect(j.magnet.x+14, j.magnet.y, 11, j.magnet.h); }
+    if(!j.wire.collected) { ctx.strokeStyle = '#5e4e3d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(j.wire.x+15, j.wire.y+15, 13, 0, Math.PI*2); ctx.stroke(); }
+    let d = j.drum; ctx.save(); ctx.translate(d.x+18, d.y+50); if(d.wobble!==0) ctx.rotate(Math.sin(d.wobble*0.6)*0.15); else ctx.rotate(d.rot);
+    ctx.fillStyle = tex.rust; ctx.strokeStyle = '#1a100a'; ctx.lineWidth = 3; ctx.fillRect(-18,-50,36,50); ctx.strokeRect(-18,-50,36,50); ctx.restore();
 }
 
-function drawPoleScene() {
-    let ps = core.poleScene; ctx.fillStyle = '#3a2b1d'; ctx.fillRect(490, 80, 20, 400);
-    if(!ps.cat.dead) { ctx.save(); ctx.translate(500, ps.cat.fallY); if(ps.cat.shocked) ctx.translate((Math.random()-0.5)*6,0); ctx.fillStyle = '#352f29'; ctx.fillRect(-12,-18,24,18); ctx.restore(); }
-    ctx.fillStyle = '#54412f'; ctx.fillRect(485, 250, 30, 40); ctx.fillStyle = ps.solved ? '#3cb82a' : '#b82a14'; ctx.beginPath(); ctx.arc(500,270,4,0,Math.PI * 2); ctx.fill();
+function drawPoleModule() {
+    let ps = state.poleScene; ctx.fillStyle = '#3a2b1d'; ctx.fillRect(490, 80, 20, 400);
+    if(!ps.cat.dead) { ctx.save(); ctx.translate(500, ps.cat.fallY); if(ps.cat.shocked) ctx.translate((Math.random()-0.5)*5,0); ctx.fillStyle = '#352f29'; ctx.fillRect(-12,-18,24,18); ctx.restore(); }
+    ctx.fillStyle = '#54412f'; ctx.fillRect(485, 250, 30, 40); ctx.fillStyle = ps.solved ? '#3cb82a' : '#b82a14'; ctx.beginPath(); ctx.arc(500,270,4,0,Math.PI*2); ctx.fill();
     if (ps.panelOpen) {
-        ctx.fillStyle = 'rgba(10,7,5,0.88)'; ctx.fillRect(0,0,1024,576);
+        ctx.fillStyle = 'rgba(10,7,5,0.9)'; ctx.fillRect(0,0,1024,576);
         ctx.fillStyle = '#3d2e20'; ctx.strokeStyle = '#19110a'; ctx.lineWidth = 5; ctx.fillRect(362,138,300,300); ctx.strokeRect(362,138,300,300);
         for(let i=0; i<9; i++) {
-            let v = ps.grid[i]; if(v===8) continue;
-            let gx = 362+(i%3)*100, gy = 138+Math.floor(i/3)*100;
+            let v = ps.grid[i]; if(v===8) continue; let gx = 362+(i%3)*100, gy = 138+Math.floor(i/3)*100;
             ctx.fillStyle = '#5c4530'; ctx.fillRect(gx+4,gy+4,92,92); ctx.strokeStyle = '#cf9136'; ctx.lineWidth = 6; ctx.beginPath();
             if(v<3){ ctx.moveTo(gx+10,gy+50); ctx.lineTo(gx+90,gy+50); } else { ctx.moveTo(gx+50,gy+10); ctx.lineTo(gx+50,gy+90); } ctx.stroke();
         }
     }
 }
 
-function drawBirdScene() {
-    let bs = core.birdScene; ctx.strokeStyle = '#2b1b10'; ctx.lineWidth = 2; drawWobblyLine([{x:600,y:315},{x:850,y:315}]);
-    bs.blocks.forEach(b => { if(b.fall && b.y>=450) return; ctx.fillStyle = b.lit ? '#e6ad3c' : '#473627'; ctx.fillRect(b.x, b.y, b.w, b.h); });
-    ctx.save(); ctx.translate(bs.bird.x, bs.bird.y); let ws = Math.sin(Date.now() * 0.025) * 14;
-    ctx.fillStyle = '#4a3f34'; ctx.beginPath(); ctx.ellipse(0,0,20,13,0,0,Math.PI * 2); ctx.fill();
+function drawBirdModule() {
+    let bs = state.birdScene; ctx.strokeStyle = '#2b1b10'; ctx.lineWidth = 2; drawHandDrawnShape([{x:600,y:315},{x:850,y:315}]);
+    bs.blocks.forEach(b => { if(!b.fall||b.y<450) { ctx.fillStyle = b.lit ? '#e6ad3c' : '#473627'; ctx.fillRect(b.x, b.y, b.w, b.h); } });
+    ctx.save(); ctx.translate(bs.bird.x, bs.bird.y); let ws = Math.sin(Date.now()*0.025)*14;
+    ctx.fillStyle = '#4a3f34'; ctx.beginPath(); ctx.ellipse(0,0,20,13,0,0,Math.PI*2); ctx.fill();
     ctx.fillStyle = '#362d25'; ctx.beginPath(); ctx.moveTo(-5,0); ctx.lineTo(-18,-12+ws); ctx.lineTo(5,0); ctx.fill();
     ctx.fillStyle = '#bf9e33'; ctx.fillRect(14,-3,10,6); ctx.restore();
 }
 
-function drawBandScene() {
-    ctx.fillStyle = '#140e0a'; ctx.fillRect(0,450,1024,126); ctx.strokeStyle = '#2b1b10'; ctx.lineWidth = 3; drawWobblyLine([{x:0,y:450},{x:1024,y:450}]);
-    ctx.fillStyle = '#b39572'; ctx.font = 'bold 20px Courier New'; ctx.fillText("🎵 STREET BAND PERFORMANCE 流浪歌手多声部演奏 🎵", 260, 120);
-    let pulse = Math.sin(Date.now() * 0.015) * 4;
-    ctx.fillStyle = '#6e563d'; ctx.fillRect(280, 260 - pulse, 35, 190 + pulse); // 乐手A萨克斯
-    ctx.fillStyle = '#423326'; ctx.fillRect(480, 310, 70, 140); // 乐手B打铁桶
-    ctx.fillStyle = '#8f7358'; ctx.fillRect(700, 290 + pulse/2, 45, 160 - pulse/2); // 乐手C吉他
+function drawFishingModule() {
+    ctx.fillStyle = '#0f140e'; ctx.fillRect(0, 440, 450, 136); ctx.strokeStyle = '#222d1f'; ctx.lineWidth = 4; drawHandDrawnShape([{x:0, y:440}, {x:450, y:440}]);
+    let f = state.fishing;
+    if(f.state==='idle') f.targetAngle=-Math.PI/4;
+    else if(f.state==='casting') f.targetAngle=-Math.PI/1.1+(f.castProgress*Math.PI*0.8);
+    else f.targetAngle=-Math.PI/12;
+    f.rodAngle += (f.targetAngle-f.rodAngle)*0.15;
+    ctx.save(); ctx.translate(state.josef.x + 12, state.josef.y - 40); ctx.rotate(f.rodAngle); ctx.strokeStyle='#cf9b46'; ctx.lineWidth=3.5; drawHandDrawnShape([{x:0,y:0},{x:110,y:0}]);
+    let tipX = state.josef.x+12+(Math.cos(f.rodAngle)*110); let tipY = state.josef.y-40+(Math.sin(f.rodAngle)*110); ctx.restore();
+    if(f.state!=='idle') {
+        ctx.strokeStyle='rgba(230,230,230,0.7)'; ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(tipX,tipY);
+        ctx.quadraticCurveTo((tipX+f.hookX)/2, Math.max(tipY,f.hookY)+30, f.hookX, f.hookY); ctx.stroke();
+        ctx.fillStyle='#bf3c24'; ctx.beginPath(); ctx.arc(f.hookX,f.hookY,4,0,Math.PI*2); ctx.fill();
+    }
+    if (f.state === 'reeling' || f.caughtItem) {
+        ctx.fillStyle = '#c49a45'; ctx.font = '16px sans-serif'; ctx.fillText('⚙️', f.hookX - 8, f.hookY + 16);
+    }
+    if (f.ripples) {
+        f.ripples.forEach((rp, idx) => {
+            ctx.strokeStyle = `rgba(180, 210, 170, ${1 - rp.r / 30})`;
+            ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(rp.x, rp.y, rp.r, rp.r * 0.35, 0, 0, Math.PI * 2); ctx.stroke();
+            rp.r += 0.6; if(rp.r > 30) f.ripples.splice(idx, 1);
+        });
+    }
+    ctx.fillStyle = '#8e7960'; ctx.font = '12px monospace';
+    ctx.fillText("🎣 点击水池区域抛竿 / 点击约瑟夫收杆 (后摇阻尼物理)", 480, 470);
 }
 
-function drawGomokuScene() {
+function drawFanQuizModule() {
+    let q = state.fanQuiz; ctx.save(); ctx.translate(180, 288); ctx.strokeStyle='#2b1c11'; ctx.lineWidth=8; ctx.beginPath(); ctx.arc(0,0,130,0,Math.PI*2); ctx.stroke();
+    let speed = q.solved?0:Date.now()*(0.012 + (q.angerLevel||0)*0.01); ctx.rotate(speed);
+    ctx.fillStyle=q.angerLevel>=3?'#b8341d':'#423324';
+    for(let i=0;i<4;i++){ ctx.rotate(Math.PI/2); ctx.fillRect(-20,-120,40,110); } ctx.restore();
+    let px=460, py=70, pw=480, ph=420; ctx.fillStyle='#ebdcb9'; ctx.strokeStyle='#382617'; ctx.lineWidth=5; ctx.fillRect(px,py,pw,ph); ctx.strokeRect(px,py,pw,ph);
+    ctx.fillStyle = q.solved?'#47bd35':'#bd3524'; if(q.wrongTimer>0 && Math.floor(Date.now()/100)%2===0) ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(px+pw/2,py+30,8,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    let curData = q.questions[q.currentIndex];
+    ctx.fillStyle='#382617'; ctx.font='bold 16px sans-serif';
+    ctx.fillText(`💨 温室风扇智商测试 (第 ${q.currentIndex+1} / 3 题)`, px+30, py+35);
+    ctx.font='bold 22px monospace'; ctx.fillText("❓ 请选择下一序列图案:", px+30, py+120);
+    for(let i=0; i<4; i++) {
+        let bx=px+30+i*110, by=py+270; ctx.fillStyle='#2d1e14'; ctx.strokeStyle='#5c432d'; ctx.lineWidth=2.5; ctx.fillRect(bx,by,95,55); ctx.strokeRect(bx,by,95,55);
+        ctx.fillStyle='#fae0c2'; ctx.font='bold 24px sans-serif'; ctx.fillText(curData.options[i], bx+32, by+36);
+    }
+    ctx.fillStyle='#5c432d'; ctx.font='12px sans-serif';
+    if(q.solved) {
+        ctx.fillStyle='#2e7d32'; ctx.font='bold 13px sans-serif'; ctx.fillText("🎉 风扇彻底过热罢工停转！通风管道敞开！", px+30, py+380);
+    } else {
+        ctx.fillText("💡 原版技巧：选对可过关；但故意激怒风扇（答错3次）能让它气炸停转通关！", px+30, py+380);
+    }
+}
+
+function drawBandModule() {
+    let pulse = Math.sin(Date.now()*0.015) * 4;
+    ctx.fillStyle = '#6e563d'; ctx.fillRect(280, 260 - pulse, 35, 190 + pulse); ctx.strokeRect(280, 260 - pulse, 35, 190 + pulse);
+    ctx.fillStyle = '#423326'; ctx.fillRect(480, 310, 70, 140); ctx.strokeRect(480, 310, 70, 140);
+    ctx.fillStyle = '#8f7358'; ctx.fillRect(700, 290 + pulse/2, 45, 160 - pulse/2); ctx.strokeRect(700, 290 + pulse/2, 45, 160 - pulse/2);
+}
+
+function drawGomokuModule() {
     let bx = 332, by = 48, bs = 400, cs = 400 / 11;
     ctx.fillStyle = '#5c4530'; ctx.strokeStyle = '#2b1b11'; ctx.lineWidth = 5; ctx.fillRect(bx, by, bs, bs); ctx.strokeRect(bx, by, bs, bs);
     ctx.strokeStyle = '#382618'; ctx.lineWidth = 1.5;
     for(let i=0; i<12; i++) {
-        ctx.beginPath(); ctx.moveTo(bx + i * cs, by); ctx.lineTo(bx + i * cs, by + bs); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(bx, by + i * cs); ctx.lineTo(bx + bs, by + i * cs); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bx + i*cs, by); ctx.lineTo(bx + i*cs, by + bs); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bx, by + i*cs); ctx.lineTo(bx + bs, by + i*cs); ctx.stroke();
     }
     for(let r=0; r<12; r++) {
         for(let c=0; c<12; c++) {
-            let val = core.gomoku.board[r][c];
-            if(val === 1) { ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(bx + c * cs, by + r * cs, 11, 0, Math.PI * 2); ctx.fill(); }
-            else if(val === 2) { ctx.fillStyle = '#e8d9c7'; ctx.beginPath(); ctx.arc(bx + c * cs, by + r * cs, 11, 0, Math.PI * 2); ctx.fill(); }
+            let val = state.gomoku.board[r][c];
+            if(val === 1) { ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(bx + c*cs, by + r*cs, 12, 0, Math.PI*2); ctx.fill(); }
+            else if(val === 2) { ctx.fillStyle = '#e8d9c7'; ctx.beginPath(); ctx.arc(bx + c*cs, by + r*cs, 12, 0, Math.PI*2); ctx.fill(); }
         }
     }
     ctx.fillStyle = '#a89176'; ctx.font = '13px monospace'; ctx.fillText("🚬 老烟枪正在盯着你落子... (黑螺丝钉 VS 白齿轮)", 50, 140);
-    if(core.gomoku.winner) ctx.fillText(core.gomoku.winner==='player'?"🎉 你赢了！":"❌ 你输了！", 50, 200);
+    if(state.gomoku.winner) ctx.fillText(state.gomoku.winner==='player'?"🎉 你赢了！":"❌ 你输了！", 50, 200);
 }
 
-function drawBubbleScene() {
+function drawBubbleModule() {
     ctx.save(); ctx.translate(512, 180);
     ctx.fillStyle = 'rgba(250, 245, 230, 0.94)'; ctx.strokeStyle = '#261a0f'; ctx.lineWidth = 3.5;
     ctx.beginPath(); ctx.ellipse(0, 0, 160, 95, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#3d2613'; ctx.font = 'bold 13px sans-serif';
-    if(core.bubbleLevel === 'junkyard') { ctx.fillText("【垃圾场发呆动画】", -60, -30); ctx.font='24px sans-serif'; ctx.fillText("🤖 ❤️ 🤖 (女友甜蜜回忆)", -110, 20); }
-    else if(core.bubbleLevel === 'prison') { ctx.fillText("【监狱牢房待机策划】", -60, -30); ctx.font='24px sans-serif'; ctx.fillText("🚽 🔥 🔧 (短路马桶越狱)", -110, 20); }
+    ctx.fillText("【垃圾场待机发呆回忆】", -60, -30); ctx.font='24px sans-serif'; ctx.fillText("🤖 ❤️ 🤖 (女友甜蜜回忆)", -110, 20);
     ctx.restore();
-    ctx.fillStyle='#2b1a0f'; ctx.fillRect(280,340,180,30); ctx.fillStyle='#fff'; ctx.font='12px sans-serif'; ctx.fillText("点击：垃圾场回忆连环画", 295, 360);
-    ctx.fillStyle='#2b1a0f'; ctx.fillRect(520,340,180,30); ctx.fillStyle='#fff'; ctx.fillText("点击：牢房短路马桶连环画", 530, 360);
+    ctx.fillStyle='#2b1a0f'; ctx.fillRect(380,340,260,34); ctx.fillStyle='#fff'; ctx.font='13px sans-serif'; ctx.fillText("点击切换女友/博士剧情电影", 410, 362);
 }
 
-function drawPlugScene() {
+function drawPlugModule() {
+    let p = state.plug;
     ctx.fillStyle = '#82715e'; ctx.font = 'bold 18px Courier New'; ctx.fillText("🧠 最终塔楼：博士脑部清除病毒红绿矩阵插销 🧠", 180, 70);
-    let p = core.plugGame;
     p.nodes.forEach((n, idx) => {
-        ctx.strokeStyle = n.target === 'green' ? '#3cb82e' : '#b82a14'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(n.x, n.y, 22, 0, Math.PI * 2); ctx.stroke();
-        ctx.fillStyle = n.state === 'green' ? '#4fe63c' : '#e63c22'; if(p.selected === idx) ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(n.x, n.y, 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = n.t === 'green' ? '#3cb82e' : '#b82a14'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(n.x, n.y, 22, 0, Math.PI*2); ctx.stroke();
+        ctx.fillStyle = n.s === 'green' ? '#4fe63c' : '#e63c22'; if(p.selected === idx) ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(n.x, n.y, 14, 0, Math.PI*2); ctx.fill(); ctx.stroke();
     });
     if(p.solved) { ctx.fillStyle = '#4fe63c'; ctx.font = 'bold 20px sans-serif'; ctx.fillText("🎯 病毒清理干净！博士核心危机解除！大结局通关！", 250, 470); }
 }
 
-function drawShootScene() {
-    let s = core.shootGame; ctx.strokeStyle = '#3a5435'; ctx.lineWidth = 4; ctx.strokeRect(s.mazeX, s.mazeY, s.mw, s.mh);
-    ctx.fillStyle = '#0f140e'; ctx.fillRect(s.mazeX+2, s.mazeY+2, s.mw-4, s.mh-4);
-    if(!s.keyCollected) { ctx.fillStyle = '#d4aa3b'; ctx.font = '20px sans-serif'; ctx.fillText("🔑", s.mazeX + 135, s.mazeY + 120); }
-    ctx.fillStyle = '#6cb85c'; ctx.fillRect(s.px, s.py, 16, 16); // 坦克
-    ctx.fillStyle = '#ff4433'; s.flies.forEach(f => { ctx.beginPath(); ctx.arc(f.x, f.y, 4, 0, Math.PI * 2); ctx.fill(); }); // 弹幕
+function drawShootModule() {
+    let s = state.shoot; ctx.strokeStyle = '#3a5435'; ctx.lineWidth = 5; ctx.strokeRect(s.mx, s.my, s.mw, s.mh);
+    ctx.fillStyle = '#0f140e'; ctx.fillRect(s.mx+2, s.my+2, s.mw-4, s.mh-4);
+    if(!s.key) { ctx.fillStyle = '#d4aa3b'; ctx.font = '20px sans-serif'; ctx.fillText("🔑", s.mx + 135, s.my + 120); }
+    ctx.fillStyle = '#6cb85c'; ctx.fillRect(s.px, s.py, 16, 16);
+    s.flies.forEach(f => { ctx.fillStyle = '#ff4433'; ctx.beginPath(); ctx.arc(f.x, f.y, 4, 0, Math.PI*2); ctx.fill(); });
 }
 
-function drawDoctorLoreScene() {
-    core.movieFrame++; let pulse = Math.sin(Date.now() * 0.01) * 3;
-    ctx.fillStyle = '#544230'; ctx.fillRect(150, 360 - pulse, 120, 120);
-    ctx.fillStyle = '#9e8467'; ctx.beginPath(); ctx.arc(210, 310 - pulse, 40, 0, Math.PI * 2); ctx.fill(); // 博士大头
-    ctx.fillStyle = (core.movieFrame % 20 < 10) ? '#e6983c' : '#4d3215'; ctx.fillRect(195, 260 - pulse, 12, 14); // 真空管发光
-    
-    // 放映机气泡及1:1老胶片颤抖
-    let bx = 460, by = 80, bw = 450, bh = 220;
-    ctx.strokeStyle = 'rgba(230,152,60,0.2)'; ctx.beginPath(); ctx.moveTo(210, 260-pulse); ctx.lineTo(bx, by+bh/2); ctx.stroke();
-    let jitterY = (Math.random() - 0.5) * 1.5; ctx.save(); ctx.translate(0, jitterY);
-    ctx.fillStyle = '#f5ebd2'; ctx.strokeStyle = '#3d2613'; ctx.lineWidth = 4; ctx.fillRect(bx, by, bw, bh); ctx.strokeRect(bx, by, bw, bh);
-    ctx.fillStyle = '#4a331d'; ctx.font = 'bold 12px sans-serif';
-    ctx.fillText(`🧠 老老博士电影讲述故事线分镜: ${core.movieChapter+1}/3`, bx + 20, by + 35);
-    ctx.strokeRect(bx + 20, by + 55, 410, 140);
-    if(core.movieChapter===0) ctx.fillText("[1:1 设定故事]: 曾经我是核心发明家，管理机械城...", bx+40, by+100);
-    if(core.movieChapter===1) ctx.fillText("[黑帮洗脑危机]: 坏蛋黑帮潜入大脑，给我注满大面积病毒！", bx+40, by+100);
-    if(core.movieChapter===2) ctx.fillText("[终极任务托付]: 拯救防空炮塔控制权，全靠你了！", bx+40, by+100);
-    ctx.restore();
-}
-
-function drawStretchUI() {
-    if (core.scene === 'menu' || core.scene === 'doctor_lore') return;
-    const sx = 975, sy1 = 190, sy2 = 330;
-    ctx.strokeStyle = '#3d2b1c';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy1);
-    ctx.lineTo(sx, sy2);
-    ctx.stroke();
-
-    const modes = [
-        { mode: 'tall', y: 200, label: '▲' },
-        { mode: 'normal', y: 260, label: '●' },
-        { mode: 'short', y: 320, label: '▼' }
-    ];
-    modes.forEach(m => {
-        const active = core.josef.mode === m.mode;
-        ctx.fillStyle = active ? '#e6983c' : '#261b12';
-        ctx.strokeStyle = active ? '#ffd54f' : '#4a3625';
-        ctx.lineWidth = active ? 2.5 : 1.5;
-        ctx.beginPath();
-        ctx.arc(sx, m.y, active ? 9 : 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-    });
-}
-
-function drawInventoryAndTopUI() {
-    if (core.scene === 'menu') return;
-    core.inventory.openY += (core.inventory.targetY - core.inventory.openY) * 0.16;
-    ctx.save(); ctx.translate(0, core.inventory.openY);
-    ctx.fillStyle = '#261c13'; ctx.strokeStyle = '#3d2e20'; ctx.lineWidth = 4; ctx.fillRect(200,0,624,60); ctx.strokeRect(200,0,624,60);
-    for(let i=0; i<6; i++) {
-        let gx = 220+i*100; ctx.fillStyle = '#0f0a06'; ctx.fillRect(gx,8,84,44);
-        let item = core.inventory.items[i]; if(item) { ctx.fillStyle = core.inventory.selected===item?'#bf3c24':'#8a765e'; ctx.font='bold 12px sans-serif'; ctx.fillText(item, gx+10,34); }
+function drawMovieModule(type) {
+    let cx = 140, cy = 40, cw = 744, ch = 480;
+    ctx.fillStyle = '#eae2cd'; ctx.strokeStyle = '#2b1b10'; ctx.lineWidth = 6; ctx.fillRect(cx, cy, cw, ch); ctx.strokeRect(cx, cy, cw, ch);
+    ctx.fillStyle = '#f5eedb'; ctx.fillRect(cx + 15, cy + 15, cw - 30, ch - 30);
+    let chap = state.movie.chap || 0;
+    if (type === 'girlfriend') {
+        ctx.fillStyle='#3d2b18'; ctx.font = 'bold 22px "Microsoft YaHei", serif';
+        ctx.fillText(`🎬 约瑟夫与女友的甜蜜回忆 · 幕 ${chap + 1} / 3`, cx + 40, cy + 55);
+        ctx.fillStyle = '#5c4228'; ctx.font = '16px "Microsoft YaHei", sans-serif';
+        if(chap === 0) {
+            ctx.fillText("【第 1 幕：阳光下的向日葵花田】", cx + 40, cy + 100);
+            ctx.fillText("约瑟夫与女友在小院里晒太阳，女友手里捧着一朵盛开的向日葵 🌻", cx + 40, cy + 140);
+            ctx.font = '64px sans-serif'; ctx.fillText("🤖 ❤️ 🤖 🌻", cx + 240, cy + 260);
+        } else if(chap === 1) {
+            ctx.fillText("【第 2 幕：黑帽恶霸帮突袭绑架】", cx + 40, cy + 100);
+            ctx.fillText("三个恶霸机器人闯入小院掳走了女友，并将约瑟夫拆散丢弃到了垃圾场！", cx + 40, cy + 140);
+            ctx.font = '64px sans-serif'; ctx.fillText("🦹‍♂️ 🦹‍♂️ 💥 🤖 😭", cx + 220, cy + 260);
+        } else {
+            ctx.fillText("【第 3 幕：发誓救回挚爱】", cx + 40, cy + 100);
+            ctx.fillText("约瑟夫拼装好自己，下定决心登上顶楼救出女友，彻底打倒黑帽帮！", cx + 40, cy + 140);
+            ctx.font = '64px sans-serif'; ctx.fillText("🤖 ⚡ 🏰 🔑", cx + 250, cy + 260);
+        }
+    } else {
+        ctx.fillStyle='#3d2b18'; ctx.font = 'bold 22px "Microsoft YaHei", serif';
+        ctx.fillText(`🎬 老博士顶层放映机终局交代 · 幕 ${chap + 1} / 3`, cx + 40, cy + 55);
+        ctx.fillStyle = '#5c4228'; ctx.font = '16px "Microsoft YaHei", sans-serif';
+        if(chap === 0) {
+            ctx.fillText("【第 1 幕：机械之城的往昔盛景】", cx + 40, cy + 100);
+            ctx.fillText("老博士曾经是核心发明家，用脑电波维持着全城的水电中枢。", cx + 40, cy + 140);
+            ctx.font = '64px sans-serif'; ctx.fillText("👴 🧠 💡 ⚙️", cx + 250, cy + 260);
+        } else if(chap === 1) {
+            ctx.fillText("【第 2 幕：病毒感染与恶霸叛乱】", cx + 40, cy + 100);
+            ctx.fillText("黑帽帮在大脑植入寄生病毒，并在城顶安放了定时炸弹！", cx + 40, cy + 140);
+            ctx.font = '64px sans-serif'; ctx.fillText("🦠 💣 ⚠️ 🦹‍♂️", cx + 250, cy + 260);
+        } else {
+            ctx.fillText("【第 3 幕：拔除病毒，双宿双飞】", cx + 40, cy + 100);
+            ctx.fillText("只要约瑟夫用插销对调消除大脑病毒，就能启动直升机飞向自由！", cx + 40, cy + 140);
+            ctx.font = '64px sans-serif'; ctx.fillText("🚁 🤖 🤝 🤖 🌈", cx + 230, cy + 260);
+        }
     }
-    ctx.restore();
-    ctx.fillStyle = core.ui.bulb.active ? '#f2c544' : '#3d301f'; ctx.beginPath(); ctx.arc(core.ui.bulb.x, core.ui.bulb.y, core.ui.bulb.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#8c2617'; ctx.fillRect(core.ui.book.x, core.ui.book.y, core.ui.book.w, core.ui.book.h); ctx.strokeRect(core.ui.book.x, core.ui.book.y, core.ui.book.w, core.ui.book.h);
-    if (core.ui.book.state === 'opened') {
-        ctx.fillStyle = 'rgba(8,6,4,0.93)'; ctx.fillRect(0,0,1024,576);
-        ctx.fillStyle = '#f5ebcf'; ctx.strokeStyle='#422d1a'; ctx.lineWidth=5; ctx.fillRect(162,48,700,480); ctx.strokeRect(162,48,700,480);
-        ctx.fillStyle='#3d2916'; ctx.font='bold 14px sans-serif'; ctx.fillText("📖 [通关小书手稿已解锁漫画]:", 200, 100); ctx.font='40px sans-serif'; ctx.fillText("⚡ 🐈 ⚡ (电击猫咪通关法)", 320, 260);
-        ctx.fillStyle='#802114'; ctx.fillRect(162+700-40, 48+10, 30, 30); ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif'; ctx.fillText("X", 162+700-31, 48+31);
-    }
+    ctx.fillStyle = '#8d6e63'; ctx.font = '13px monospace';
+    ctx.fillText("📖 点击画面翻阅下一幕 · 再次点击循环播放", cx + 210, cy + 440);
 }
 
 function drawSpiderGameWindow() {
@@ -438,286 +510,291 @@ function drawSpiderGameWindow() {
     ctx.fillStyle = '#2b2016'; ctx.strokeStyle = '#140f09'; ctx.lineWidth = 5; ctx.fillRect(sx, sy, sw, sh); ctx.strokeRect(sx, sy, sw, sh);
     ctx.fillStyle = '#1b241a'; ctx.fillRect(sx+10, sy+10, sw-20, sh-20);
     ctx.fillStyle = '#9df092'; ctx.font = 'bold 12px monospace';
-    ctx.fillText(`🕷️ SPIDER SHOOTER (击杀: ${core.spiderGame.kills}/${core.spiderGame.required})`, sx + 16, sy + 28);
+    ctx.fillText(`🕷️ SPIDER SHOOTER (击杀: ${state.spiderGame.kills}/${state.spiderGame.required})`, sx + 16, sy + 28);
     ctx.fillStyle = '#ff6b6b'; ctx.font = 'bold 12px monospace';
     ctx.fillText('[✖ 关闭 (ESC)]', sx + sw - 110, sy + 28);
-    if (core.spiderGame.over) { ctx.fillStyle='#b82c16'; ctx.font='bold 16px monospace'; ctx.fillText("⚙️ MECHANISM JAMMED (点击重来) ⚙️", sx+60, sy+190); return; }
-    let p = core.spiderGame.player; ctx.save(); ctx.translate(p.x, p.y); ctx.strokeStyle = '#8ab881'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0,0,p.r,0,Math.PI * 2); ctx.stroke(); ctx.restore();
-    core.spiderGame.bullets.forEach(b => { ctx.fillStyle = b.ie?'#ff4422':'#9df092'; ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI * 2); ctx.fill(); });
-    core.spiderGame.spiders.forEach(sp => { ctx.save(); ctx.translate(sp.x, sp.y); ctx.fillStyle = sp.ib?'#8f652d':(sp.ir?'#bd2e19':'#332921'); ctx.beginPath(); ctx.arc(0,0,sp.r,0,Math.PI * 2); ctx.fill(); ctx.restore(); });
+    if (state.spiderGame.over) { ctx.fillStyle='#b82c16'; ctx.font='bold 16px monospace'; ctx.fillText("⚙️ MECHANISM JAMMED (点击重来) ⚙️", sx+60, sy+190); return; }
+    let p = state.spiderGame.player; ctx.save(); ctx.translate(p.x, p.y); ctx.strokeStyle = '#8ab881'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0,0,p.r,0,Math.PI * 2); ctx.stroke(); ctx.restore();
+    state.spiderGame.bullets.forEach(b => { ctx.fillStyle = b.ie?'#ff4422':'#9df092'; ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI * 2); ctx.fill(); });
+    state.spiderGame.spiders.forEach(sp => { ctx.save(); ctx.translate(sp.x, sp.y); ctx.fillStyle = sp.ib?'#8f652d':(sp.ir?'#bd2e19':'#332921'); ctx.beginPath(); ctx.arc(0,0,sp.r,0,Math.PI * 2); ctx.fill(); ctx.restore(); });
+}
+
+function drawTopOverlayAndInventory() {
+    if (state.mode === 'menu') return;
+    state.inventory.openY += (state.inventory.targetY - state.inventory.openY) * 0.16;
+    ctx.save(); ctx.translate(0, state.inventory.openY);
+    ctx.fillStyle = '#261c13'; ctx.strokeStyle = '#3d2e20'; ctx.lineWidth = 4; ctx.fillRect(200,0,624,60); ctx.strokeRect(200,0,624,60);
+    ctx.restore();
+    ctx.fillStyle = state.ui.bulb.active ? '#f2c544' : '#3d301f'; ctx.beginPath(); ctx.arc(state.ui.bulb.x, state.ui.bulb.y, state.ui.bulb.r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
 }
 
 // ==========================================
-// ⚙️ 核心 AI 与多波次联动更新算法
+// ⚙️ 核心逻辑状态分发计算器
 // ==========================================
-function update() {
-    initAudioEngine(); toggleIndustryBuzz(core.scene === 'pole' && !core.poleScene.solved);
-    if(core.mouse.y < 65) core.inventory.targetY = 0; else core.inventory.targetY = -62;
-    if (core.scene === 'menu') {
-        core.menuFlies.forEach(fly => {
-            if (fly.state === 'idle') {
-                fly.x = fly.homeX + (Math.random()-0.5)*0.5; fly.y = fly.homeY + (Math.random()-0.5)*0.5;
-                if (Math.hypot(core.mouse.x - fly.x, core.mouse.y - fly.y) < 18) { fly.state = 'flying'; fly.energy = 130+Math.random()*70; let a=Math.random() * Math.PI * 2; fly.vx=Math.cos(a)*8; fly.vy=Math.sin(a)*8; }
-            } else if (fly.state === 'flying') {
-                fly.energy--; fly.vx += (Math.random()-0.5)*1.6; fly.vy += (Math.random()-0.5)*1.6;
-                let spd = Math.hypot(fly.vx, fly.vy); if (spd > 7.5) { fly.vx = (fly.vx/spd)*7.5; fly.vy = (fly.vy/spd)*7.5; }
-                fly.x += fly.vx; fly.y += fly.vy; if(Math.random()<0.5) playActionSound('buzz', spd/7.5);
-                if (fly.x<20||fly.x>1004) fly.vx = -fly.vx; if (fly.y<20||fly.y>556) fly.vy = -fly.vy;
-                if (fly.energy <= 0) { fly.vx *= 0.85; fly.vy *= 0.85; if (Math.hypot(fly.vx, fly.vy)<0.2) { fly.state = 'idle'; fly.homeX=fly.x; fly.homeY=fly.y; } }
+function updateEngine() {
+    initAudioContext(); startSignatureMelody(); updateBuzzLoop(state.mode==='pole' && !state.poleScene.solved);
+    if(state.mouse.y < 65) state.inventory.targetY = 0; else state.inventory.targetY = -62;
+    if (state.mode === 'menu') {
+        state.flies.forEach(fly => {
+            if (fly.state==='idle') {
+                fly.x = fly.homeX+(Math.random()-0.5)*0.5; fly.y=fly.homeY+(Math.random()-0.5)*0.5;
+                if(Math.hypot(state.mouse.x-fly.x, state.mouse.y-fly.y)<18){ fly.state='flying'; fly.energy=130+Math.random()*60; let a=Math.random()*Math.PI*2; fly.vx=Math.cos(a)*8; fly.vy=Math.sin(a)*8; }
+            } else {
+                fly.energy--; fly.vx+=(Math.random()-0.5)*1.6; fly.vy+=(Math.random()-0.5)*1.6;
+                let spd = Math.hypot(fly.vx,fly.vy); if(spd>7) { fly.vx=(fly.vx/spd)*7; fly.vy=(fly.vy/spd)*7; }
+                fly.x+=fly.vx; fly.y+=fly.vy; if(Math.random()<0.5) playProceduralSound('buzz',spd/7);
+                if(fly.x<20||fly.x>1004) fly.vx=-fly.vx; if(fly.y<20||fly.y>556) fly.vy=-fly.vy;
+                if(fly.energy<=0 && Math.hypot(fly.vx,fly.vy)<0.2){ fly.state='idle'; fly.homeX=fly.x; fly.homeY=fly.y; }
             }
         });
         return;
     }
-    if (core.ui.book.state === 'gaming') {
-        let s = core.spiderGame; if (s.over) return; let p = s.player; s.spawnT++;
-        if (s.level===1 && s.spawnT%50===0 && s.kills<s.required) { let a=Math.random() * Math.PI * 2; s.spiders.push({x:p.x+Math.cos(a)*250, y:p.y+Math.sin(a)*250, vx:-Math.cos(a)*1.2, vy:-Math.sin(a)*1.2, r:9, hp:1, ib:false}); }
-        if (s.level===2 && s.spawnT%35===0 && s.kills<s.required) { let a=Math.random() * Math.PI * 2; s.spiders.push({x:p.x+Math.cos(a)*250, y:p.y+Math.sin(a)*250, vx:-Math.cos(a)*2.2, vy:-Math.sin(a)*2.2, r:8, hp:1, ir:true, ib:false}); }
+    if (state.ui.book.subState === 'gaming') {
+        let s = state.spiderGame; if (s.over) return; let p = s.player; s.spawnT++;
+        if (s.level===1 && s.spawnT%50===0 && s.kills<s.required) { let a=Math.random()*Math.PI*2; s.spiders.push({x:p.x+Math.cos(a)*250, y:p.y+Math.sin(a)*250, vx:-Math.cos(a)*1.2, vy:-Math.sin(a)*1.2, r:9, hp:1, ib:false}); }
+        if (s.level===2 && s.spawnT%35===0 && s.kills<s.required) { let a=Math.random()*Math.PI*2; s.spiders.push({x:p.x+Math.cos(a)*250, y:p.y+Math.sin(a)*250, vx:-Math.cos(a)*2.2, vy:-Math.sin(a)*2.2, r:8, hp:1, ir:true, ib:false}); }
         s.bullets.forEach((b,bi) => { b.x+=b.vx; b.y+=b.vy; if(b.x<312||b.x>712||b.y<90||b.y>480) s.bullets.splice(bi,1); });
         s.spiders.forEach((sp,spi) => {
             sp.x+=sp.vx; sp.y+=sp.vy; if (Math.hypot(p.x-sp.x, p.y-sp.y) < p.r+sp.r) s.over = true;
-            s.bullets.forEach((b,bi) => { if(!b.ie && Math.hypot(b.x-sp.x, b.y-sp.y)<sp.r+3){ sp.hp--; s.bullets.splice(bi,1); if(sp.hp<=0){ s.spiders.splice(spi,1); playActionSound('pop'); if(s.level<3) s.kills++; if(sp.ib){ core.ui.book.state='opened'; } } } });
+            s.bullets.forEach((b,bi) => { if(!b.ie && Math.hypot(b.x-sp.x, b.y-sp.y)<sp.r+3){ sp.hp--; s.bullets.splice(bi,1); if(sp.hp<=0){ s.spiders.splice(spi,1); playProceduralSound('pop'); if(s.level<3) s.kills++; if(sp.ib){ state.ui.book.subState='closed'; } } } });
         });
         if (s.level<3 && s.kills>s.required && s.spiders.length===0) { s.level++; s.kills=0; s.spawnT=0; if(s.level===3) s.spiders.push({x:512,y:180,vx:0.8,vy:0,r:32,hp:10,ib:true,ang:0}); }
         return;
     }
-    if (core.josef.isDone || core.poleScene.panelOpen) return;
-    if (core.josef.isSwinging) { core.josef.swingP += 0.015; if (core.josef.swingP>1.0){ core.josef.isSwinging=false; core.josef.isDone=true; } return; }
-    let dx = core.josef.targetX - core.josef.x;
-    if (Math.abs(dx) > core.josef.speed) { core.josef.x += Math.sign(dx) * core.josef.speed; core.josef.stepT++; if(core.josef.stepT%22===0) playActionSound('step'); }
-    if (core.scene === 'junkyard') {
-        let d = core.junkyard.drum; if(Math.abs(core.josef.x-d.x)<38 && core.josef.mode==='normal') { d.vx=7.4; d.rot=0.22; playActionSound('thud',1.1,0.85); core.junkyard.magnet.visible=true; }
-        if (Math.abs(d.vx)>0.05) { d.x+=d.vx; d.rot+=d.vx * 0.02; d.vx *= 0.94; if(d.x>850){ d.x=850; d.vx=-d.vx*0.6; playActionSound('thud',0.6); } } else if(d.vx!==0){ d.vx=0; d.wobble=30; } if(d.wobble>0){ d.wobble--; if(d.wobble===0) d.rot=0; }
+
+    let p = state.josef; let dx = p.targetX - p.x;
+    if (Math.abs(dx) > 1) { p.x += Math.sign(dx)*p.speed; p.stepCount++; if(p.stepCount%22===0) playProceduralSound('step'); p.antennaAv += -Math.sign(dx)*0.01; }
+    else { if(p.stepCount!==0) { p.stepCount=0; p.headVy=3.5; p.antennaAv=0.2; playProceduralSound('hydraulic', 0.5); } }
+    p.headOffsetY += p.headVy; p.headVy += -p.headOffsetY*0.25; p.headVy *= 0.82;
+    p.antennaAngle += p.antennaAv; p.antennaAv += -p.antennaAngle*0.15; p.antennaAv *= 0.88;
+    p.idleTimer++; if(p.idleTimer>240 && p.idleState==='none') { let r=Math.random(); p.idleState=r<0.33?'scratching':(r<0.66?'blinking':'looking_foot'); p.idleProgress=0; p.idleTimer=0; }
+    if(p.idleState==='scratching'){ p.idleProgress+=0.04; if(p.idleProgress>=1) p.idleState='none'; }
+    else if(p.idleState==='blinking'){ p.idleProgress+=0.08; if(p.idleProgress>=1) p.idleState='none'; }
+    else if(p.idleState==='looking_foot'){ p.idleProgress+=0.03; if(p.idleProgress>=1) p.idleState='none'; }
+
+    if (state.mode === 'junkyard') {
+        let d = state.junkyard.drum; if(Math.abs(p.x-d.x)<38 && p.mode==='normal'){ d.vx=7.4; d.rot=0.22; playProceduralSound('thud',1.1); state.junkyard.magnet.visible=true; p.targetX=p.x-10; }
+        if(Math.abs(d.vx)>0.05){ d.x+=d.vx; d.rot+=d.vx*0.02; d.vx*=0.94; if(d.x>850){ d.x=850; d.vx=-d.vx*0.6; playProceduralSound('thud',0.6); } } else if(d.vx!==0){ d.vx=0; d.wobble=30; }
     }
-    if (core.scene === 'pole' && core.poleScene.cat.shocked && !core.poleScene.cat.dead) { core.poleScene.cat.fallY += 5; if(core.poleScene.cat.fallY>450) core.poleScene.cat.dead=true; }
-    if (core.scene === 'bird') {
-        let b = core.birdScene.bird;
-        if(b.status === 'idle') { let lit = core.birdScene.blocks.find(bk=>bk.lit && !bk.fall); if(lit){ b.status='dive'; b.tBlock=lit; b.p=0; } }
-        else if(b.status==='dive') { b.p+=0.035; b.x=740+(b.tBlock.x-740)*b.p; b.y=90+(b.tBlock.y-12-90)*b.p; if(b.p>=1.0){ b.status='ret'; b.tBlock.lit=false; playActionSound('thud',0.5); } }
-        else if(b.status==='ret') { b.p-=0.035; b.x=740+(b.tBlock.x-740)*b.p; b.y=90+(b.tBlock.y-12-90)*b.p; if(b.p<=0){ b.status='idle'; b.x=740; b.y=90; } }
-        core.birdScene.blocks.forEach(bk => { if(bk.fall && bk.y<450){ bk.vy+=0.4; bk.y+=bk.vy; if(bk.y>=450) playActionSound('thud',0.4); } });
+    if (state.mode === 'pole' && state.poleScene.cat.shocked && !state.poleScene.cat.dead) { state.poleScene.cat.fallY+=5; if(state.poleScene.cat.fallY>=450) state.poleScene.cat.dead=true; }
+    if (state.mode === 'shoot') {
+        let s = state.shoot; if(s.flies.length<6) s.flies.push({x:s.mx+50+Math.random()*200, y:s.my+50+Math.random()*200, vx:(Math.random()-0.5)*3, vy:(Math.random()-0.5)*3});
+        s.flies.forEach(f => { f.x+=f.vx; f.y+=f.vy; if(f.x<s.mx+6||f.x>s.mx+s.mw-6) f.vx=-f.vx; if(f.y<s.my+6||f.y>s.my+s.mh-6) f.vy=-f.vy; });
+        if(!s.key && Math.hypot(s.px-(s.mx+140), s.py-(s.my+120))<20){ s.key=true; playProceduralSound('page'); }
     }
-    if (core.scene === 'shoot') {
-        let s = core.shootGame; if(s.flies.length < 6) s.flies.push({ x: s.mazeX+50+Math.random()*200, y: s.mazeY+60+Math.random()*200, vx: (Math.random()-0.5)*3, vy: (Math.random()-0.5)*3 });
-        s.flies.forEach(f => { f.x+=f.vx; f.y+=f.vy; if(f.x<s.mazeX+6||f.x>s.mazeX+s.mw-6) f.vx=-f.vx; if(f.y<s.mazeY+6||f.y>s.mazeY+s.mh-6) f.vy=-f.vy; if(Math.hypot(s.px+8-f.x, s.py+8-f.y)<11){ s.px=420; s.py=420; playActionSound('thud'); } });
-        if(!s.keyCollected && Math.hypot(s.px-(s.mazeX+140), s.py-(s.mazeY+120))<20){ s.keyCollected=true; playActionSound('page'); }
+    if (state.mode === 'fishing') {
+        let fish = state.fishing;
+        if(fish.state === 'casting') {
+            fish.castProgress+=0.04; fish.hookX=p.x-(fish.castProgress*340); fish.hookY=445-Math.sin(fish.castProgress*Math.PI)*120;
+            if(fish.castProgress>=1){
+                fish.state='fishing'; fish.caughtItem=true;
+                if(!fish.ripples) fish.ripples=[]; fish.ripples.push({x:fish.hookX, y:445, r:2});
+                playProceduralSound('splash');
+            }
+        } else if(fish.state==='reeling') {
+            fish.hookX+=(p.x-fish.hookX)*0.15; fish.hookY+=(445-fish.hookY)*0.15;
+            if(Math.hypot(p.x-fish.hookX,445-fish.hookY)<18) { fish.state='idle'; playProceduralSound('pop'); }
+        }
+    }
+    if (state.mode === 'fan_quiz' && state.fanQuiz.wrongTimer > 0) {
+        state.fanQuiz.wrongTimer--;
     }
 }
 
-function render() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    if(core.scene === 'menu') { drawMenuScene(); return; }
-    drawBaseWorld();
-    if(core.scene === 'junkyard') drawJunkyardScene();
-    if(core.scene === 'pole') drawPoleScene();
-    if(core.scene === 'bird') drawBirdScene();
-    if(core.scene === 'band') drawBandScene();
-    if(core.scene === 'gomoku') drawGomokuScene();
-    if(core.scene === 'bubble') drawBubbleScene();
-    if(core.scene === 'plug') drawPlugScene();
-    if(core.scene === 'shoot') drawShootScene();
-    if(core.scene === 'doctor_lore') drawDoctorLoreScene();
-    drawJosef(); drawStretchUI(); drawInventoryAndTopUI();
-    if(core.ui.book.state === 'gaming') drawSpiderGameWindow();
-    ctx.save(); ctx.translate(core.mouse.x, core.mouse.y); ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0,0,5,0,Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
+function mainRenderLoop() {
+    ctx.clearRect(0,0,canvas.width,canvas.height); drawBaseWorld();
+    if(state.mode==='menu') drawMenuModule();
+    else if(state.mode==='junkyard') drawJunkyardModule();
+    else if(state.mode==='pole') drawPoleModule();
+    else if(state.mode==='bird') drawBirdModule();
+    else if(state.mode==='fishing') drawFishingModule();
+    else if(state.mode==='fan_quiz') drawFanQuizModule();
+    else if(state.mode==='band') drawBandModule();
+    else if(state.mode==='gomoku') drawGomokuModule();
+    else if(state.mode==='bubble') drawBubbleModule();
+    else if(state.mode==='plug') drawPlugModule();
+    else if(state.mode==='shoot') drawShootModule();
+    else if(state.mode==='movie_gf') drawMovieModule('girlfriend');
+    else if(state.mode==='movie_doc') drawMovieModule('meet_doctor');
+
+    drawJosef(); drawTopOverlayAndInventory();
+    if(state.ui.book.subState === 'gaming') drawSpiderGameWindow();
+
+    ctx.save(); ctx.translate(state.mouse.x, state.mouse.y); ctx.fillStyle='#fff'; ctx.strokeStyle='#000'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,15); ctx.lineTo(5,11); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
 }
 
-function mainGlobalLoop() { update(); render(); requestAnimationFrame(mainGlobalLoop); }
+function globalLoop() { updateEngine(); mainRenderLoop(); requestAnimationFrame(globalLoop); }
 
 // ==========================================
-// 🖱️ 点击动作事件全域分流拦截器
+// 🖱️ 点击动作事件拦截器
 // ==========================================
 canvas.addEventListener('mousedown', (e) => {
-    initAudioEngine();
-    let rect = canvas.getBoundingClientRect();
-    let scaleX = canvas.width / rect.width;
-    let scaleY = canvas.height / rect.height;
-    let mx = (e.clientX - rect.left) * scaleX;
-    let my = (e.clientY - rect.top) * scaleY;
-    core.mouse.x = mx; core.mouse.y = my;
+    initAudioContext();
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    state.mouse.x = (e.clientX - rect.left) * scaleX;
+    state.mouse.y = (e.clientY - rect.top) * scaleY;
+    let mx = state.mouse.x, my = state.mouse.y;
 
-    if (core.ui.book.state === 'gaming') {
-        if (mx > 600 && mx < 712 && my > 88 && my < 125) {
-            core.ui.book.state = 'closed';
-            const curBtn = document.getElementById(`btn-${core.scene}`);
-            if (curBtn) curBtn.classList.add('active');
+    if(state.ui.book.subState === 'gaming') {
+        if(mx>600 && mx<712 && my>88 && my<125) {
+            state.ui.book.subState = 'closed';
+            const curBtn = document.getElementById(`btn-${state.mode}`);
+            if(curBtn) curBtn.classList.add('active');
             const spBtn = document.getElementById('btn-spider');
-            if (spBtn) spBtn.classList.remove('active');
+            if(spBtn) spBtn.classList.remove('active');
             return;
         }
-        if (core.spiderGame.over) {
-            if(mx>312 && mx<712 && my>88 && my<488) { core.spiderGame.level=1; core.spiderGame.spiders=[]; core.spiderGame.kills=0; core.spiderGame.over=false; }
+        if(state.spiderGame.over) {
+            if(mx>312 && mx<712 && my>88 && my<488) { state.spiderGame.level=1; state.spiderGame.spiders=[]; state.spiderGame.kills=0; state.spiderGame.over=false; }
             return;
         }
-        const p = core.spiderGame.player;
+        const p = state.spiderGame.player;
         let ang = Math.atan2(my - p.y, mx - p.x);
-        core.spiderGame.bullets.push({ x: p.x, y: p.y, vx: Math.cos(ang) * 9, vy: Math.sin(ang) * 9, ie: false });
-        playActionSound('laser', 0.8, 1.2);
+        state.spiderGame.bullets.push({ x: p.x, y: p.y, vx: Math.cos(ang) * 9, vy: Math.sin(ang) * 9, ie: false });
+        playProceduralSound('laser', 0.8, 1.2);
         return;
     }
-    if (core.ui.book.state === 'opened') {
-        if(mx>162+700-40 && mx<162+700-10 && my>48+10 && my<48+40) core.ui.book.state='closed';
-        return;
-    }
-    if (core.scene==='pole' && core.poleScene.panelOpen) {
-        let c=Math.floor((mx-362)/100)+Math.floor((my-138)/100)*3, b=core.poleScene.grid.indexOf(8);
+
+    if(state.mode.startsWith('movie')) { state.movie.chap = (state.movie.chap+1)%3; playProceduralSound('page'); return; }
+
+    if(state.mode === 'pole' && state.poleScene.panelOpen) {
+        let c = Math.floor((mx-362)/100)+Math.floor((my-138)/100)*3, b = state.poleScene.grid.indexOf(8);
         if([c-1,c+1,c-3,c+3].includes(b)){
-            core.poleScene.grid[b]=core.poleScene.grid[c]; core.poleScene.grid[c]=8; playActionSound('thud');
-            if(core.poleScene.grid.slice(0,8).every((v,i)=>v===i)){ core.poleScene.solved=true; core.poleScene.panelOpen=false; core.poleScene.cat.shocked=true; playActionSound('shock'); }
+            state.poleScene.grid[b]=state.poleScene.grid[c]; state.poleScene.grid[c]=8; playProceduralSound('thud');
+            if(state.poleScene.grid.slice(0,8).every((v,i)=>v===i)){ state.poleScene.solved=true; state.poleScene.panelOpen=false; state.poleScene.cat.shocked=true; playProceduralSound('shock'); }
         }
         return;
     }
-    if (my<60 && mx>200 && mx<800 && core.scene!=='menu') {
-        let idx = Math.floor((mx-220)/100), item = core.inventory.items[idx];
-        if(item){
-            if(core.inventory.selected && core.inventory.selected!==item){
-                if((core.inventory.selected==='细导线'&&item==='磁铁')||(core.inventory.selected==='磁铁'&&item==='细导线')){
-                    core.inventory.items=core.inventory.items.filter(i=>i!=='细导线'&&i!=='磁铁'); core.inventory.items.push('磁铁组线'); core.inventory.selected=null; playActionSound('pop');
-                }
-            }else{
-                core.inventory.selected=(core.inventory.selected===item)?null:item; playActionSound('pop');
-            }
-        }
-        return;
-    }
-    if(mx>950 && mx<990 && my>180 && my<360 && core.scene!=='menu') {
-        if(my<240) { core.josef.mode='tall'; playActionSound('hydraulic'); }
-        else if(my>310) { core.josef.mode='short'; playActionSound('hydraulic'); }
-        else { core.josef.mode='normal'; playActionSound('hydraulic'); }
-        return;
-    }
-    if(core.scene!=='menu' && Math.hypot(mx-core.ui.bulb.x, my-core.ui.bulb.y)<core.ui.bulb.r){
-        core.ui.bulb.active=true; core.ui.bulb.timer=150; playActionSound('pop'); return;
-    }
-    if(core.scene!=='menu' && mx>core.ui.book.x && mx<core.ui.book.x+core.ui.book.w && my>core.ui.book.y && my<core.ui.book.y+core.ui.book.h){
-        core.ui.book.state='gaming'; playActionSound('page'); return;
-    }
 
-    if(core.scene==='junkyard') {
-        let j = core.junkyard;
-        if(!core.josef.isAssembled){
-            if(mx>130&&mx<230){ j.bathtub.searched=true; playActionSound('thud'); }
-            else if(j.bathtub.searched&&mx>160&&mx<190){ j.torso.collected=true; core.josef.isAssembled=true; playActionSound('pop'); }
-            return;
-        }
-        if(mx>50&&mx<80&&my>240&&my<300){
-            if(core.josef.mode==='tall') { j.pole.bent=true; playActionSound('thud'); }
-            else { playActionSound('buzz'); }
-            return;
-        }
-        if(j.pole.bent && mx>50&&mx<120&&my>220&&my<320 && core.inventory.selected==='磁铁组线' && core.josef.mode==='tall') {
-            core.josef.isSwinging = true; playActionSound('laser'); return;
-        }
-        if(!j.wire.collected && Math.hypot(mx-(j.wire.x+15), my-(j.wire.y+15))<25){
-            j.wire.collected=true; core.inventory.items.push('细导线'); playActionSound('pop'); return;
-        }
-        if(j.magnet.visible && !j.magnet.collected && mx>=j.magnet.x && mx<=j.magnet.x+j.magnet.w){
-            j.magnet.collected=true; core.inventory.items.push('磁铁'); playActionSound('pop'); return;
-        }
-    }
-
-    if(core.scene==='pole') {
-        if(mx>480&&mx<510&&my>250&&my<290){
-            if(core.josef.mode==='tall') { core.poleScene.panelOpen=true; playActionSound('thud'); }
-            else { playActionSound('buzz'); }
-            return;
-        }
-    }
-
-    if(core.scene==='bird') {
-        let bs = core.birdScene;
-        bs.blocks.forEach(b => {
-            if(!b.fall && mx>=b.x && mx<=b.x+b.w && my>=b.y && my<=b.y+b.h){ b.lit=!b.lit; playActionSound('thud'); }
-        });
-        return;
-    }
-
-    if(core.scene==='gomoku') {
-        let cs = 400 / 11;
-        let c = Math.round((mx - 332) / cs);
-        let r = Math.round((my - 48) / cs);
-        if (r>=0 && r<12 && c>=0 && c<12 && core.gomoku.board[r][c]===0 && !core.gomoku.winner) {
-            core.gomoku.board[r][c] = 1;
-            playActionSound('thud');
+    if(state.mode === 'gomoku') {
+        let cs = 400/11; let c = Math.round((mx-332)/cs), r = Math.round((my-48)/cs);
+        if(r>=0&&r<12&&c>=0&&c<12&&state.gomoku.board[r][c]===0 && !state.gomoku.winner) {
+            state.gomoku.board[r][c]=1; playProceduralSound('thud');
             setTimeout(() => {
                 let emptySpots = [];
-                for (let i = 0; i < 12; i++) {
-                    for (let j = 0; j < 12; j++) {
-                        if (core.gomoku.board[i][j] === 0) emptySpots.push({ r: i, c: j });
-                    }
-                }
-                if (emptySpots.length > 0) {
-                    let pick = emptySpots.find(p => Math.hypot(p.r - r, p.c - c) <= 2) || emptySpots[0];
-                    core.gomoku.board[pick.r][pick.c] = 2;
-                    playActionSound('thud', 0.8, 1.2);
+                for(let i=0;i<12;i++){ for(let j=0;j<12;j++){ if(state.gomoku.board[i][j]===0) emptySpots.push({r:i,c:j}); } }
+                if(emptySpots.length>0) {
+                    let pick = emptySpots.find(p=>Math.hypot(p.r-r, p.c-c)<=2) || emptySpots[0];
+                    state.gomoku.board[pick.r][pick.c] = 2; playProceduralSound('thud', 0.8, 1.2);
                 }
             }, 300);
         }
         return;
     }
 
-    if(core.scene==='bubble') {
-        if (mx < 500) core.bubbleLevel = 'junkyard'; else core.bubbleLevel = 'prison';
-        playActionSound('page'); return;
+    if(state.mode === 'fishing') {
+        if(mx>state.josef.x-40 && mx<state.josef.x+40 && state.fishing.state==='fishing') { state.fishing.state='reeling'; return; }
+        if(mx<state.josef.x && state.fishing.state==='idle') { state.fishing.state='casting'; state.fishing.castProgress=0; return; }
     }
 
-    if(core.scene==='plug') {
-        let p = core.plugGame;
-        p.nodes.forEach((n, idx) => {
-            if (Math.hypot(mx - n.x, my - n.y) < 22) {
-                playActionSound('thud');
-                if (p.selected === null) {
-                    p.selected = idx;
-                } else if (p.selected === idx) {
-                    p.selected = null;
+    if(state.mode === 'fan_quiz') {
+        let px=460, py=70; let curQ = state.fanQuiz.questions[state.fanQuiz.currentIndex];
+        for(let i=0; i<4; i++) {
+            let bx=px+30+i*110, by=py+270;
+            if(mx>bx && mx<bx+95 && my>by && my<by+55) {
+                if(i===curQ.correct) {
+                    playProceduralSound('pop');
+                    if(state.fanQuiz.currentIndex<2) state.fanQuiz.currentIndex++;
+                    else { state.fanQuiz.solved=true; playProceduralSound('laser'); }
                 } else {
-                    let tmp = p.nodes[p.selected].state;
-                    p.nodes[p.selected].state = n.state;
-                    n.state = tmp;
-                    p.selected = null;
-                    playActionSound('pop');
-                    if (p.nodes.every(node => node.state === node.target)) {
-                        p.solved = true; playActionSound('laser');
-                    }
+                    state.fanQuiz.angerLevel = (state.fanQuiz.angerLevel || 0) + 1;
+                    state.fanQuiz.wrongTimer = 30; playProceduralSound('buzz');
+                    if(state.fanQuiz.angerLevel >= 3) { state.fanQuiz.solved=true; playProceduralSound('thud', 1.5, 0.6); }
+                }
+                break;
+            }
+        }
+        return;
+    }
+
+    if(state.mode === 'plug') {
+        let p = state.plug;
+        p.nodes.forEach((n, idx) => {
+            if(Math.hypot(mx - n.x, my - n.y) < 22) {
+                playProceduralSound('thud');
+                if(p.selected === null) p.selected = idx;
+                else if(p.selected === idx) p.selected = null;
+                else {
+                    let tmp = p.nodes[p.selected].s; p.nodes[p.selected].s = n.s; n.s = tmp; p.selected = null;
+                    playProceduralSound('pop');
+                    if(p.nodes.every(node => node.s === node.t)) { p.solved = true; playProceduralSound('laser'); }
                 }
             }
         });
         return;
     }
 
-    if(core.scene==='doctor_lore') {
-        core.movieChapter = (core.movieChapter + 1) % 3;
-        playActionSound('page'); return;
+    if(mx>950 && mx<990 && my>180 && my<360 && state.mode!=='menu') {
+        if(my<240) state.josef.mode='tall'; else if(my>310) state.josef.mode='short'; else state.josef.mode='normal';
+        playProceduralSound('hydraulic'); return;
     }
 
-    if(my>410 && mx<930) core.josef.targetX = mx;
+    if(state.mode==='junkyard') {
+        let j = state.junkyard;
+        if(!state.josef.isAssembled){
+            if(mx>130&&mx<230){ j.bathtub.searched=true; playProceduralSound('thud'); }
+            else if(j.bathtub.searched&&mx>160&&mx<190){ j.torso.collected=true; state.josef.isAssembled=true; playProceduralSound('pop'); }
+            return;
+        }
+        if(mx>50&&mx<80&&my>240&&my<300){
+            if(state.josef.mode==='tall') { j.pole.bent=true; playProceduralSound('thud'); }
+            else playProceduralSound('buzz');
+            return;
+        }
+        if(j.pole.bent && mx>50&&mx<120&&my>220&&my<320 && state.josef.mode==='tall') {
+            state.josef.isSwinging = true; playProceduralSound('laser'); return;
+        }
+        if(!j.wire.collected && Math.hypot(mx-(j.wire.x+15), my-(j.wire.y+15))<25){
+            j.wire.collected=true; state.inventory.items.push('细导线'); playProceduralSound('pop'); return;
+        }
+        if(j.magnet.visible && !j.magnet.collected && mx>=j.magnet.x && mx<=j.magnet.x+j.magnet.w){
+            j.magnet.collected=true; state.inventory.items.push('磁铁'); playProceduralSound('pop'); return;
+        }
+    }
+
+    if(state.mode==='pole' && mx>480&&mx<510&&my>250&&my<290){
+        if(state.josef.mode==='tall') { state.poleScene.panelOpen=true; playProceduralSound('thud'); }
+        else playProceduralSound('buzz');
+        return;
+    }
+
+    if(state.mode==='bird') {
+        state.birdScene.blocks.forEach(b => {
+            if(!b.fall && mx>=b.x && mx<=b.x+b.w && my>=b.y && my<=b.y+b.h){ b.lit=!b.lit; playProceduralSound('thud'); }
+        });
+        return;
+    }
+
+    if(my>410 && mx<930 && state.mode!=='menu') state.josef.targetX = mx;
 });
 
 canvas.addEventListener('mousemove', (e) => {
-    let rect = canvas.getBoundingClientRect();
-    core.mouse.x = (e.clientX - rect.left) * (canvas.width / rect.width);
-    core.mouse.y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    const rect = canvas.getBoundingClientRect();
+    state.mouse.x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    state.mouse.y = (e.clientY - rect.top) * (canvas.height / rect.height);
 });
 
 window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && core.ui.book.state === 'gaming') {
-        core.ui.book.state = 'closed';
-        const curBtn = document.getElementById(`btn-${core.scene}`);
+    if (e.key === 'Escape' && state.ui.book.subState === 'gaming') {
+        state.ui.book.subState = 'closed';
+        const curBtn = document.getElementById(`btn-${state.mode}`);
         if (curBtn) curBtn.classList.add('active');
         const spBtn = document.getElementById('btn-spider');
         if (spBtn) spBtn.classList.remove('active');
         return;
     }
-    if (core.scene === 'shoot') {
-        const s = core.shootGame;
-        const spd = 8;
-        if (e.key === 'ArrowLeft' || e.key === 'a') s.px = Math.max(s.mazeX + 4, s.px - spd);
-        if (e.key === 'ArrowRight' || e.key === 'd') s.px = Math.min(s.mazeX + s.mw - 20, s.px + spd);
-        if (e.key === 'ArrowUp' || e.key === 'w') s.py = Math.max(s.mazeY + 4, s.py - spd);
-        if (e.key === 'ArrowDown' || e.key === 's') s.py = Math.min(s.mazeY + s.mh - 20, s.py + spd);
+    if (state.mode === 'shoot') {
+        const s = state.shoot; const spd = 8;
+        if (e.key === 'ArrowLeft' || e.key === 'a') s.px = Math.max(s.mx + 4, s.px - spd);
+        if (e.key === 'ArrowRight' || e.key === 'd') s.px = Math.min(s.mx + s.mw - 20, s.px + spd);
+        if (e.key === 'ArrowUp' || e.key === 'w') s.py = Math.max(s.my + 4, s.py - spd);
+        if (e.key === 'ArrowDown' || e.key === 's') s.py = Math.min(s.my + s.mh - 20, s.py + spd);
     }
-    if (core.ui.book.state === 'gaming') {
-        const p = core.spiderGame.player;
-        const spd = 6;
+    if (state.ui.book.subState === 'gaming') {
+        const p = state.spiderGame.player; const spd = 6;
         if (e.key === 'ArrowLeft' || e.key === 'a') p.x = Math.max(325, p.x - spd);
         if (e.key === 'ArrowRight' || e.key === 'd') p.x = Math.min(700, p.x + spd);
         if (e.key === 'ArrowUp' || e.key === 'w') p.y = Math.max(100, p.y - spd);
@@ -725,41 +802,54 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
-function switchScene(s) {
-    core.ui.book.state = 'closed';
-    core.scene = s;
-    document.querySelectorAll('.m-btn').forEach(b => b.classList.remove('active'));
-    const curBtn = document.getElementById(`btn-${s}`);
+function changeEngineMode(m) {
+    state.ui.book.subState = 'closed';
+    state.mode = m;
+    document.querySelectorAll('.ui-btn').forEach(b => b.classList.remove('active'));
+    const curBtn = document.getElementById(`btn-${m}`);
     if (curBtn) curBtn.classList.add('active');
-    initAudioEngine();
-    playActionSound('page');
+    initAudioContext();
+    playProceduralSound('page');
+}
+
+function switchScene(m) { changeEngineMode(m); }
+
+function triggerLoreMovie(type) {
+    state.ui.book.subState = 'closed';
+    state.mode = type === 'girlfriend' ? 'movie_gf' : 'movie_doc';
+    state.movie.chap = 0;
+    document.querySelectorAll('.ui-btn').forEach(b => b.classList.remove('active'));
+    const curBtn = document.getElementById(type === 'girlfriend' ? 'btn-movie_gf' : 'btn-movie_doc');
+    if (curBtn) curBtn.classList.add('active');
+    initAudioContext();
+    playProceduralSound('page');
 }
 
 function triggerSpiderGame() {
-    core.ui.book.state = 'gaming';
-    core.spiderGame.level = 1;
-    core.spiderGame.spiders = [];
-    core.spiderGame.bullets = [];
-    core.spiderGame.kills = 0;
-    core.spiderGame.over = false;
-    document.querySelectorAll('.m-btn').forEach(b => b.classList.remove('active'));
+    state.ui.book.subState = 'gaming';
+    state.spiderGame.level = 1;
+    state.spiderGame.spiders = [];
+    state.spiderGame.bullets = [];
+    state.spiderGame.kills = 0;
+    state.spiderGame.over = false;
+    document.querySelectorAll('.ui-btn').forEach(b => b.classList.remove('active'));
     const curBtn = document.getElementById('btn-spider');
     if (curBtn) curBtn.classList.add('active');
-    initAudioEngine();
-    playActionSound('laser');
+    initAudioContext();
+    playProceduralSound('laser');
 }
 
-// 流浪歌手定期多声部合奏
-setInterval(() => {
-    if(core.scene !== 'band') return;
-    playActionSound('sax', 1.0, 260 + Math.sin(Date.now() * 0.003) * 60);
-    if(Math.random() < 0.5) playActionSound('thud', 0.8, 1.2);
-    if(Math.random() < 0.4) playActionSound('guitar', 0.9, 440);
-}, 450);
+// 暴露全局 state 供外界调试与测试检查
+window.state = state;
+window.core = state;
+window.changeEngineMode = changeEngineMode;
+window.switchScene = switchScene;
+window.triggerLoreMovie = triggerLoreMovie;
+window.triggerSpiderGame = triggerSpiderGame;
 
 canvas.style.cursor = 'none';
-generateTextures();
-mainGlobalLoop();
+buildGraphicsPatterns();
+globalLoop();
 </script>
 </body>
 </html>
