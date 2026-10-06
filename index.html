@@ -2178,8 +2178,7 @@
         <h1 id="homeTitle">积木小院</h1>
         <div class="home-buttons">
             <button class="btn-home" id="startBtn" onclick="startGame(gameState.mode)">▶ 开始游戏</button>
-            <button class="btn-home" id="btnMode9Direct" onclick="selectMode(9); startGame(9);" style="background: linear-gradient(135deg, #4b382a 0%, #8d6e63 100%); color: #ffe082; border: 2px solid #ffd54f; box-shadow: 0 4px 15px rgba(255, 213, 79, 0.4); font-weight: bold;">🤖 模式九：机械迷城 (大集合版)</button>
-            <button class="btn-home" id="m9OneToOneBtn" onclick="openMachinariumModal()" style="background: linear-gradient(135deg, #e65100 0%, #ff9800 100%); color: white; border: 2px solid #ffe082; box-shadow: 0 4px 12px rgba(255,153,0,0.4); font-weight: bold;">⚡ 机械迷城 1:1 独立大集合版 (10大模块)</button>
+            <button class="btn-home" id="m9OneToOneBtn" onclick="openMachinariumModal()" style="display: none; background: linear-gradient(135deg, #e65100 0%, #ff9800 100%); color: white; border: 2px solid #ffe082; box-shadow: 0 4px 12px rgba(255,153,0,0.4); font-weight: bold;">⚡ 机械迷城 1:1 独立大集合版 (14大模块)</button>
             <button class="btn-home" onclick="openLeaderboard()">🏆 排行榜</button>
             <button class="btn-home" onclick="openModeModal()">⚙️ 选择模式 (<span id="modeDisplayBtn">一</span>)</button>
             <button class="btn-home" onclick="openInstructionsModal()">📖 游戏说明</button>
@@ -11963,21 +11962,10 @@
                 startBtn.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
                 startBtn.style.color = "white";
             }
-            const directM9Btn = document.getElementById('btnMode9Direct');
-            if (directM9Btn) {
-                if (mode === 9) {
-                    directM9Btn.innerHTML = "🗺️ 16 大章节选关直达";
-                    directM9Btn.onclick = () => {
-                        if (typeof window.m9 !== 'undefined') { window.m9.state = 'chapter_select'; }
-                        startGame(9);
-                    };
-                } else {
-                    directM9Btn.innerHTML = "🤖 模式九：机械迷城 (大集合版)";
-                    directM9Btn.onclick = () => { selectMode(9); startGame(9); };
-                }
-            }
             const m9Btn = document.getElementById('m9OneToOneBtn');
-            if (m9Btn) m9Btn.style.display = 'block';
+            if (m9Btn) {
+                m9Btn.style.display = (mode === 9) ? 'block' : 'none';
+            }
         }
 
         // ===== 通用核心控制 =====
