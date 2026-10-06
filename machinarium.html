@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>机械迷城 (Machinarium) - 废料场 1:1 像素级交互逻辑</title>
+    <title>机械迷城 (Machinarium) - 1:1 像素级交互逻辑系统</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
         body {
@@ -25,28 +25,53 @@
             justify-content: space-between;
             width: 100%;
             max-width: 900px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             flex-wrap: wrap;
             gap: 10px;
         }
         
         .header-title-bar h2 {
             color: #e6c29e;
-            letter-spacing: 2px;
-            font-size: 18px;
+            letter-spacing: 1px;
+            font-size: 17px;
             display: flex;
             align-items: center;
             gap: 8px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .chapter-tab-btn {
+            background: #2a2019;
+            color: #d4bda5;
+            border: 1px solid #5c4a3c;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .chapter-tab-btn.active {
+            background: #ff9900;
+            color: #1a1512;
+            border-color: #ff9900;
+            font-weight: bold;
+            box-shadow: 0 0 8px rgba(255, 153, 0, 0.4);
         }
 
         .nav-back-btn {
             background: #3d2f26;
             color: #e6c29e;
             border: 1px solid #5c4a3c;
-            padding: 6px 14px;
+            padding: 5px 12px;
             border-radius: 4px;
             text-decoration: none;
-            font-size: 13px;
+            font-size: 12px;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -79,12 +104,12 @@
         #inventory-bar {
             width: 100%;
             height: 50px;
-            background: rgba(20, 15, 12, 0.92);
+            background: rgba(20, 15, 12, 0.94);
             border-bottom: 3px solid #3d2f26;
             display: flex;
             align-items: center;
-            padding: 0 20px;
-            gap: 15px;
+            padding: 0 15px;
+            gap: 12px;
             position: absolute;
             top: 0;
             left: 0;
@@ -98,7 +123,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 18px;
             background: #231b16;
             cursor: pointer;
             position: relative;
@@ -109,22 +134,30 @@
             box-shadow: 0 0 10px #ff9900;
             background: #332317;
         }
+        .inv-slot-tip {
+            position: absolute;
+            bottom: -20px;
+            font-size: 10px;
+            white-space: nowrap;
+            color: #ffd54f;
+            display: none;
+            pointer-events: none;
+        }
+        .inv-slot:hover .inv-slot-tip { display: block; }
         #combine-btn {
             font-size: 11px;
             background: #ff9900;
             color: #1a1512;
             font-weight: bold;
-            padding: 5px 10px;
+            padding: 4px 8px;
             border-radius: 3px;
             cursor: pointer;
             display: none;
             transition: transform 0.15s;
         }
-        #combine-btn:active {
-            transform: scale(0.95);
-        }
+        #combine-btn:active { transform: scale(0.95); }
         
-        /* 场景废铁环境背景描述 */
+        /* 场景背景描述文字 */
         #bg-details {
             position: absolute;
             bottom: 12px;
@@ -133,9 +166,10 @@
             opacity: 0.65;
             line-height: 1.5;
             pointer-events: none;
+            z-index: 20;
         }
         
-        /* 1:1 游戏内实体部件样式 */
+        /* 1:1 游戏内实体通用部件样式 */
         .entity {
             position: absolute;
             cursor: pointer;
@@ -148,7 +182,8 @@
         .entity:hover {
             filter: brightness(1.15);
         }
-        
+
+        /* ========== 第一章实体样式 ========== */
         #bathtub {
             width: 100px;
             height: 60px;
@@ -161,7 +196,6 @@
             font-weight: bold;
             color: #555;
             transform-origin: bottom right;
-            box-shadow: inset 0 -4px 8px rgba(0,0,0,0.25);
         }
         #bathtub.kicked-1 { transform: rotate(15deg); left: 360px; }
         #bathtub.kicked-2 { transform: rotate(110deg) translate(50px, -200px); opacity: 0; pointer-events: none; }
@@ -171,52 +205,50 @@
             height: 22px;
             background: #8c7667;
             border-radius: 50% 50% 0 0;
-            top: 120px;
+            top: 130px;
             left: 180px;
-            font-size: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+            font-size: 11px;
+            z-index: 10;
         }
         #mouse-bubble {
             position: absolute;
-            top: 60px;
-            left: 140px;
-            width: 125px;
-            background: white;
+            top: 75px;
+            left: 130px;
+            width: 130px;
+            background: rgba(255, 255, 255, 0.95);
             border: 2px solid #000;
-            border-radius: 10px;
-            color: black;
+            border-radius: 8px;
+            color: #000;
             font-size: 11px;
-            padding: 8px 10px;
+            padding: 6px;
             display: none;
-            line-height: 1.35;
+            line-height: 1.3;
             z-index: 90;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
         #right-leg {
             width: 22px;
-            height: 45px;
+            height: 48px;
             background: #7c8c82;
             border: 2px solid #4a544e;
-            border-radius: 3px;
             bottom: 40px;
             left: 520px;
             display: none;
             font-size: 11px;
-            color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            border-radius: 3px;
+            z-index: 5;
         }
         #iron-plate {
-            width: 75px;
-            height: 18px;
+            width: 70px;
+            height: 16px;
             background: #524741;
             border: 1px solid #332b27;
-            border-radius: 2px;
             bottom: 40px;
             left: 500px;
-            font-size: 11px;
-            color: #bbb;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            font-size: 10px;
+            color: #aaa;
+            z-index: 6;
         }
         #iron-plate.moved { transform: translateX(-80px) rotate(-10deg); }
 
@@ -230,19 +262,19 @@
             left: 680px;
             font-size: 11px;
             background: transparent;
-            color: #fff;
+            z-index: 5;
         }
         #string {
-            width: 28px;
-            height: 28px;
+            width: 26px;
+            height: 26px;
             background: #d1c2a5;
             border-radius: 50%;
             bottom: 45px;
             left: 780px;
-            font-size: 11px;
+            font-size: 10px;
             color: #333;
             font-weight: bold;
-            box-shadow: inset 0 0 4px rgba(0,0,0,0.4);
+            z-index: 5;
         }
 
         #iron-bar {
@@ -253,15 +285,12 @@
             left: 280px;
             transform-origin: bottom center;
             transition: transform 0.5s ease;
-            border-radius: 6px 6px 0 0;
+            z-index: 5;
+            border-radius: 4px 4px 0 0;
         }
-        #iron-bar.bent {
-            transform: rotate(-45deg);
-            background: #ff9900;
-            box-shadow: 0 0 12px rgba(255,153,0,0.6);
-        }
+        #iron-bar.bent { transform: rotate(-45deg); background: #ff9900; }
 
-        /* 主角约瑟夫 Josef 骨骼与拉伸控制器 */
+        /* 主角约瑟夫 Josef 样式 */
         #josef {
             position: absolute;
             bottom: 40px;
@@ -272,24 +301,22 @@
             flex-direction: column;
             align-items: center;
             justify-content: flex-end;
-            z-index: 5;
-            transition: left 0.4s ease, height 0.3s ease;
+            z-index: 15;
+            transition: left 0.4s ease, height 0.3s ease, transform 0.5s ease;
         }
         #josef-head {
-            width: 36px;
-            height: 36px;
+            width: 34px;
+            height: 34px;
             background: #b0bec5;
             border: 3px solid #37474f;
             border-radius: 50%;
-            font-size: 11px;
+            font-size: 10px;
             color: #263238;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
             position: relative;
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
         #josef-body {
             width: 44px;
@@ -305,28 +332,24 @@
             padding-bottom: 2px;
             transition: height 0.3s ease;
         }
-        #josef-leg-l { width: 8px; height: 20px; background: #37474f; margin-bottom: -20px; border-radius: 0 0 2px 2px; }
-        #josef-leg-r { width: 8px; height: 20px; background: #37474f; margin-bottom: -20px; display: none; border-radius: 0 0 2px 2px; }
+        #josef-leg-l { width: 8px; height: 20px; background: #37474f; margin-bottom: -20px; }
+        #josef-leg-r { width: 8px; height: 20px; background: #37474f; margin-bottom: -20px; display: none; }
 
-        /* 拉伸箭头按钮 */
+        /* 拉伸按钮 */
         #stretch-btn {
             position: absolute;
-            top: -40px;
+            top: -38px;
             background: #ff9900;
-            color: white;
+            color: #1a1512;
+            font-weight: bold;
             padding: 3px 8px;
             font-size: 11px;
-            border-radius: 4px;
+            border-radius: 3px;
             display: none;
-            cursor: ns-resize;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-            font-weight: bold;
-            line-height: 1.1;
-            text-align: center;
-            touch-action: none;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
         }
 
-        /* 绳子荡秋千线条 */
         #rope-swing {
             position: absolute;
             bottom: 40px;
@@ -339,31 +362,412 @@
             z-index: 4;
         }
 
-        /* 动作与系统日志输出 */
+        /* ========== 第八章与第九章实体样式 ========== */
+        #stage-ch8 {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: radial-gradient(circle at 50% 30%, #3d2f24 0%, #1c1511 100%);
+            display: none;
+        }
+
+        /* 广场青石板路与地砖纹理 */
+        .cobble-ground {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 120px;
+            background: linear-gradient(180deg, #2b221b 0%, #18120e 100%);
+            border-top: 3px solid #4a382c;
+            box-shadow: inset 0 10px 20px rgba(0,0,0,0.6);
+        }
+
+        /* 左侧酒馆外观 */
+        #tavern-building {
+            position: absolute;
+            bottom: 120px;
+            left: 20px;
+            width: 180px;
+            height: 280px;
+            background: #2d221a;
+            border: 4px solid #453327;
+            border-radius: 6px;
+            box-shadow: 5px 5px 25px rgba(0,0,0,0.7);
+        }
+        #tavern-sign {
+            position: absolute;
+            top: 15px;
+            left: 10px;
+            right: 10px;
+            background: #ff9900;
+            color: #1a1512;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            padding: 4px;
+            border-radius: 3px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+        }
+        #tavern-counter-window {
+            position: absolute;
+            bottom: 30px;
+            left: 20px;
+            width: 140px;
+            height: 90px;
+            background: #19120e;
+            border: 3px solid #5a4232;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 6px;
+        }
+        #tavern-owner {
+            font-size: 26px;
+            transition: transform 0.2s;
+        }
+        #tavern-oil-pod {
+            position: absolute;
+            bottom: 8px;
+            right: 12px;
+            font-size: 22px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            filter: drop-shadow(0 0 6px #ff9900);
+        }
+        #tavern-oil-pod:hover { transform: scale(1.15); }
+
+        /* 排污臭水洼与飞舞苍蝇 */
+        #puddle-area {
+            position: absolute;
+            bottom: 40px;
+            left: 60px;
+            width: 110px;
+            height: 50px;
+            background: radial-gradient(ellipse at center, #354a21 0%, #1e2815 80%);
+            border: 2px dashed #4e6b2e;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 25;
+            box-shadow: 0 0 15px rgba(78, 107, 46, 0.4);
+        }
+        .fly-dot {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #a4e637;
+            border-radius: 50%;
+            box-shadow: 0 0 4px #a4e637;
+            animation: flyHover 1.2s infinite alternate ease-in-out;
+        }
+        @keyframes flyHover {
+            0% { transform: translate(-10px, -6px); }
+            50% { transform: translate(12px, 8px); }
+            100% { transform: translate(-8px, 12px); }
+        }
+
+        /* 下棋小桌按键 */
+        #gomoku-table-btn {
+            position: absolute;
+            bottom: 125px;
+            left: 140px;
+            background: #5c422f;
+            border: 2px solid #8d6e53;
+            color: #ffe0b2;
+            font-size: 11px;
+            padding: 5px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 30;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.6);
+        }
+
+        /* 广场中央：三位乐手 */
+        .musician-box {
+            position: absolute;
+            bottom: 80px;
+            width: 90px;
+            height: 140px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            cursor: pointer;
+            z-index: 25;
+            transition: transform 0.3s;
+        }
+        .musician-box:hover {
+            transform: translateY(-5px);
+        }
+        .musician-box.playing {
+            animation: musicianJam 0.6s infinite alternate ease-in-out;
+        }
+        @keyframes musicianJam {
+            0% { transform: translateY(0) rotate(-2deg); }
+            100% { transform: translateY(-8px) rotate(2deg); }
+        }
+        .mus-status-tag {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 5px;
+            white-space: nowrap;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid #555;
+        }
+        .mus-status-tag.fixed {
+            background: #2e7d32;
+            border-color: #81c784;
+            color: #fff;
+        }
+        .mus-avatar {
+            font-size: 42px;
+            line-height: 1;
+            position: relative;
+        }
+
+        #mus-sax { left: 240px; }
+        #mus-drum { left: 350px; }
+        #mus-horn { left: 460px; }
+
+        /* 大号上的小老鼠 */
+        #horn-rat {
+            position: absolute;
+            top: -6px;
+            right: 0px;
+            font-size: 16px;
+            transition: all 0.3s;
+            animation: ratPeek 1.5s infinite alternate ease-in-out;
+        }
+        @keyframes ratPeek {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-8px); }
+        }
+
+        /* 右上角钟楼与大妈阳台 */
+        #clock-tower {
+            position: absolute;
+            top: 60px;
+            right: 25px;
+            width: 250px;
+            height: 320px;
+            background: #251b15;
+            border: 4px solid #4a3628;
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: -5px 5px 25px rgba(0,0,0,0.6);
+        }
+        #clock-dial {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ecdcc7 0%, #b89f81 100%);
+            border: 5px solid #423023;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        .dial-label-red {
+            position: absolute;
+            top: 25px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #c62828;
+        }
+        .dial-label-black {
+            position: absolute;
+            bottom: 25px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #1a1512;
+        }
+        .clock-controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .clock-adj-btn {
+            background: #3e2d21;
+            color: #ffcc80;
+            border: 1px solid #795548;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .clock-adj-btn:hover { background: #5d4037; }
+
+        /* 二楼大妈阳台与房间 */
+        #grandma-balcony {
+            width: 100%;
+            background: #1b130e;
+            border: 2px solid #5d4037;
+            border-radius: 4px;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            cursor: pointer;
+        }
+        #grandma-npc {
+            font-size: 26px;
+            transition: transform 0.5s ease;
+        }
+        #balcony-radio {
+            font-size: 20px;
+            cursor: pointer;
+            filter: drop-shadow(0 0 5px #ff9900);
+            display: none;
+        }
+
+        /* 右侧路灯、裸露电线与黑猫 */
+        #street-lamp-post {
+            position: absolute;
+            bottom: 120px;
+            right: 290px;
+            width: 8px;
+            height: 200px;
+            background: #3e332a;
+            border-radius: 4px;
+        }
+        #electric-wire {
+            position: absolute;
+            top: -20px;
+            right: 0;
+            width: 80px;
+            height: 25px;
+            border-bottom: 3px dashed #ff5722;
+            transform: rotate(-15deg);
+            cursor: pointer;
+        }
+        #electric-sparks {
+            position: absolute;
+            top: -30px;
+            right: 20px;
+            font-size: 18px;
+            display: none;
+            animation: sparkFlash 0.3s infinite alternate;
+        }
+        @keyframes sparkFlash {
+            0% { opacity: 0.2; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1.3); }
+        }
+
+        #alley-cat {
+            position: absolute;
+            bottom: 230px;
+            right: 300px;
+            font-size: 28px;
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 30;
+        }
+        #alley-cat.stunned {
+            bottom: 125px;
+            transform: rotate(90deg) scale(0.9);
+            filter: grayscale(0.5) drop-shadow(0 0 8px #ffeb3b);
+        }
+
+        /* 碎花盆碎片掉落物 */
+        #pot-debris {
+            position: absolute;
+            bottom: 60px;
+            left: 400px;
+            background: rgba(30, 20, 15, 0.9);
+            border: 2px dashed #ff9900;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 12px;
+            display: none;
+            cursor: pointer;
+            z-index: 40;
+            box-shadow: 0 0 15px rgba(255, 153, 0, 0.6);
+            animation: bounceIn 0.5s ease;
+        }
+        @keyframes bounceIn {
+            0% { transform: translateY(-40px) scale(0.5); opacity: 0; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        /* ========== 五子棋交互弹窗 ========== */
+        #gomoku-modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #2a1f18;
+            border: 4px solid #8d6e53;
+            border-radius: 8px;
+            padding: 16px;
+            display: none;
+            z-index: 150;
+            box-shadow: 0 0 35px rgba(0,0,0,0.95);
+            text-align: center;
+        }
+        #gomoku-board {
+            display: grid;
+            grid-template-columns: repeat(11, 26px);
+            grid-template-rows: repeat(11, 26px);
+            gap: 2px;
+            background: #b8860b;
+            padding: 6px;
+            border: 3px solid #5c3a1e;
+            border-radius: 4px;
+            margin: 10px auto;
+        }
+        .gomoku-cell {
+            width: 26px;
+            height: 26px;
+            background: #d2a679;
+            border: 1px solid #8b5a2b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .gomoku-cell:hover { background: #e6be8a; }
+
+        /* 日志输出区 */
         #msg-log {
             width: 900px;
             max-width: 100%;
-            background: #231b16;
+            margin-top: 10px;
+            background: #110d0a;
             border: 2px solid #3d2f26;
-            padding: 15px;
-            margin-top: 15px;
+            padding: 10px 14px;
             border-radius: 4px;
             font-size: 13px;
             line-height: 1.5;
-            height: 130px;
+            height: 120px;
             overflow-y: auto;
             box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
 
         /* 通关徽章弹窗 */
-        #win-modal {
+        #win-modal, #win-modal-ch8 {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             background: #231b16;
             border: 4px solid #ff9900;
-            padding: 25px 35px;
+            padding: 22px 30px;
             border-radius: 8px;
             text-align: center;
             display: none;
@@ -375,8 +779,13 @@
 <body>
 
     <div class="header-title-bar">
-        <h2><span>🤖</span> 机械迷城 (Machinarium) - 废料场 1:1 交互引擎</h2>
-        <a href="index.html" class="nav-back-btn">⬅️ 返回积木小院</a>
+        <h2><span>⚙️</span> 机械迷城 (Machinarium) 1:1 交互引擎</h2>
+        <div class="header-actions">
+            <button id="tab-ch1" class="chapter-tab-btn active" onclick="switchChapter(1)">第1章: 废料场</button>
+            <button id="tab-ch8" class="chapter-tab-btn" onclick="switchChapter(8)">第8章: 钟楼大广场与三乐手</button>
+            <button onclick="restartCurrentChapter()" class="nav-back-btn" style="background:#5c4a3c;">🔄 重置关卡</button>
+            <a href="index.html" class="nav-back-btn">⬅️ 返回积木主页</a>
+        </div>
     </div>
 
     <!-- 1:1 游戏舞台容器 -->
@@ -385,62 +794,171 @@
             <!-- 顶层物品栏 -->
             <div id="inventory-bar">
                 <span style="font-size: 12px; color: #7c6857; font-weight: bold;">ITEM BAR:</span>
-                <div class="inv-slot" id="slot-0" onclick="selectSlot(0)"></div>
-                <div class="inv-slot" id="slot-1" onclick="selectSlot(1)"></div>
+                <div class="inv-slot" id="slot-0" onclick="selectSlot(0)"><span class="inv-slot-tip">槽位1</span></div>
+                <div class="inv-slot" id="slot-1" onclick="selectSlot(1)"><span class="inv-slot-tip">槽位2</span></div>
+                <div class="inv-slot" id="slot-2" onclick="selectSlot(2)"><span class="inv-slot-tip">槽位3</span></div>
+                <div class="inv-slot" id="slot-3" onclick="selectSlot(3)"><span class="inv-slot-tip">槽位4</span></div>
+                <div class="inv-slot" id="slot-4" onclick="selectSlot(4)"><span class="inv-slot-tip">槽位5</span></div>
                 <span id="combine-btn" onclick="tryCombine()">[组合物品]</span>
             </div>
 
             <!-- 场景静态信息 -->
             <div id="bg-details">
                 环境：城外废料场 (The Junk Yard)<br>
-                远景：像素之城（Machinarium）冒烟的工业塔<br>
+                远景：像素之城冒烟的蒸汽塔<br>
                 状态：Josef 被拆卸遗弃
             </div>
 
-            <!-- 机关实体 -->
-            <div id="bathtub" class="entity" onclick="clickBathtub()">浴缸</div>
-            <div id="mouse" class="entity" onclick="clickMouse()">老鼠</div>
-            <div id="mouse-bubble">🐹: 我要我的<br><b style="color:red">发条发光娃娃</b>！拿换我的右腿。</div>
-            
-            <div id="iron-plate" class="entity" onclick="clickIronPlate()">铁皮</div>
-            <div id="right-leg" class="entity" onclick="clickRightLeg()">右腿</div>
-            <div id="magnet" class="entity" onclick="clickMagnet()">磁铁</div>
-            <div id="string" class="entity" onclick="clickString()">线轴</div>
-            <div id="iron-bar" class="entity" onclick="clickIronBar()">铁杆</div>
+            <!-- ===================== 第一章场景实体 ===================== -->
+            <div id="stage-ch1">
+                <div id="bathtub" class="entity" onclick="clickBathtub()">浴缸</div>
+                <div id="mouse" class="entity" onclick="clickMouse()">老鼠</div>
+                <div id="mouse-bubble">🐹: 我要我的<br><b style="color:red">发条发光娃娃</b>！拿换我的右腿。</div>
+                
+                <div id="iron-plate" class="entity" onclick="clickIronPlate()">铁皮</div>
+                <div id="right-leg" class="entity" onclick="clickRightLeg()">右腿</div>
+                <div id="magnet" class="entity" onclick="clickMagnet()">磁铁</div>
+                <div id="string" class="entity" onclick="clickString()">线轴</div>
+                <div id="iron-bar" class="entity" onclick="clickIronBar()">铁杆</div>
 
-            <!-- 主角 Josef 容器 -->
-            <div id="josef">
-                <div id="stretch-btn">▲<br>▼</div>
-                <div id="josef-head">头</div>
-                <div id="josef-body">
-                    躯干
-                    <div id="josef-leg-l"></div>
-                    <div id="josef-leg-r"></div>
+                <!-- 主角 Josef 容器 -->
+                <div id="josef">
+                    <div id="stretch-btn" onclick="toggleStretch(event)">▲<br>▼</div>
+                    <div id="josef-head">头</div>
+                    <div id="josef-body">
+                        躯干
+                        <div id="josef-leg-l"></div>
+                        <div id="josef-leg-r"></div>
+                    </div>
+                </div>
+
+                <div id="rope-swing"></div>
+
+                <!-- 通关胜利弹窗 (第1章) -->
+                <div id="win-modal">
+                    <div style="font-size: 36px; margin-bottom: 8px;">🎉</div>
+                    <h3 style="color: #8cff99; margin-bottom: 8px;">第一章：废料场 1:1 通关！</h3>
+                    <p style="font-size: 13px; color: #d4bda5; margin-bottom: 15px;">约瑟夫已成功飞跃毒液深渊，前往下一章【护城河变装城门卫所】。</p>
+                    <button class="chapter-tab-btn active" onclick="switchChapter(8)" style="padding:6px 16px;">前往第8章：钟楼大广场 ➡</button>
+                    <button class="nav-back-btn" onclick="restartCurrentChapter()" style="margin-left: 8px;">🔄 再次游玩</button>
                 </div>
             </div>
 
-            <!-- 绳子荡秋千线条 -->
-            <div id="rope-swing"></div>
+            <!-- ===================== 第八章与第九章场景实体 ===================== -->
+            <div id="stage-ch8">
+                <div class="cobble-ground"></div>
 
-            <!-- 通关胜利弹窗 -->
-            <div id="win-modal">
-                <div style="font-size: 40px; margin-bottom: 10px;">🎉</div>
-                <h3 style="color: #8cff99; margin-bottom: 8px;">第一章：废料场 通关！</h3>
-                <p style="font-size: 13px; color: #d4bda5; margin-bottom: 15px;">约瑟夫已成功飞跃毒液深渊，前往下一章【护城河吊桥】。</p>
-                <button class="nav-back-btn" onclick="restartChapter()" style="background:#ff9900; color:#1a1512; font-weight:bold; border:none; padding:8px 20px;">🔄 再次游玩本章</button>
-                <a href="index.html" class="nav-back-btn" style="margin-left: 10px;">进入主游戏模式九</a>
+                <!-- 左侧酒馆 -->
+                <div id="tavern-building">
+                    <div id="tavern-sign">🍺 STEAM TAVERN</div>
+                    <div id="tavern-counter-window" onclick="clickTavernCounter()">
+                        <div id="tavern-owner">🧔</div>
+                        <span style="font-size:10px; color:#aaa; margin-top:4px;">柜台老板</span>
+                        <div id="tavern-oil-pod" title="大油桶" onclick="clickOilPod(event)">🛢️</div>
+                    </div>
+                </div>
+
+                <!-- 酒馆门口五子棋牌桌 -->
+                <button id="gomoku-table-btn" onclick="openGomokuModal()">♟️ 棋牌桌(对战老头)</button>
+
+                <!-- 臭水洼与绿头苍蝇群 -->
+                <div id="puddle-area" onclick="clickPuddle()" title="点击挥动罐子捕捉苍蝇">
+                    <div class="fly-dot" style="top:15px; left:25px;"></div>
+                    <div class="fly-dot" style="top:25px; left:60px;"></div>
+                    <div class="fly-dot" style="top:10px; left:80px;"></div>
+                    <span id="fly-count-badge" style="font-size:10px; color:#a4e637; font-weight:bold;">🪰 臭水塘(0/5)</span>
+                </div>
+
+                <!-- 三位乐手 -->
+                <div id="mus-sax" class="musician-box" onclick="clickMusician('sax')">
+                    <span id="tag-sax" class="mus-status-tag">🎷 缺5枚螺母</span>
+                    <div class="mus-avatar">🤖<span style="font-size:20px; position:absolute; bottom:0; right:-10px;">🎷</span></div>
+                </div>
+
+                <div id="mus-drum" class="musician-box" onclick="clickMusician('drum')">
+                    <span id="tag-drum" class="mus-status-tag">🥁 鼓面破损</span>
+                    <div class="mus-avatar">🤖<span id="drum-drum-icon" style="font-size:20px; position:absolute; bottom:0; right:-10px;">🥁</span></div>
+                </div>
+
+                <div id="mus-horn" class="musician-box" onclick="clickMusician('horn')">
+                    <span id="tag-horn" class="mus-status-tag">🎺 老鼠筑巢</span>
+                    <div class="mus-avatar">🤖<span style="font-size:24px; position:absolute; bottom:0; right:-10px;">🎺</span>
+                        <span id="horn-rat">🐭</span>
+                    </div>
+                </div>
+
+                <!-- 钟楼与大妈 -->
+                <div id="clock-tower">
+                    <div id="clock-dial">
+                        <span class="dial-label-red" id="dial-red-text">红: I</span>
+                        <div style="font-size:24px;">🕰️</div>
+                        <span class="dial-label-black" id="dial-black-text">黑: VI</span>
+                    </div>
+                    <div class="clock-controls">
+                        <button class="clock-adj-btn" onclick="adjustClock('red', 1)">红针 ▲</button>
+                        <button class="clock-adj-btn" onclick="adjustClock('red', -1)">红针 ▼</button>
+                        <button class="clock-adj-btn" onclick="adjustClock('black', 1)">黑针 ▲</button>
+                        <button class="clock-adj-btn" onclick="adjustClock('black', -1)">黑针 ▼</button>
+                    </div>
+                    <div id="grandma-balcony" onclick="clickBalcony()">
+                        <div id="grandma-npc">👵</div>
+                        <span id="grandma-status-txt" style="font-size:10px; color:#ffcc80;">二楼阳台(老奶奶)</span>
+                        <div id="balcony-radio" title="旧收音机" onclick="clickRadio(event)">📻</div>
+                    </div>
+                </div>
+
+                <!-- 路灯电线与流浪猫 -->
+                <div id="street-lamp-post"></div>
+                <div id="electric-wire" onclick="clickWire()" title="悬挂裸露高压电线">
+                    <span id="electric-sparks">⚡💥</span>
+                </div>
+                <div id="alley-cat" onclick="clickCat()" title="黑色敏捷流浪猫">🐈‍⬛</div>
+
+                <!-- 砸碎花盆地面残留物 -->
+                <div id="pot-debris" onclick="clickPotDebris()">
+                    🏺💥 破碎黏土花盆 (露出了【调频拨盘】与【废旧电池】点击捡起)
+                </div>
+
+                <!-- 通关胜利弹窗 (第8章) -->
+                <div id="win-modal-ch8">
+                    <div style="font-size: 38px; margin-bottom: 8px;">🎷🥁🎺</div>
+                    <h3 style="color: #ff9900; margin-bottom: 8px;">第八章：钟楼大广场与三乐手 1:1 通关！</h3>
+                    <p style="font-size: 13px; color: #d4bda5; margin-bottom: 12px;" id="win-ch8-desc">三乐手合奏蒸汽爵士乐，老奶奶愤怒砸下的花盆爆出了关键道具！</p>
+                    <button class="chapter-tab-btn active" onclick="restartCurrentChapter()" style="padding:6px 16px;">🔄 再次游玩第八章</button>
+                    <a href="index.html" class="nav-back-btn" style="margin-left: 8px;">进入主游戏模式九</a>
+                </div>
             </div>
+
+            <!-- 五子棋对局弹窗 -->
+            <div id="gomoku-modal">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <h4 style="color:#ffd54f;">♟️ 酒馆桌面五子棋 (连成五颗黄铜螺母获胜)</h4>
+                    <button onclick="closeGomokuModal()" style="background:#5c422f; color:#fff; border:none; padding:2px 8px; border-radius:3px; cursor:pointer;">✖</button>
+                </div>
+                <div style="font-size:11px; color:#d4bda5;">🟡 约瑟夫(黄铜螺母) vs ⚫ 下棋老头(黑铁螺栓)</div>
+                <div id="gomoku-board"></div>
+                <div style="display:flex; justify-content:center; gap:10px; margin-top:8px;">
+                    <button onclick="resetGomokuGame()" class="nav-back-btn" style="font-size:11px;">🔄 重新开局</button>
+                    <span id="gomoku-status-msg" style="font-size:11px; color:#ff9900; align-self:center;"></span>
+                </div>
+            </div>
+
         </div>
     </div>
 
     <!-- 动作与系统日志输出 -->
     <div id="msg-log">
-        <div style="color: #8cff99;">[系统]: 机械迷城 1:1 核心交互引擎初始化成功。当前关卡：第1章 - 废料场。</div>
-        <div>[提示]: 约瑟夫的头卡在白色浴缸下面。请连续点击【浴缸】将其移开。</div>
+        <div style="color: #8cff99;">[系统]: 机械迷城 1:1 核心交互引擎初始化成功。</div>
+        <div id="initial-log-hint">[提示]: 约瑟夫的头卡在白色浴缸下面。请连续点击【浴缸】将其移开。</div>
     </div>
 
+    <!-- 引入第八章独立 1:1 状态机 -->
+    <script src="js/mach_chapter8.js"></script>
+
 <script>
-    // 简易 Web Audio 音效系统
+    // ==========================================
+    // 简易 Web Audio 音效系统 (1:1 丰富合成)
+    // ==========================================
     let audioCtx = null;
     function playSfx(type) {
         try {
@@ -499,12 +1017,103 @@
                     osc.connect(gain); gain.connect(audioCtx.destination);
                     osc.start(now + idx * 0.09); osc.stop(now + idx * 0.09 + 0.35);
                 });
+            } else if (type === 'fly_buzz') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.linearRampToValueAtTime(280, now + 0.1);
+                osc.frequency.linearRampToValueAtTime(210, now + 0.2);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(now); osc.stop(now + 0.22);
+            } else if (type === 'church_bell') {
+                [523.25, 392.00].forEach((f, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(f, now + idx * 0.3);
+                    gain.gain.setValueAtTime(0.3, now + idx * 0.3);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.3 + 1.2);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(now + idx * 0.3); osc.stop(now + idx * 0.3 + 1.2);
+                });
+            } else if (type === 'spark') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.setValueAtTime(150, now + 0.05);
+                osc.frequency.setValueAtTime(1200, now + 0.1);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(now); osc.stop(now + 0.25);
+            } else if (type === 'sax') {
+                [466.16, 554.37, 622.25, 740.0].forEach((f, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(f, now + idx * 0.12);
+                    gain.gain.setValueAtTime(0.15, now + idx * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.2);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(now + idx * 0.12); osc.stop(now + idx * 0.12 + 0.2);
+                });
+            } else if (type === 'drum') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(140, now);
+                osc.frequency.exponentialRampToValueAtTime(35, now + 0.18);
+                gain.gain.setValueAtTime(0.35, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(now); osc.stop(now + 0.2);
+            } else if (type === 'horn') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(110, now);
+                osc.frequency.exponentialRampToValueAtTime(87.3, now + 0.35);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(now); osc.stop(now + 0.4);
+            } else if (type === 'jazz_band') {
+                const notes = [233, 293, 349, 440, 523];
+                for (let i = 0; i < 8; i++) {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = i % 2 === 0 ? 'sawtooth' : 'triangle';
+                    osc.frequency.setValueAtTime(notes[i % notes.length], now + i * 0.15);
+                    gain.gain.setValueAtTime(0.18, now + i * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.3);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(now + i * 0.15); osc.stop(now + i * 0.15 + 0.3);
+                }
+            } else if (type === 'pot_smash') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(50, now + 0.25);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(now); osc.stop(now + 0.3);
             }
         } catch(e) {}
     }
 
-    // 游戏核心状态机
-    let state = {
+    // ==========================================
+    // 全局状态管理
+    // ==========================================
+    let currentChapter = 1;
+
+    // 第1章状态
+    let stateCh1 = {
         bathtubKicks: 0,
         hasBody: false,
         hasLeg: false,
@@ -515,9 +1124,13 @@
         ironBarBent: false,
         gameOver: false
     };
+    window.state = stateCh1;
+    var state = stateCh1;
+
+    // 第8章状态机实例 (TownSquareLevel)
+    let lvlCh8 = (typeof TownSquareLevel !== 'undefined') ? new TownSquareLevel() : (window.mach_chapter8 || null);
 
     const logBox = document.getElementById("msg-log");
-
     function printLog(text, color = "#d4bda5") {
         const div = document.createElement("div");
         div.style.color = color;
@@ -526,235 +1139,249 @@
         logBox.scrollTop = logBox.scrollHeight;
     }
 
-    // 1. 点击浴缸逻辑
-    function clickBathtub() {
-        if (state.gameOver) return;
-        state.bathtubKicks++;
-        playSfx('clank');
-        const btn = document.getElementById("bathtub");
-        if (state.bathtubKicks === 1) {
-            btn.className = "entity kicked-1";
-            printLog("你猛击了一下浴缸，浴缸松动了，露出了里面的机械头骨！");
-        } else if (state.bathtubKicks >= 2) {
-            btn.className = "entity kicked-2";
-            printLog("你二次顶飞了浴缸！浴缸滚落悬崖。约瑟夫的【头和躯干】露了出来。", "#fff");
-            document.getElementById("josef").style.display = "flex";
-            printLog("[提示]: 点击地上的【头】，把头组装回身体上。");
+    // ==========================================
+    // 关卡切换控制器
+    // ==========================================
+    function switchChapter(ch) {
+        currentChapter = ch;
+        document.getElementById("tab-ch1").className = ch === 1 ? "chapter-tab-btn active" : "chapter-tab-btn";
+        document.getElementById("tab-ch8").className = ch === 8 ? "chapter-tab-btn active" : "chapter-tab-btn";
+
+        const st1 = document.getElementById("stage-ch1");
+        const st8 = document.getElementById("stage-ch8");
+        const bgDetails = document.getElementById("bg-details");
+        const combineBtn = document.getElementById("combine-btn");
+
+        if (ch === 1) {
+            st1.style.display = "block";
+            st8.style.display = "none";
+            bgDetails.innerHTML = "环境：城外废料场 (The Junk Yard)<br>远景：像素之城冒烟的工业塔<br>状态：Josef 被拆卸遗弃";
+            combineBtn.style.display = (stateCh1.inventory.includes("磁铁") && stateCh1.inventory.includes("线轴")) ? "block" : "none";
+            renderInventory();
+            printLog("切换至【第1章：废料场】1:1 像素交互舞台。", "#ffcc80");
+        } else {
+            st1.style.display = "none";
+            st8.style.display = "block";
+            bgDetails.innerHTML = "环境：钟楼大广场与蒸汽酒吧 (Town Square)<br>设施：钟楼、酒吧、流浪猫、高压电线<br>目标：修复三位街头乐手，引发大妈花盆剧情";
+            combineBtn.style.display = "none";
+            renderInventory();
+            updateCh8DOM();
+            printLog("切换至【第8章：钟楼大广场与三位街头乐手】1:1 全细节状态机！", "#ffcc80");
         }
     }
 
-    // 2. 点击自身组装身体
-    document.getElementById("josef-head").addEventListener("click", () => {
-        if (!state.hasBody && state.bathtubKicks >= 2) {
-            state.hasBody = true;
-            playSfx('combine');
-            document.getElementById("josef-body").style.background = "#90a4ae";
-            printLog("咔哒！头和身体成功用弹簧颈接上了。但现在只有左腿，一瘸一拐。");
-            document.getElementById("stretch-btn").style.display = "block";
-            printLog("[提示]: 鼠标或触摸按住主角头顶的【▲▼】拖拽，可以改变约瑟夫的身高！");
-        }
-    });
-
-    // 3. 拉伸与缩短身体逻辑 (同时支持鼠标与触摸屏)
-    let isDragging = false;
-    const stretchBtn = document.getElementById("stretch-btn");
-
-    function handleStartStretch(e) {
-        e.stopPropagation();
-        e.preventDefault();
-        isDragging = true;
-        playSfx('stretch');
-        window.addEventListener("mousemove", onStretch, { passive: false });
-        window.addEventListener("mouseup", stopStretch);
-        window.addEventListener("touchmove", onStretchTouch, { passive: false });
-        window.addEventListener("touchend", stopStretch);
-    }
-
-    stretchBtn.addEventListener("mousedown", handleStartStretch);
-    stretchBtn.addEventListener("touchstart", handleStartStretch, { passive: false });
-
-    function onStretch(e) {
-        if (!isDragging) return;
-        applyStretch(e.clientY);
-    }
-
-    function onStretchTouch(e) {
-        if (!isDragging || !e.touches || !e.touches[0]) return;
-        e.preventDefault();
-        applyStretch(e.touches[0].clientY);
-    }
-
-    function applyStretch(clientY) {
-        const stage = document.getElementById("game-stage");
-        const stageRect = stage.getBoundingClientRect();
-        // 计算缩放比率
-        const scale = stageRect.height / 550;
-        const relativeY = (stageRect.bottom - clientY) / scale - 40;
-        
-        if (relativeY >= 70 && relativeY <= 210) {
-            document.getElementById("josef").style.height = relativeY + "px";
-            document.getElementById("josef-body").style.height = (relativeY - 40) + "px";
-            if (relativeY > 150) {
-                if (!state.isStretched) {
-                    state.isStretched = true;
-                    printLog("约瑟夫已充分【向上拉伸】身体！现在的身高足够触发高处机关了。");
-                }
-            } else {
-                state.isStretched = false;
-            }
+    function restartCurrentChapter() {
+        if (currentChapter === 1) {
+            restartChapter1();
+        } else {
+            restartChapter8();
         }
     }
 
-    function stopStretch() {
-        if (isDragging) {
-            isDragging = false;
-            window.removeEventListener("mousemove", onStretch);
-            window.removeEventListener("mouseup", stopStretch);
-            window.removeEventListener("touchmove", onStretchTouch);
-            window.removeEventListener("touchend", stopStretch);
-        }
-    }
-
-    // 4. 老鼠与交换右腿交互
-    function clickMouse() {
-        if (!state.hasBody) { printLog("你现在只有一个头，老鼠根本不理你。"); return; }
-        const bubble = document.getElementById("mouse-bubble");
-        bubble.style.display = "block";
-        if (state.selectedItem === "绑着绳子的磁铁") {
-            playSfx('pick');
-            bubble.innerHTML = "🐹: 哇！这就是我的发条磁铁玩具！谢谢你！";
-            printLog("你将【绑着绳子的磁铁】交给了小老鼠。老鼠高兴地咬断了控制线。");
-            removeItem("绑着绳子的磁铁");
-            setTimeout(() => { bubble.style.display = "none"; }, 2500);
-            return;
-        }
-        printLog("小老鼠说它需要它的发条小玩具。");
-        setTimeout(() => { bubble.style.display = "none"; }, 4000);
-    }
-
-    // 5. 移开铁皮发现右腿
-    function clickIronPlate() {
-        if (state.ironPlateMoved) return;
-        state.ironPlateMoved = true;
-        playSfx('clank');
-        document.getElementById("iron-plate").className = "entity moved";
-        document.getElementById("right-leg").style.display = "flex";
-        printLog("你飞起一脚踢开了生锈的铁皮，压在底下的【机械右腿】露出来了！");
-    }
-
-    function clickRightLeg() {
-        if (!state.hasBody) { printLog("你得先把头和身体连上才能捡腿。"); return; }
-        state.hasLeg = true;
-        playSfx('combine');
-        document.getElementById("right-leg").style.display = "none";
-        document.getElementById("josef-leg-r").style.display = "block";
-        document.getElementById("josef").style.left = "320px"; // 自动向左移动两步
-        printLog("成功装回右腿！约瑟夫恢复了正常的双腿平衡，并自动向左移动到铁杆旁！", "#8cff99");
-    }
-
-    // 6. 道具收集与栏位逻辑
-    function clickMagnet() {
-        playSfx('pick');
-        pushInventory("磁铁");
-        document.getElementById("magnet").style.display = "none";
-    }
-
-    function clickString() {
-        playSfx('pick');
-        pushInventory("线轴");
-        document.getElementById("string").style.display = "none";
-    }
-
-    function pushInventory(item) {
-        state.inventory.push(item);
-        printLog(`获得了物品：【${item}】`);
-        renderInventory();
-    }
-
-    function removeItem(item) {
-        state.inventory = state.inventory.filter(i => i !== item);
-        state.selectedItem = null;
-        renderInventory();
+    // ==========================================
+    // 物品栏通用渲染器
+    // ==========================================
+    function getCurInventory() {
+        return currentChapter === 1 ? stateCh1.inventory : lvlCh8.gameState.josef.inventory;
     }
 
     function renderInventory() {
-        const s0 = document.getElementById("slot-0");
-        const s1 = document.getElementById("slot-1");
-        s0.innerText = state.inventory[0] === "磁铁" ? "🧲" : (state.inventory[0] === "线轴" ? "🧵" : (state.inventory[0] === "绑着绳子的磁铁" ? "🎣" : ""));
-        s0.title = state.inventory[0] || "";
-        s1.innerText = state.inventory[1] === "磁铁" ? "🧲" : (state.inventory[1] === "线轴" ? "🧵" : (state.inventory[1] === "绑着绳子的磁铁" ? "🎣" : ""));
-        s1.title = state.inventory[1] || "";
-
-        if (state.inventory.includes("磁铁") && state.inventory.includes("线轴")) {
-            document.getElementById("combine-btn").style.display = "inline-block";
-        } else {
-            document.getElementById("combine-btn").style.display = "none";
+        const inv = getCurInventory();
+        const selected = currentChapter === 1 ? stateCh1.selectedItem : lvlCh8.gameState.josef.selectedItem;
+        for (let i = 0; i < 5; i++) {
+            const slot = document.getElementById(`slot-${i}`);
+            if (!slot) continue;
+            if (inv[i]) {
+                let icon = "📦";
+                const name = inv[i];
+                if (name.includes("磁铁")) icon = "🧲";
+                else if (name.includes("线")) icon = "🧵";
+                else if (name.includes("罐")) icon = name.includes("抓满") ? "🐝" : "🫙";
+                else if (name.includes("油桶")) icon = "🛢️";
+                else if (name.includes("收音机")) icon = "📻";
+                else if (name.includes("猫")) icon = "🐈‍⬛";
+                else if (name.includes("螺母")) icon = "🔩";
+                else if (name.includes("拨盘")) icon = "🔘";
+                else if (name.includes("电池")) icon = "🔋";
+                
+                slot.innerText = icon;
+                slot.className = (selected === name) ? "inv-slot active" : "inv-slot";
+                slot.title = name;
+            } else {
+                slot.innerText = "";
+                slot.className = "inv-slot";
+                slot.title = `槽位${i+1}`;
+            }
         }
     }
 
     function selectSlot(index) {
-        if (!state.inventory[index]) return;
-        document.getElementById("slot-0").className = "inv-slot";
-        document.getElementById("slot-1").className = "inv-slot";
-        if (state.selectedItem === state.inventory[index]) {
-            state.selectedItem = null;
-            printLog("取消选中当前物品。");
+        const inv = getCurInventory();
+        if (index >= inv.length) return;
+        playSfx('pick');
+        if (currentChapter === 1) {
+            if (stateCh1.selectedItem === inv[index]) {
+                stateCh1.selectedItem = null;
+                printLog("取消选中物品。");
+            } else {
+                stateCh1.selectedItem = inv[index];
+                printLog(`启用了道具：【${stateCh1.selectedItem}】。请点击场景目标使用。`);
+            }
         } else {
-            state.selectedItem = state.inventory[index];
-            document.getElementById(`slot-${index}`).className = "inv-slot active";
-            printLog(`当前启用了物品：【${state.selectedItem}】。请点击场景中的目标实体使用。`);
+            if (lvlCh8.gameState.josef.selectedItem === inv[index]) {
+                lvlCh8.gameState.josef.selectedItem = null;
+                printLog("取消选中物品。");
+            } else {
+                lvlCh8.gameState.josef.selectedItem = inv[index];
+                printLog(`启用了道具：【${lvlCh8.gameState.josef.selectedItem}】。请点击目标实体使用。`);
+            }
+        }
+        renderInventory();
+    }
+
+    // ==========================================
+    // 第1章 交互逻辑实现 (100% 保持稳定)
+    // ==========================================
+    function clickBathtub() {
+        if (stateCh1.gameOver) return;
+        stateCh1.bathtubKicks++;
+        playSfx('clank');
+        const btn = document.getElementById("bathtub");
+        if (stateCh1.bathtubKicks === 1) {
+            btn.className = "entity kicked-1";
+            printLog("你猛击了一下浴缸，浴缸松动了，露出了里面的机械头骨！");
+        } else if (stateCh1.bathtubKicks >= 2) {
+            btn.className = "entity kicked-2";
+            printLog("你二次顶飞了浴缸！浴缸滚落悬崖。约瑟夫的【头和躯干】露了出来。", "#fff");
+            stateCh1.hasBody = true;
+            const josef = document.getElementById("josef");
+            josef.style.display = "flex";
+            document.getElementById("stretch-btn").style.display = "block";
+        }
+    }
+
+    function clickMouse() {
+        if (stateCh1.gameOver) return;
+        playSfx('clank');
+        const bubble = document.getElementById("mouse-bubble");
+        bubble.style.display = bubble.style.display === "block" ? "none" : "block";
+        printLog("小老鼠吱吱叫着，正在等待你给它带来喜爱的发光玩偶。");
+    }
+
+    function toggleStretch(e) {
+        if (e) e.stopPropagation();
+        if (!stateCh1.hasBody) return;
+        playSfx('stretch');
+        stateCh1.isStretched = !stateCh1.isStretched;
+        const josef = document.getElementById("josef");
+        const body = document.getElementById("josef-body");
+        if (stateCh1.isStretched) {
+            josef.style.height = "110px";
+            body.style.height = "76px";
+            printLog("【拉伸身体】约瑟夫挺直了气压中轴，身体向上伸长！高处的机关现在触手可及。");
+        } else {
+            josef.style.height = "70px";
+            body.style.height = "36px";
+            printLog("【收缩身体】约瑟夫恢复了常态身高。");
+        }
+    }
+
+    function clickIronPlate() {
+        if (!stateCh1.hasBody) { printLog("只剩一个头，根本推不动厚重铁皮。"); return; }
+        if (stateCh1.ironPlateMoved) return;
+        stateCh1.ironPlateMoved = true;
+        playSfx('clank');
+        document.getElementById("iron-plate").className = "entity moved";
+        document.getElementById("right-leg").style.display = "flex";
+        printLog("约瑟夫用力蹬开了铁皮！在铁皮下方赫然发现了自己失落的【右腿】！");
+    }
+
+    function clickRightLeg() {
+        if (!stateCh1.ironPlateMoved || stateCh1.hasLeg) return;
+        stateCh1.hasLeg = true;
+        playSfx('combine');
+        document.getElementById("right-leg").style.display = "none";
+        document.getElementById("josef-leg-r").style.display = "block";
+        document.getElementById("josef-leg-l").style.display = "block";
+        document.getElementById("josef").style.left = "480px";
+        printLog("【部件组装完毕】约瑟夫成功装上了右腿！现在双腿完好，可以在废料场内自由行走了！", "#ff9900");
+    }
+
+    function clickMagnet() {
+        if (!stateCh1.hasLeg) { printLog("没有腿走不过去拾取磁铁。"); return; }
+        playSfx('pick');
+        document.getElementById("magnet").style.display = "none";
+        stateCh1.inventory.push("磁铁");
+        printLog("拾取了关键道具：【磁铁】！");
+        checkCombineBtn();
+        renderInventory();
+    }
+
+    function clickString() {
+        if (!stateCh1.hasLeg) { printLog("没有腿走不过去拾取线轴。"); return; }
+        playSfx('pick');
+        document.getElementById("string").style.display = "none";
+        stateCh1.inventory.push("线轴");
+        printLog("拾取了关键道具：【线轴】！");
+        checkCombineBtn();
+        renderInventory();
+    }
+
+    function checkCombineBtn() {
+        const btn = document.getElementById("combine-btn");
+        if (stateCh1.inventory.includes("磁铁") && stateCh1.inventory.includes("线轴")) {
+            btn.style.display = "block";
+        } else {
+            btn.style.display = "none";
         }
     }
 
     function tryCombine() {
-        if (state.inventory.includes("磁铁") && state.inventory.includes("线轴")) {
+        if (stateCh1.inventory.includes("磁铁") && stateCh1.inventory.includes("线轴")) {
             playSfx('combine');
-            state.inventory = ["绑着绳子的磁铁"];
-            state.selectedItem = null;
-            printLog("【微操组合成功】: 你将线轴的细绳牢牢绑在马蹄形磁铁上，获得了：【绑着绳子的磁铁】！", "#ff9900");
+            stateCh1.inventory = ["绑着绳子的磁铁"];
+            stateCh1.selectedItem = null;
+            printLog("【微操组合成功】: 将线轴细绳牢牢绑在磁铁上，获得了：【绑着绳子的磁铁】！", "#ff9900");
+            checkCombineBtn();
             renderInventory();
         }
     }
 
-    // 7. 破坏铁杆环境
     function clickIronBar() {
-        if (!state.hasLeg) { printLog("你腿还没装好，走不过去，力气也不够。"); return; }
-        if (state.ironBarBent) return;
-        state.ironBarBent = true;
+        if (!stateCh1.hasLeg) { printLog("你腿还没装好，走不过去，力气也不够。"); return; }
+        if (stateCh1.ironBarBent) {
+            // 如果已弯曲且选中了组合道具，尝试抛掷通关
+            if (stateCh1.selectedItem === "绑着绳子的磁铁") {
+                if (!stateCh1.isStretched) {
+                    printLog("【高度不够】: 身高太矮，抛掷角度不正确！请按住身体【▲▼】拉长身体再试。");
+                    return;
+                }
+                stateCh1.gameOver = true;
+                playSfx('success');
+                stateCh1.inventory = [];
+                renderInventory();
+                printLog("【1:1 像素终极动作触发】: 约瑟夫将绑绳磁铁全力抛向铁杆顶端！磁力卡死！", "#ff9900");
+                const josef = document.getElementById("josef");
+                josef.style.left = "280px";
+                setTimeout(() => {
+                    josef.style.transform = "translate(-220px, -60px) scale(0.4)";
+                    josef.style.opacity = "0";
+                    printLog("【第一章通关】: 约瑟夫荡过深渊，成功逃离废料场！", "#8cff99");
+                    setTimeout(() => {
+                        document.getElementById("win-modal").style.display = "block";
+                    }, 600);
+                }, 500);
+            }
+            return;
+        }
+        stateCh1.ironBarBent = true;
         playSfx('clank');
         document.getElementById("iron-bar").className = "entity bent";
-        printLog("约瑟夫双手握住微弯的铁杆，利用全身重量全力一压！铁杆变为了一个呈45度延伸向悬崖外的完美【斜角吊点】。");
+        printLog("约瑟夫利用体重全力一压！铁杆变为了一个呈45度延伸向悬崖外的完美【斜角吊点】。");
     }
 
-    // 8. 终极抛掷：使用组合道具在弯铁杆上荡秋千逃离
-    document.getElementById("iron-bar").addEventListener("click", (e) => {
-        if (state.ironBarBent && state.selectedItem === "绑着绳子的磁铁") {
-            if (!state.isStretched) {
-                printLog("【高度不够】: 现在的身高太矮了，抛掷角度不正确！请按住头顶【▲▼】先【向上拉长身体】再试。");
-                return;
-            }
-            // 触发通关动作
-            state.gameOver = true;
-            playSfx('success');
-            removeItem("绑着绳子的磁铁");
-            printLog("【1:1 像素终极动作触发】: 约瑟夫将绑着绳子的磁铁全力抛向直角铁杆顶端！磁力卡死！", "#ff9900");
-            
-            // 播放荡秋千飞跃动画
-            const josef = document.getElementById("josef");
-            josef.style.left = "280px";
-            setTimeout(() => {
-                josef.style.transform = "translate(-220px, -60px) scale(0.4)";
-                josef.style.opacity = "0";
-                printLog("【通关成功】: 约瑟夫抓着绳子如同秋千一般荡向了深渊对岸，成功逃离废料场！即将进入下一章：【护城河变装城门卫所】。", "#8cff99");
-                setTimeout(() => {
-                    document.getElementById("win-modal").style.display = "block";
-                }, 800);
-            }, 600);
-        }
-    });
-
-    function restartChapter() {
-        state = {
+    function restartChapter1() {
+        stateCh1 = {
             bathtubKicks: 0,
             hasBody: false,
             hasLeg: false,
@@ -775,17 +1402,340 @@
         document.getElementById("josef").style.left = "400px";
         document.getElementById("josef").style.height = "70px";
         document.getElementById("josef-body").style.height = "36px";
-        document.getElementById("josef-body").style.background = "#90a4ae";
         document.getElementById("josef").style.transform = "none";
         document.getElementById("josef").style.opacity = "1";
         document.getElementById("stretch-btn").style.display = "none";
         document.getElementById("josef-leg-r").style.display = "none";
         document.getElementById("win-modal").style.display = "none";
         renderInventory();
-        printLog("关卡已重置。请重新点击【浴缸】开始。", "#8cff99");
+        printLog("第一章关卡已重置。请重新点击【浴缸】开始。", "#8cff99");
     }
 
-    // 响应式视口自动缩放（适配手机与平板小屏）
+    // ==========================================
+    // 第8章 交互逻辑与 DOM 联动 (1:1 状态机对接)
+    // ==========================================
+    function updateCh8DOM() {
+        const gs = lvlCh8.gameState;
+        // 1. 苍蝇捕捉计数
+        const flyBadge = document.getElementById("fly-count-badge");
+        if (flyBadge) flyBadge.innerText = `🪰 臭水塘(${gs.tavern.fliesCaptured}/5)`;
+
+        // 2. 酒馆老板状态
+        const ownerEl = document.getElementById("tavern-owner");
+        if (ownerEl) {
+            ownerEl.innerText = gs.tavern.ownerDistracted ? "🪰😵🪰" : "🧔";
+        }
+        const oilPodEl = document.getElementById("tavern-oil-pod");
+        if (oilPodEl) {
+            oilPodEl.style.display = gs.tavern.oilPodStolen ? "none" : "block";
+        }
+
+        // 3. 钟楼表盘指针文本
+        const redTxt = document.getElementById("dial-red-text");
+        const blackTxt = document.getElementById("dial-black-text");
+        if (redTxt) redTxt.innerText = `红: ${gs.clockTower.pointerRed}`;
+        if (blackTxt) blackTxt.innerText = `黑: ${gs.clockTower.pointerBlack}`;
+
+        // 4. 大妈状态与旧收音机
+        const gNpc = document.getElementById("grandma-npc");
+        const gTxt = document.getElementById("grandma-status-txt");
+        const radEl = document.getElementById("balcony-radio");
+        if (gs.clockTower.grandmaOut) {
+            if (gNpc) gNpc.innerText = "⛪🚪";
+            if (gTxt) gTxt.innerText = "老奶奶已前往大教堂(房间无人)";
+            if (radEl) radEl.style.display = gs.clockTower.radioStolen ? "none" : "block";
+        } else {
+            if (gNpc) gNpc.innerText = "👵";
+            if (gTxt) gTxt.innerText = "二楼阳台(老奶奶警惕看守中)";
+            if (radEl) radEl.style.display = "none";
+        }
+
+        // 5. 电线火花与流浪猫
+        const sparks = document.getElementById("electric-sparks");
+        const catEl = document.getElementById("alley-cat");
+        if (gs.wires.sparking) {
+            if (sparks) sparks.style.display = "block";
+        } else {
+            if (sparks) sparks.style.display = "none";
+        }
+        if (catEl) {
+            if (gs.strayCat.isCaptured) {
+                catEl.style.display = "none";
+            } else if (gs.strayCat.isElectrocuted) {
+                catEl.style.display = "block";
+                catEl.className = "stunned";
+                catEl.innerText = "😵‍💫⚡";
+            } else {
+                catEl.style.display = "block";
+                catEl.className = "";
+                catEl.innerText = "🐈‍⬛";
+            }
+        }
+
+        // 6. 三位乐手状态标签与动画
+        const saxBox = document.getElementById("mus-sax");
+        const drumBox = document.getElementById("mus-drum");
+        const hornBox = document.getElementById("mus-horn");
+        const tagSax = document.getElementById("tag-sax");
+        const tagDrum = document.getElementById("tag-drum");
+        const tagHorn = document.getElementById("tag-horn");
+        const ratIcon = document.getElementById("horn-rat");
+        const drumIcon = document.getElementById("drum-drum-icon");
+
+        if (tagSax) {
+            if (gs.musicians.sax.status === "fixed") {
+                tagSax.className = "mus-status-tag fixed";
+                tagSax.innerText = "🎷 已修复(蓝调合奏)";
+                saxBox.classList.add("playing");
+            } else {
+                tagSax.className = "mus-status-tag";
+                tagSax.innerText = "🎷 缺5枚螺母";
+                saxBox.classList.remove("playing");
+            }
+        }
+        if (tagDrum) {
+            if (gs.musicians.drum.status === "fixed") {
+                tagDrum.className = "mus-status-tag fixed";
+                tagDrum.innerText = "🥁 大油桶就绪";
+                drumBox.classList.add("playing");
+                if (drumIcon) drumIcon.innerText = "🛢️";
+            } else {
+                tagDrum.className = "mus-status-tag";
+                tagDrum.innerText = "🥁 鼓面破损";
+                drumBox.classList.remove("playing");
+                if (drumIcon) drumIcon.innerText = "🥁";
+            }
+        }
+        if (tagHorn) {
+            if (gs.musicians.horn.status === "fixed") {
+                tagHorn.className = "mus-status-tag fixed";
+                tagHorn.innerText = "🎺 通畅(低音轰鸣)";
+                hornBox.classList.add("playing");
+                if (ratIcon) ratIcon.style.display = "none";
+            } else {
+                tagHorn.className = "mus-status-tag";
+                tagHorn.innerText = "🎺 老鼠筑巢";
+                hornBox.classList.remove("playing");
+                if (ratIcon) ratIcon.style.display = "block";
+            }
+        }
+
+        // 7. 摔碎花盆与通关检测
+        const debris = document.getElementById("pot-debris");
+        if (debris) {
+            if (gs.flowerPot.smashed && (!gs.flowerPot.dialPicked || !gs.flowerPot.batteryPicked)) {
+                debris.style.display = "block";
+            } else {
+                debris.style.display = "none";
+            }
+        }
+    }
+
+    // 动作A：点击排污臭水塘抓苍蝇
+    function clickPuddle() {
+        const item = lvlCh8.gameState.josef.selectedItem;
+        const msg = lvlCh8.interactTavernSwarm(item || "空罐子");
+        playSfx('fly_buzz');
+        printLog(msg, "#8cff99");
+        renderInventory();
+        updateCh8DOM();
+    }
+
+    // 动作B：点击酒馆柜台 (放苍蝇/偷油)
+    function clickTavernCounter() {
+        const item = lvlCh8.gameState.josef.selectedItem;
+        if (item === "抓满苍蝇的罐子") {
+            const msg = lvlCh8.interactTavernSwarm("抓满苍蝇的罐子");
+            playSfx('fly_buzz');
+            printLog(msg, "#ff9900");
+        } else if (lvlCh8.gameState.tavern.ownerDistracted && !lvlCh8.gameState.tavern.oilPodStolen) {
+            const msg = lvlCh8.interactTavernSwarm("偷取");
+            playSfx('pick');
+            printLog(msg, "#8cff99");
+        } else {
+            const msg = lvlCh8.interactTavernSwarm(item || "");
+            printLog(msg);
+        }
+        renderInventory();
+        updateCh8DOM();
+    }
+
+    function clickOilPod(e) {
+        if (e) e.stopPropagation();
+        const msg = lvlCh8.interactTavernSwarm("大油桶");
+        if (lvlCh8.gameState.tavern.oilPodStolen) playSfx('pick');
+        printLog(msg, lvlCh8.gameState.tavern.oilPodStolen ? "#8cff99" : "#d4bda5");
+        renderInventory();
+        updateCh8DOM();
+    }
+
+    // 动作C：调整钟楼双指针
+    function adjustClock(color, step) {
+        playSfx('clank');
+        const msg = lvlCh8.rotateClockPointers(color, step);
+        if (lvlCh8.gameState.clockTower.grandmaOut) {
+            playSfx('church_bell');
+            printLog(msg, "#ff9900");
+        } else {
+            printLog(msg);
+        }
+        updateCh8DOM();
+    }
+
+    // 动作D：偷取阳台旧收音机
+    function clickBalcony() {
+        if (lvlCh8.gameState.clockTower.grandmaOut && !lvlCh8.gameState.clockTower.radioStolen) {
+            clickRadio();
+        } else {
+            printLog(lvlCh8.stealRadio());
+        }
+    }
+
+    function clickRadio(e) {
+        if (e) e.stopPropagation();
+        const msg = lvlCh8.stealRadio();
+        if (lvlCh8.gameState.clockTower.radioStolen) playSfx('pick');
+        printLog(msg, "#8cff99");
+        renderInventory();
+        updateCh8DOM();
+    }
+
+    // 动作E：电线挂收音机电猫
+    function clickWire() {
+        const item = lvlCh8.gameState.josef.selectedItem;
+        if (item === "旧收音机" || lvlCh8.gameState.josef.inventory.includes("旧收音机")) {
+            const msg = lvlCh8.handleCatElectricity("放置收音机");
+            playSfx('spark');
+            printLog(msg, "#ff9900");
+        } else {
+            printLog("裸露的高压电线正在滋滋闪烁微弱电弧，上面似乎可以挂载带线圈的电器来放电。");
+        }
+        renderInventory();
+        updateCh8DOM();
+    }
+
+    // 动作F：点击/抓取流浪猫
+    function clickCat() {
+        if (lvlCh8.gameState.strayCat.isElectrocuted && !lvlCh8.gameState.strayCat.isCaptured) {
+            const msg = lvlCh8.handleCatElectricity("捕捉");
+            playSfx('pick');
+            printLog(msg, "#8cff99");
+        } else {
+            const msg = lvlCh8.handleCatElectricity("");
+            printLog(msg);
+        }
+        renderInventory();
+        updateCh8DOM();
+    }
+
+    // 动作G：与三位乐手交互
+    function clickMusician(type) {
+        const item = lvlCh8.gameState.josef.selectedItem;
+        if (type === 'sax') {
+            const msg = lvlCh8.repairSaxophone(item);
+            if (lvlCh8.gameState.musicians.sax.status === "fixed") playSfx('sax');
+            printLog(msg, lvlCh8.gameState.musicians.sax.status === "fixed" ? "#8cff99" : "#d4bda5");
+        } else if (type === 'drum') {
+            const msg = lvlCh8.repairDrum(item);
+            if (lvlCh8.gameState.musicians.drum.status === "fixed") playSfx('drum');
+            printLog(msg, lvlCh8.gameState.musicians.drum.status === "fixed" ? "#8cff99" : "#d4bda5");
+        } else if (type === 'horn') {
+            if (item === "眩晕流浪猫" || lvlCh8.gameState.strayCat.isCaptured) {
+                const msg = lvlCh8.handleCatElectricity("通大号");
+                if (lvlCh8.gameState.musicians.horn.status === "fixed") playSfx('horn');
+                printLog(msg, "#8cff99");
+            } else {
+                printLog("大号里面堵着大老鼠！你需要弄一只猫塞进去吓跑它。");
+            }
+        }
+        renderInventory();
+        updateCh8DOM();
+        checkBandFinale();
+    }
+
+    // 检查三乐手联合演奏与大妈砸花盆
+    function checkBandFinale() {
+        const res = lvlCh8.checkBandPerformance();
+        if (typeof res === 'object' && res.audioTrigger === "PLAY_STREET_BAND_JAZZ_LOOP") {
+            playSfx('jazz_band');
+            setTimeout(() => playSfx('pot_smash'), 800);
+            printLog(res.description, "#ff9900");
+            updateCh8DOM();
+        }
+    }
+
+    // 拾取碎花盆中的关键道具
+    function clickPotDebris() {
+        const msg = lvlCh8.pickPotRewards();
+        playSfx('success');
+        printLog(msg, "#8cff99");
+        renderInventory();
+        updateCh8DOM();
+        if (lvlCh8.gameState.solved) {
+            setTimeout(() => {
+                document.getElementById("win-modal-ch8").style.display = "block";
+            }, 600);
+        }
+    }
+
+    function restartChapter8() {
+        lvlCh8.reset();
+        document.getElementById("win-modal-ch8").style.display = "none";
+        renderInventory();
+        updateCh8DOM();
+        printLog("第八关【钟楼大广场与三乐手】已重置。请先去臭水桶抓苍蝇，或去酒馆下棋！", "#8cff99");
+    }
+
+    // ==========================================
+    // 五子棋对局系统 (11x11 完美对战)
+    // ==========================================
+    function openGomokuModal() {
+        document.getElementById("gomoku-modal").style.display = "block";
+        renderGomokuBoard();
+    }
+    function closeGomokuModal() {
+        document.getElementById("gomoku-modal").style.display = "none";
+    }
+    function resetGomokuGame() {
+        lvlCh8.gameState.oldMan.boardState = Array(11).fill(0).map(() => Array(11).fill(0));
+        lvlCh8.gameState.oldMan.winner = 0;
+        document.getElementById("gomoku-status-msg").innerText = "";
+        renderGomokuBoard();
+    }
+    function renderGomokuBoard() {
+        const b = lvlCh8.gameState.oldMan.boardState;
+        const container = document.getElementById("gomoku-board");
+        container.innerHTML = "";
+        for (let r = 0; r < 11; r++) {
+            for (let c = 0; c < 11; c++) {
+                const cell = document.createElement("div");
+                cell.className = "gomoku-cell";
+                if (b[r][c] === 1) cell.innerText = "🟡";
+                else if (b[r][c] === 2) cell.innerText = "⚫";
+                cell.onclick = () => onGomokuCellClick(r, c);
+                container.appendChild(cell);
+            }
+        }
+    }
+    function onGomokuCellClick(r, c) {
+        if (lvlCh8.gameState.oldMan.winner !== 0) return;
+        const res = lvlCh8.playGomoku(r, c);
+        playSfx('clank');
+        renderGomokuBoard();
+        const msgEl = document.getElementById("gomoku-status-msg");
+        if (res.winner === 1) {
+            playSfx('success');
+            msgEl.innerText = "🎉 你击败了老头！获得【黄铜螺母】！";
+            printLog(res.text, "#ff9900");
+            renderInventory();
+            updateCh8DOM();
+        } else if (res.winner === 2) {
+            msgEl.innerText = "💀 老头完成了五连珠！请重新开局。";
+            printLog(res.text, "#e57373");
+        }
+    }
+
+    // 响应式视口自适应缩放
     function handleResize() {
         const wrapper = document.getElementById("stage-wrapper");
         const stage = document.getElementById("game-stage");
@@ -800,7 +1750,15 @@
         }
     }
     window.addEventListener("resize", handleResize);
-    window.addEventListener("DOMContentLoaded", handleResize);
+    window.addEventListener("DOMContentLoaded", () => {
+        handleResize();
+        // 检查 URL 是否带 #ch8 或 ?ch=8
+        if (window.location.hash === "#ch8" || window.location.search.includes("ch=8")) {
+            switchChapter(8);
+        } else {
+            switchChapter(1);
+        }
+    });
     handleResize();
 </script>
 </body>

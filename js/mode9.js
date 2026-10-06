@@ -368,19 +368,32 @@
                 screwsObtained: false,
                 solved: false
             },
-            // 第8关 机器人乐团
+            // 第8关 机器人乐团与钟楼广场 (1:1 像素级交互状态机)
             ch8: {
+                level: (typeof TownSquareLevel !== 'undefined') ? new TownSquareLevel() : null,
                 gaveScrews: false,
                 caughtFlies: false,
+                fliesCount: 0,
                 releasedFlies: false,
+                oilStolen: false,
+                catShocked: false,
                 catCaught: false,
+                radioFound: false,
+                drumFixed: false,
+                saxFixed: false,
+                hornFixed: false,
                 bandPlaying: false,
+                potSmashed: false,
+                potLooted: false,
                 solved: false
             },
             // 第9关 钟楼大广场
             ch9: {
+                pointerRed: "I",
+                pointerBlack: "VI",
                 hourHand: 3, // 目标 7 (VII)
-                minuteHand: 0, // 目标 8 (倒∞)
+                minuteHand: 0, // 目标 8 (倒∞ / ∽)
+                grandmaOut: false,
                 oilCanFilled: false,
                 solved: false
             },
@@ -1317,43 +1330,154 @@
         drawHintBanner(ctx, '【第七关：酒吧下棋】在 9x9 棋盘上与黑帽对手对决，率先五子连珠赢取螺丝，顺便顺走粘蝇纸！');
     }
 
-    // 第8关：乐团
+    // 第8关：乐团与钟楼广场 (1:1 像素级全细节交互)
     function renderChapter8(ctx, w, h) {
-        ctx.fillStyle = '#3a2e26';
+        ctx.fillStyle = '#2d221a';
         ctx.fillRect(0, 0, w, h);
 
         const ch8 = m9.levels.ch8;
+        const lvl = ch8.level || (typeof TownSquareLevel !== 'undefined' ? (ch8.level = new TownSquareLevel()) : null);
 
-        // 三位街头乐手（萨克斯手、鼓手、小号手）
+        // 广场青石板路
+        ctx.fillStyle = '#1c1511';
+        ctx.fillRect(0, h * 0.72, w, h * 0.28);
+        ctx.strokeStyle = '#3e2e23';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, h * 0.72);
+        ctx.lineTo(w, h * 0.72);
+        ctx.stroke();
+
+        // 1. 左侧蒸汽酒吧外观与柜台
+        ctx.fillStyle = '#3a2b20';
+        ctx.fillRect(w * 0.04, h * 0.28, w * 0.18, h * 0.44);
+        ctx.strokeStyle = '#5a4232';
+        ctx.strokeRect(w * 0.04, h * 0.28, w * 0.18, h * 0.44);
+
+        // 酒吧招牌
+        ctx.fillStyle = '#ff9900';
+        ctx.fillRect(w * 0.05, h * 0.3, w * 0.16, 24);
+        ctx.fillStyle = '#1a1512';
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('🍺 STEAM TAVERN', w * 0.13, h * 0.3 + 16);
+
+        // 柜台与老板
+        ctx.fillStyle = '#231812';
+        ctx.fillRect(w * 0.06, h * 0.42, w * 0.14, h * 0.22);
+        ctx.fillStyle = '#ffd54f';
+        ctx.font = '18px sans-serif';
+        const distracted = lvl ? lvl.gameState.tavern.ownerDistracted : ch8.releasedFlies;
+        ctx.fillText(distracted ? '🪰😵🪰' : '🧔', w * 0.13, h * 0.52);
+
+        // 大油桶 (若未偷取)
+        const oilStolen = lvl ? lvl.gameState.tavern.oilPodStolen : ch8.oilStolen;
+        if (!oilStolen) {
+            ctx.fillStyle = '#d35400';
+            ctx.font = '20px sans-serif';
+            ctx.fillText('🛢️', w * 0.16, h * 0.6);
+        }
+
+        // 臭水塘与飞舞苍蝇
+        const fliesCount = lvl ? lvl.gameState.tavern.fliesCaptured : ch8.fliesCount;
+        ctx.fillStyle = '#354a21';
+        ctx.beginPath();
+        ctx.ellipse(w * 0.13, h * 0.82, 38, 18, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#4e6b2e';
+        ctx.stroke();
+        ctx.fillStyle = '#a4e637';
+        ctx.font = '11px sans-serif';
+        ctx.fillText(`🪰 臭水塘 (${fliesCount}/5)`, w * 0.13, h * 0.82 + 4);
+
+        // 2. 三位街头乐手 (萨克斯手、破鼓手、大号手)
+        const saxFixed = lvl ? (lvl.gameState.musicians.sax.status === 'fixed') : ch8.saxFixed;
+        const drumFixed = lvl ? (lvl.gameState.musicians.drum.status === 'fixed') : ch8.drumFixed;
+        const hornFixed = lvl ? (lvl.gameState.musicians.horn.status === 'fixed') : ch8.hornFixed;
+
         const musicians = [
-            { name: '🎷 萨克斯手', x: w * 0.3, status: ch8.gaveScrews ? '已修复' : '缺少固定螺丝' },
-            { name: '🥁 鼓手', x: w * 0.5, status: ch8.catCaught ? '黑猫伴奏中' : '管道里有猫卡住' },
-            { name: '🎺 小号手', x: w * 0.7, status: '演奏就绪' }
+            { name: '🎷 萨克斯手', x: w * 0.34, status: saxFixed ? '已修复 (蓝调合奏)' : '缺5枚按键螺母', fixed: saxFixed, icon: '🎷' },
+            { name: '🥁 破鼓手', x: w * 0.48, status: drumFixed ? '大油桶底鼓 (强力节拍)' : '鼓面破损 (缺大油桶)', fixed: drumFixed, icon: drumFixed ? '🛢️' : '🥁' },
+            { name: '🎺 大号手', x: w * 0.62, status: hornFixed ? '已疏通 (低音轰鸣)' : '老鼠筑巢堵塞 (需猫驱赶)', fixed: hornFixed, icon: '🎺' }
         ];
 
         musicians.forEach(m => {
-            ctx.fillStyle = '#5d4037';
-            ctx.fillRect(m.x - 25, h * 0.5, 50, 75);
-            ctx.fillStyle = '#ffd54f';
-            ctx.font = 'bold 14px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(m.name, m.x, h * 0.45);
-            ctx.font = '12px sans-serif';
-            ctx.fillStyle = '#ecf0f1';
-            ctx.fillText(m.status, m.x, h * 0.65);
+            // 人物身躯
+            ctx.fillStyle = m.fixed ? '#3e4a36' : '#5d4037';
+            ctx.fillRect(m.x - 28, h * 0.46, 56, 80);
+            ctx.strokeStyle = m.fixed ? '#81c784' : '#8d6e63';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(m.x - 28, h * 0.46, 56, 80);
+
+            // 头部
+            ctx.fillStyle = '#cfd8dc';
+            ctx.beginPath();
+            ctx.arc(m.x, h * 0.42, 16, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 乐器图标
+            ctx.font = '22px sans-serif';
+            ctx.fillText(m.icon, m.x + 14, h * 0.52);
+
+            // 标签
+            ctx.fillStyle = m.fixed ? '#a5d6a7' : '#ffd54f';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillText(m.name, m.x, h * 0.35);
+
+            ctx.font = '10px sans-serif';
+            ctx.fillStyle = m.fixed ? '#c8e6c9' : '#ecf0f1';
+            ctx.fillText(m.status, m.x, h * 0.64);
         });
 
-        // 排水管道与猫咪
-        ctx.fillStyle = '#2c3e50';
-        ctx.fillRect(w * 0.45, h * 0.75, 80, 24);
-        if (!ch8.catCaught) {
-            ctx.fillStyle = '#e74c3c';
-            ctx.font = '12px sans-serif';
-            ctx.fillText('🐱 黑猫探头 (用苍蝇诱出)', w * 0.49, h * 0.73);
+        // 3. 右侧路灯、高压裸露电线与流浪黑猫
+        ctx.fillStyle = '#37474f';
+        ctx.fillRect(w * 0.78, h * 0.32, 8, h * 0.4);
+        ctx.strokeStyle = '#ff5722';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(w * 0.78, h * 0.35);
+        ctx.lineTo(w * 0.88, h * 0.38);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const sparksActive = lvl ? lvl.gameState.wires.sparking : ch8.catShocked;
+        if (sparksActive) {
+            ctx.fillStyle = '#ffeb3b';
+            ctx.font = '16px sans-serif';
+            ctx.fillText('⚡💥', w * 0.83, h * 0.34);
+        }
+
+        const catCaptured = lvl ? lvl.gameState.strayCat.isCaptured : ch8.catCaught;
+        const catShocked = lvl ? lvl.gameState.strayCat.isElectrocuted : ch8.catShocked;
+        if (!catCaptured) {
+            ctx.font = '24px sans-serif';
+            if (catShocked) {
+                ctx.fillText('😵‍💫🐈‍⬛', w * 0.84, h * 0.7);
+                ctx.fillStyle = '#ffcc80';
+                ctx.font = '10px sans-serif';
+                ctx.fillText('(点击捕获眩晕猫)', w * 0.84, h * 0.74);
+            } else {
+                ctx.fillText('🐈‍⬛', w * 0.86, h * 0.5);
+                ctx.fillStyle = '#bbb';
+                ctx.font = '10px sans-serif';
+                ctx.fillText('(墙头黑猫)', w * 0.86, h * 0.54);
+            }
+        }
+
+        // 4. 碎裂花盆掉落物
+        const potSmashed = lvl ? lvl.gameState.flowerPot.smashed : ch8.potSmashed;
+        const potLooted = lvl ? (lvl.gameState.flowerPot.dialPicked && lvl.gameState.flowerPot.batteryPicked) : ch8.potLooted;
+        if (potSmashed && !potLooted) {
+            ctx.fillStyle = '#ff9900';
+            ctx.font = '16px sans-serif';
+            ctx.fillText('🏺💥🔘🔋', w * 0.48, h * 0.78);
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText('点击捡起：【调频拨盘】与【废旧电池】', w * 0.48, h * 0.82);
         }
 
         drawJosef(ctx);
-        drawHintBanner(ctx, '【第八关：机器人乐团】将螺丝交给萨克斯手，用粘蝇纸捕捉苍蝇赶出管道黑猫，乐团奏响欢庆乐章！');
+        drawHintBanner(ctx, '【第八关：机器人乐团】1:1 全要素！捉苍蝇偷油桶修破鼓、五子棋赢螺母修萨克斯、电线电猫通大号，齐奏蒸汽爵士乐！');
     }
 
     // 第9关：钟楼大广场
@@ -1366,11 +1490,12 @@
         }
 
         const ch9 = m9.levels.ch9;
+        const lvl = (typeof TownSquareLevel !== 'undefined' && window.mach_chapter8) ? window.mach_chapter8 : null;
 
         // 巨型蒸汽大时钟表盘
         const clockX = w * 0.48;
         const clockY = h * 0.38;
-        const radius = 65;
+        const radius = 68;
 
         ctx.fillStyle = '#d7ccc8';
         ctx.strokeStyle = '#4e342e';
@@ -1381,29 +1506,32 @@
         ctx.stroke();
 
         // 罗马数字刻度标记
-        ctx.fillStyle = '#212121';
-        ctx.font = 'bold 13px serif';
+        ctx.fillStyle = '#c62828';
+        ctx.font = 'bold 14px serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        const curRed = lvl ? lvl.gameState.clockTower.pointerRed : ch9.pointerRed;
+        const curBlack = lvl ? lvl.gameState.clockTower.pointerBlack : ch9.pointerBlack;
+        ctx.fillText(`红: ${curRed}`, clockX, clockY - 32);
+
+        ctx.fillStyle = '#212121';
+        ctx.fillText(`黑: ${curBlack}`, clockX, clockY + 32);
+
+        ctx.font = 'bold 12px serif';
         ctx.fillText('VII', clockX + Math.cos(Math.PI * 0.7) * (radius - 16), clockY + Math.sin(Math.PI * 0.7) * (radius - 16));
-        ctx.fillText('∞', clockX + Math.cos(Math.PI * 0.2) * (radius - 16), clockY + Math.sin(Math.PI * 0.2) * (radius - 16));
+        ctx.fillText('∽', clockX + Math.cos(Math.PI * 0.2) * (radius - 16), clockY + Math.sin(Math.PI * 0.2) * (radius - 16));
 
-        // 时针与分针
-        ctx.strokeStyle = '#c0392b';
-        ctx.lineWidth = 4;
-        const hAngle = (ch9.hourHand / 12) * Math.PI * 2 - Math.PI / 2;
-        ctx.beginPath();
-        ctx.moveTo(clockX, clockY);
-        ctx.lineTo(clockX + Math.cos(hAngle) * 38, clockY + Math.sin(hAngle) * 38);
-        ctx.stroke();
-
-        ctx.strokeStyle = '#2980b9';
-        ctx.lineWidth = 3;
-        const mAngle = (ch9.minuteHand / 12) * Math.PI * 2 - Math.PI / 2;
-        ctx.beginPath();
-        ctx.moveTo(clockX, clockY);
-        ctx.lineTo(clockX + Math.cos(mAngle) * 52, clockY + Math.sin(mAngle) * 52);
-        ctx.stroke();
+        // 二楼大妈阳台
+        const grandmaOut = lvl ? lvl.gameState.clockTower.grandmaOut : ch9.grandmaOut;
+        ctx.fillStyle = '#2a1a12';
+        ctx.fillRect(w * 0.74, h * 0.22, 90, 70);
+        ctx.strokeStyle = '#5d4037';
+        ctx.strokeRect(w * 0.74, h * 0.22, 90, 70);
+        ctx.font = '22px sans-serif';
+        ctx.fillText(grandmaOut ? '⛪🚪' : '👵', w * 0.8, h * 0.28);
+        ctx.font = '10px sans-serif';
+        ctx.fillStyle = grandmaOut ? '#81c784' : '#ffb74d';
+        ctx.fillText(grandmaOut ? '房间空了(可取收音机)' : '大妈看守中', w * 0.8, h * 0.35);
 
         // 自动加油机
         ctx.fillStyle = '#d35400';
@@ -1413,7 +1541,7 @@
         ctx.fillText('🛢️ 加油机', w * 0.8, h * 0.62);
 
         drawJosef(ctx);
-        drawHintBanner(ctx, '【第九关：钟楼大广场】将大钟时间调至【VII】与【倒∞】，钟声敲响打开自动售油机取油！');
+        drawHintBanner(ctx, '【第九关：钟楼大广场】将大钟时间调至红【VII】与黑【∽】，钟声响起大妈前往教堂，阳台旧收音机入手！');
     }
 
     // 第10关：自毁风扇
@@ -2505,6 +2633,206 @@
                 }, 300);
             }
             return;
+        } else if (ch === 8) {
+            const ch8 = m9.levels.ch8;
+            const lvl = ch8.level || (typeof TownSquareLevel !== 'undefined' ? (ch8.level = new TownSquareLevel()) : null);
+
+            // 1. 点击臭水塘捉苍蝇
+            if (Math.hypot(x - w * 0.13, y - h * 0.82) < 45) {
+                if (ch8.fliesCount < 5) {
+                    ch8.fliesCount++;
+                    if (lvl) lvl.interactTavernSwarm('空罐子');
+                    playSound('pick');
+                    m9.josef.thoughtText = `抓到苍蝇 (${ch8.fliesCount}/5)！`;
+                    m9.josef.thoughtTimer = 2.0;
+                    if (ch8.fliesCount >= 5) {
+                        ch8.caughtFlies = true;
+                        addItem('fly_jar', '装满苍蝇的罐子', '🫙', '装有5只狂暴绿头苍蝇');
+                        m9.josef.thoughtText = '罐子装满了苍蝇！去酒吧释放骚扰老板吧！';
+                    }
+                }
+                return;
+            }
+
+            // 2. 点击酒馆柜台 (放苍蝇与偷大油桶)
+            if (x >= w * 0.04 && x <= w * 0.22 && y >= h * 0.38 && y <= h * 0.65) {
+                if (!ch8.releasedFlies) {
+                    if (hasItem('fly_jar') || ch8.caughtFlies) {
+                        removeItem('fly_jar');
+                        ch8.releasedFlies = true;
+                        if (lvl) lvl.interactTavernSwarm('抓满苍蝇的罐子');
+                        playSound('success');
+                        m9.josef.thoughtText = '苍蝇骚扰老板！快趁机偷走柜台的大油桶！';
+                        m9.josef.thoughtTimer = 3.0;
+                    } else {
+                        m9.josef.thoughtText = '老板死死盯着柜台，需要苍蝇来引开他的视线！';
+                        m9.josef.thoughtTimer = 2.5;
+                    }
+                } else if (!ch8.oilStolen) {
+                    ch8.oilStolen = true;
+                    if (lvl) lvl.interactTavernSwarm('大油桶');
+                    addItem('oil_pod', '大油桶', '🛢️', '坚固厚重的大油桶');
+                    playSound('pick');
+                    m9.josef.thoughtText = '成功顺走大油桶！可以交给破鼓手当底鼓了！';
+                    m9.josef.thoughtTimer = 3.0;
+                }
+                return;
+            }
+
+            // 3. 点击萨克斯手 (给予螺丝修复)
+            if (Math.hypot(x - w * 0.34, y - h * 0.52) < 45) {
+                if (!ch8.saxFixed) {
+                    if (hasItem('brass_screws') || ch8.gaveScrews || (lvl && lvl.gameState.josef.inventory.includes('黄铜螺母'))) {
+                        removeItem('brass_screws');
+                        ch8.saxFixed = true;
+                        ch8.gaveScrews = true;
+                        if (lvl) lvl.repairSaxophone('黄铜螺母');
+                        playSound('solve');
+                        m9.josef.thoughtText = '萨克斯手按键修复！吹响了蓝调！';
+                        m9.josef.thoughtTimer = 2.5;
+                        checkCh8BandFinish();
+                    } else {
+                        m9.josef.thoughtText = '萨克斯缺5枚按键螺母，需在第7关酒吧下棋赢取！';
+                        m9.josef.thoughtTimer = 2.5;
+                    }
+                }
+                return;
+            }
+
+            // 4. 点击破鼓手 (给予大油桶修复)
+            if (Math.hypot(x - w * 0.48, y - h * 0.52) < 45) {
+                if (!ch8.drumFixed) {
+                    if (hasItem('oil_pod') || ch8.oilStolen) {
+                        removeItem('oil_pod');
+                        ch8.drumFixed = true;
+                        if (lvl) lvl.repairDrum('大油桶');
+                        playSound('clank');
+                        m9.josef.thoughtText = '大油桶安放就绪！鼓手敲出震撼节奏！';
+                        m9.josef.thoughtTimer = 2.5;
+                        checkCh8BandFinish();
+                    } else {
+                        m9.josef.thoughtText = '鼓面破裂！需要厚重的大油桶做底鼓。';
+                        m9.josef.thoughtTimer = 2.5;
+                    }
+                }
+                return;
+            }
+
+            // 5. 点击电线与黑猫 (电击与抓猫)
+            if (x >= w * 0.78 && x <= w * 0.9 && y >= h * 0.3 && y <= h * 0.45) {
+                // 点击电线
+                if (!ch8.catShocked) {
+                    if (hasItem('old_radio') || ch8.radioFound) {
+                        removeItem('old_radio');
+                        ch8.catShocked = true;
+                        if (lvl) lvl.handleCatElectricity('放置收音机');
+                        playSound('clank');
+                        m9.josef.thoughtText = '收音机短路！强电流击晕了墙头黑猫！';
+                        m9.josef.thoughtTimer = 3.0;
+                    } else {
+                        m9.josef.thoughtText = '电线上可以挂载收音机来释放强电流。';
+                        m9.josef.thoughtTimer = 2.0;
+                    }
+                }
+                return;
+            }
+
+            if (x >= w * 0.78 && x <= w * 0.92 && y >= h * 0.5 && y <= h * 0.75) {
+                // 点击猫
+                if (ch8.catShocked && !ch8.catCaught) {
+                    ch8.catCaught = true;
+                    if (lvl) lvl.handleCatElectricity('捕捉');
+                    addItem('stunned_cat', '眩晕流浪猫', '🐈‍⬛', '被电击眩晕的流浪黑猫');
+                    playSound('pick');
+                    m9.josef.thoughtText = '把眩晕黑猫收进铁舱！可以去大号驱赶老鼠了！';
+                    m9.josef.thoughtTimer = 3.0;
+                } else if (!ch8.catShocked) {
+                    m9.josef.thoughtText = '黑猫太敏捷了！需要用收音机在电线上将其电晕。';
+                    m9.josef.thoughtTimer = 2.0;
+                }
+                return;
+            }
+
+            // 6. 点击大号手 (塞猫赶老鼠)
+            if (Math.hypot(x - w * 0.62, y - h * 0.52) < 45) {
+                if (!ch8.hornFixed) {
+                    if (hasItem('stunned_cat') || ch8.catCaught) {
+                        removeItem('stunned_cat');
+                        ch8.hornFixed = true;
+                        if (lvl) lvl.handleCatElectricity('通大号');
+                        playSound('solve');
+                        m9.josef.thoughtText = '黑猫钻入大号抓出老鼠！大号恢复通畅！';
+                        m9.josef.thoughtTimer = 3.0;
+                        checkCh8BandFinish();
+                    } else {
+                        m9.josef.thoughtText = '大号管内老鼠筑巢阻塞，需要猫来驱逐！';
+                        m9.josef.thoughtTimer = 2.5;
+                    }
+                }
+                return;
+            }
+
+            // 7. 点击碎裂花盆 (拾取调频拨盘与电池通关)
+            if (ch8.potSmashed && !ch8.potLooted && Math.hypot(x - w * 0.48, y - h * 0.8) < 55) {
+                ch8.potLooted = true;
+                if (lvl) lvl.pickPotRewards();
+                addItem('radio_dial', '调频拨盘', '🔘', '收音机关键调谐拨盘');
+                addItem('zinc_battery', '废旧锌锰电池', '🔋', '充满能量的蒸汽电池');
+                playSound('success');
+                ch8.solved = true;
+                m9.josef.thoughtText = '关键道具入手！第八关圆满通关！';
+                m9.josef.thoughtTimer = 3.0;
+                setTimeout(() => advanceToNextChapter(), 1600);
+                return;
+            }
+            return;
+        } else if (ch === 9) {
+            const ch9 = m9.levels.ch9;
+            const lvl = (typeof TownSquareLevel !== 'undefined' && window.mach_chapter8) ? window.mach_chapter8 : null;
+
+            // 调整钟楼指针
+            if (Math.hypot(x - w * 0.48, y - h * 0.38) < 75) {
+                if (x < w * 0.48) {
+                    // 点击左半边调整红针
+                    ch9.pointerRed = (ch9.pointerRed === 'VII') ? 'I' : 'VII';
+                    ch9.hourHand = (ch9.hourHand === 7) ? 1 : 7;
+                    if (lvl) lvl.gameState.clockTower.pointerRed = ch9.pointerRed;
+                } else {
+                    // 点击右半边调整黑针
+                    ch9.pointerBlack = (ch9.pointerBlack === '∽') ? 'VI' : '∽';
+                    ch9.minuteHand = (ch9.minuteHand === 8) ? 6 : 8;
+                    if (lvl) lvl.gameState.clockTower.pointerBlack = ch9.pointerBlack;
+                }
+                playSound('clank');
+                if (ch9.pointerRed === 'VII' && ch9.pointerBlack === '∽') {
+                    ch9.grandmaOut = true;
+                    if (lvl) lvl.gameState.clockTower.grandmaOut = true;
+                    playSound('success');
+                    m9.josef.thoughtText = '钟声当当作响！二楼老奶奶推门前往大教堂！';
+                    m9.josef.thoughtTimer = 3.0;
+                }
+                return;
+            }
+
+            // 点击阳台拿收音机
+            if (x >= w * 0.74 && x <= w * 0.88 && y >= h * 0.22 && y <= h * 0.35) {
+                if (ch9.grandmaOut) {
+                    if (!hasItem('old_radio')) {
+                        addItem('old_radio', '旧收音机', '📻', '大妈阳台上的蒸汽收音机');
+                        m9.levels.ch8.radioFound = true;
+                        playSound('pick');
+                        m9.josef.thoughtText = '顺利取得旧收音机！';
+                        m9.josef.thoughtTimer = 2.5;
+                        ch9.solved = true;
+                        setTimeout(() => advanceToNextChapter(), 1500);
+                    }
+                } else {
+                    m9.josef.thoughtText = '老奶奶在阳台监视，无法靠近！先把大钟调到VII和∽！';
+                    m9.josef.thoughtTimer = 2.5;
+                }
+                return;
+            }
+            return;
         } else if (ch === 14) {
             const ch14 = m9.levels.ch14;
             const bX = w * 0.2;
@@ -2627,6 +2955,17 @@
                     return;
                 }
             }
+        }
+    }
+
+    function checkCh8BandFinish() {
+        const ch8 = m9.levels.ch8;
+        if (ch8.saxFixed && ch8.drumFixed && ch8.hornFixed && !ch8.potSmashed) {
+            ch8.potSmashed = true;
+            ch8.bandPlaying = true;
+            playSound('success');
+            m9.josef.thoughtText = '三位乐手合奏激昂蒸汽爵士乐！狂怒大妈从楼上砸下巨大花盆！';
+            m9.josef.thoughtTimer = 3.5;
         }
     }
 
