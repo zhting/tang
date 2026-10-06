@@ -2265,23 +2265,37 @@
             ctx.fillText(`密码: ${cm.password}`, cx + 10, cy + 64);
         });
 
-        ctx.fillStyle = '#fff';
-        ctx.font = '13px sans-serif';
+        // 底部 1:1 大集合版快速跳转按钮
+        const btnY = mapY + mapH - 52;
+        ctx.fillStyle = '#b26a00';
+        ctx.strokeStyle = '#ffd54f';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(mapX + 35, btnY, mapW - 70, 36, [8]);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffe082';
+        ctx.font = 'bold 14px "Microsoft YaHei", sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('✖️ 点击空白处关闭选关', w * 0.5, mapY + mapH - 18);
+        ctx.fillText('⚡ 切换至 1:1 终极完全体大集合版 (10大经典模块独立沙盒)', w * 0.5, btnY + 18);
     }
 
     // ==========================================
     // 交互与点击事件逻辑
     // ==========================================
     function handlePointerDown(e) {
+        const canvas = document.getElementById('gameCanvas');
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const clickX = (e.clientX - rect.left) * scaleX;
+        const clickY = (e.clientY - rect.top) * scaleY;
+        const w = canvas.width;
+        const h = canvas.height;
+
         if (m9.state === 'book_hint') {
-            const canvas = document.getElementById('gameCanvas');
-            const rect = canvas.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const clickY = e.clientY - rect.top;
-            const w = canvas.width;
-            const h = canvas.height;
             const bookW = Math.min(w * 0.85, 860);
             const bookH = Math.min(h * 0.85, 580);
             const bookX = (w - bookW) / 2;
@@ -2319,18 +2333,23 @@
         }
 
         if (m9.state === 'chapter_select') {
-            const canvas = document.getElementById('gameCanvas');
-            const rect = canvas.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const clickY = e.clientY - rect.top;
-            const w = canvas.width;
-            const h = canvas.height;
             const mapW = Math.min(w * 0.88, 900);
             const mapH = Math.min(h * 0.88, 600);
             const mapX = (w - mapW) / 2;
             const mapY = (h - mapH) / 2;
             const cardW = (mapW - 100) / 4;
             const cardH = (mapH - 140) / 4;
+
+            // 检查点击底部的“1:1大集合版”入口按钮
+            if (clickX >= mapX + 35 && clickX <= mapX + mapW - 35 && clickY >= mapY + mapH - 55 && clickY <= mapY + mapH - 15) {
+                playSound('gear');
+                if (typeof window.openMachinariumModal === 'function') {
+                    window.openMachinariumModal();
+                } else {
+                    window.location.href = 'machinarium.html';
+                }
+                return;
+            }
 
             for (let i = 0; i < CHAPTERS_META.length; i++) {
                 const col = i % 4;
@@ -2350,13 +2369,8 @@
         }
 
         // 正常游玩界面交互
-        const canvas = document.getElementById('gameCanvas');
-        if (!canvas) return;
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const w = canvas.width;
-        const h = canvas.height;
+        const x = clickX;
+        const y = clickY;
 
         // 1. 顶部 HUD 按钮点击
         if (y <= 54) {
@@ -3087,5 +3101,7 @@
         }
         window.removeEventListener('keydown', handleKeyDown);
     };
+
+    window.m9 = m9;
 
 })();

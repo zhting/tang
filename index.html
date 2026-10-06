@@ -2178,7 +2178,8 @@
         <h1 id="homeTitle">积木小院</h1>
         <div class="home-buttons">
             <button class="btn-home" id="startBtn" onclick="startGame(gameState.mode)">▶ 开始游戏</button>
-            <button class="btn-home" id="m9OneToOneBtn" onclick="openMachinariumModal()" style="display: none; background: linear-gradient(135deg, #ff9900 0%, #d35400 100%); color: white; border: 2px solid #ffe082;">🤖 废料场 1:1 交互版</button>
+            <button class="btn-home" id="btnMode9Direct" onclick="selectMode(9); startGame(9);" style="background: linear-gradient(135deg, #4b382a 0%, #8d6e63 100%); color: #ffe082; border: 2px solid #ffd54f; box-shadow: 0 4px 15px rgba(255, 213, 79, 0.4); font-weight: bold;">🤖 模式九：机械迷城 (大集合版)</button>
+            <button class="btn-home" id="m9OneToOneBtn" onclick="openMachinariumModal()" style="background: linear-gradient(135deg, #e65100 0%, #ff9800 100%); color: white; border: 2px solid #ffe082; box-shadow: 0 4px 12px rgba(255,153,0,0.4); font-weight: bold;">⚡ 机械迷城 1:1 独立大集合版 (10大模块)</button>
             <button class="btn-home" onclick="openLeaderboard()">🏆 排行榜</button>
             <button class="btn-home" onclick="openModeModal()">⚙️ 选择模式 (<span id="modeDisplayBtn">一</span>)</button>
             <button class="btn-home" onclick="openInstructionsModal()">📖 游戏说明</button>
@@ -2457,12 +2458,15 @@
 
     <!-- 🤖 机械迷城 1:1 像素交互舞台弹窗 -->
     <div id="machinariumModal" class="modal-overlay hidden" style="z-index: 1500; background: rgba(0, 0, 0, 0.88); padding: 10px;">
-        <div class="modal-content" style="max-width: 950px; width: 100%; height: 90vh; max-height: 800px; padding: 15px; display: flex; flex-direction: column; background: #1a1512; border: 3px solid #ff9900; box-shadow: 0 0 35px rgba(255,153,0,0.5);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div class="modal-content" style="max-width: 1060px; width: 98%; height: 92vh; max-height: 880px; padding: 12px; display: flex; flex-direction: column; background: #1a1512; border: 3px solid #ff9900; box-shadow: 0 0 35px rgba(255,153,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
                 <h3 style="color: #ff9900; margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px;">
-                    <span>🤖</span> 机械迷城 - 废料场 1:1 像素交互版
+                    <span>🤖</span> 机械迷城 1:1 终极完全体大集合版 (10大经典模块)
                 </h3>
-                <button class="btn-secondary" onclick="closeMachinariumModal()" style="margin: 0; padding: 4px 14px; font-size: 13px; color: #fff; background: #3d2f26; border: 1px solid #5c4a3c; cursor: pointer;">关闭 ✖</button>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <a href="machinarium.html" target="_blank" style="padding: 4px 10px; font-size: 12px; color: #ffe082; background: #3d2817; border: 1px solid #c48c4d; text-decoration: none; border-radius: 3px; font-weight: bold;">↗️ 全屏独立窗口</a>
+                    <button class="btn-secondary" onclick="closeMachinariumModal()" style="margin: 0; padding: 4px 14px; font-size: 13px; color: #fff; background: #3d2f26; border: 1px solid #5c4a3c; cursor: pointer;">关闭 ✖</button>
+                </div>
             </div>
             <iframe id="machinariumIframe" src="about:blank" style="flex: 1; width: 100%; border: none; border-radius: 4px; background: #1a1512;"></iframe>
         </div>
@@ -3236,8 +3240,8 @@
     <script src="js/mcPaintingStudio.js?v=20261006_v110"></script>
     <script src="js/mode7.js?v=20260924_v107"></script>
     <script src="js/mode8.js?v=1.0.0"></script>
-    <script src="js/mach_chapter8.js?v=20261006_v111"></script>
-    <script src="js/mode9.js?v=20261006_v111"></script>
+    <script src="js/mach_chapter8.js?v=20261006_v112"></script>
+    <script src="js/mode9.js?v=20261006_v112"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -4726,7 +4730,7 @@
                 { id: 7, name: '模式七：第七音 (简单模式)', icon: '🟢', color: 'linear-gradient(135deg, #1b5e20 0%, #43a047 100%)', text: 'white', diff: 'easy' },
                 { id: 7.5, name: '模式七：第七音 (普通模式)', icon: '🟠', color: 'linear-gradient(135deg, #e65100 0%, #ffa000 100%)', text: 'white', diff: 'normal' },
                 { id: 8, name: '模式八：坚果保龄球 (种植版)', icon: '🌰', color: 'linear-gradient(135deg, #5D4037 0%, #388E3C 100%)', text: 'white' },
-                { id: 9, name: '模式九：机械迷城', icon: '🤖', color: 'linear-gradient(135deg, #4b382a 0%, #8d6e63 100%)', text: 'white', isNew: true }
+                { id: 9, name: '模式九：机械迷城 (1:1 大集合版)', icon: '🤖', color: 'linear-gradient(135deg, #4b382a 0%, #8d6e63 100%)', text: '#ffe082', isNew: true }
             ];
 
             modes.forEach(m => {
@@ -4949,7 +4953,7 @@
                     </p>
                     <div style="margin-top: 14px; text-align: center;">
                         <a href="machinarium.html" onclick="openMachinariumModal(); closeInstructionsModal(); return false;" class="mc-btn" style="display: inline-block; background: #ff9900; color: #1a1512; font-weight: bold; text-decoration: none; padding: 8px 18px; border-radius: 4px; box-shadow: 0 4px 12px rgba(255,153,0,0.45); font-size: 13px;">
-                            🤖 开启【废料场 1:1 像素级交互独立版】
+                            🤖 开启【机械迷城 1:1 终极完全体大集合版 (10大经典模块)】
                         </a>
                     </div>
                 `;
@@ -11945,13 +11949,13 @@
                 startBtn.innerHTML = "▶ 开启保龄球 (模式八)";
             } else if (mode === 9) {
                 // 进入“机械迷城”主题
-                title.textContent = "机械迷城";
+                title.textContent = "机械迷城 (Machinarium)";
                 title.style.color = "#ffe082";
                 title.style.textShadow = "0 4px 12px rgba(0, 0, 0, 0.9), 0 0 25px rgba(255, 179, 0, 0.6)";
                 screen.style.background = "linear-gradient(135deg, #2b1f17 0%, #4a3828 50%, #1e150f 100%)";
                 startBtn.style.background = "linear-gradient(135deg, #8d6e63 0%, #4e342e 100%)";
                 startBtn.style.color = "#ffffff";
-                startBtn.innerHTML = "▶ 开启冒险 (模式九)";
+                startBtn.innerHTML = "▶ 开启机械迷城冒险 (模式九)";
             } else {
                 // 默认“积木小院”主题
                 title.textContent = "积木小院";
@@ -11959,8 +11963,21 @@
                 startBtn.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
                 startBtn.style.color = "white";
             }
+            const directM9Btn = document.getElementById('btnMode9Direct');
+            if (directM9Btn) {
+                if (mode === 9) {
+                    directM9Btn.innerHTML = "🗺️ 16 大章节选关直达";
+                    directM9Btn.onclick = () => {
+                        if (typeof window.m9 !== 'undefined') { window.m9.state = 'chapter_select'; }
+                        startGame(9);
+                    };
+                } else {
+                    directM9Btn.innerHTML = "🤖 模式九：机械迷城 (大集合版)";
+                    directM9Btn.onclick = () => { selectMode(9); startGame(9); };
+                }
+            }
             const m9Btn = document.getElementById('m9OneToOneBtn');
-            if (m9Btn) m9Btn.style.display = (mode === 9) ? 'block' : 'none';
+            if (m9Btn) m9Btn.style.display = 'block';
         }
 
         // ===== 通用核心控制 =====

@@ -3,1763 +3,763 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>机械迷城 (Machinarium) - 1:1 像素级交互逻辑系统</title>
+    <title>《机械迷城》1:1 终极完全体独立离线保全拯救工程 - 大集合版</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
         body {
-            background: #1a1512;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            font-family: monospace;
-            color: #d4bda5;
-            padding: 15px;
-            overflow-x: hidden;
+            margin: 0; padding: 0; background-color: #060403;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            min-height: 100vh; overflow-x: hidden; font-family: sans-serif; color: #8e7960; user-select: none;
+            -webkit-user-select: none;
         }
-
-        .header-title-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-            max-width: 900px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        
-        .header-title-bar h2 {
-            color: #e6c29e;
-            letter-spacing: 1px;
-            font-size: 17px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .chapter-tab-btn {
-            background: #2a2019;
-            color: #d4bda5;
-            border: 1px solid #5c4a3c;
-            padding: 5px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .chapter-tab-btn.active {
-            background: #ff9900;
-            color: #1a1512;
-            border-color: #ff9900;
-            font-weight: bold;
-            box-shadow: 0 0 8px rgba(255, 153, 0, 0.4);
-        }
-
-        .nav-back-btn {
-            background: #3d2f26;
-            color: #e6c29e;
-            border: 1px solid #5c4a3c;
-            padding: 5px 12px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .nav-back-btn:hover {
-            background: #5c4a3c;
-            color: #fff;
-        }
-
-        /* 响应式自适应舞台外框 */
-        #stage-wrapper {
-            width: 900px;
+        #game-container {
+            position: relative; box-shadow: 0 0 80px rgba(0, 0, 0, 1);
+            border: 6px solid #1c140d; background: #0f0a06;
             max-width: 100%;
-            position: relative;
         }
-
-        /* 游戏主舞台 */
-        #game-stage {
-            width: 900px;
-            height: 550px;
-            background: linear-gradient(180deg, #5c4a3c, #2a1f18);
-            border: 8px solid #3d2f26;
-            border-radius: 4px;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
-            transform-origin: top left;
-        }
-        
-        /* 顶层物品栏 */
-        #inventory-bar {
-            width: 100%;
-            height: 50px;
-            background: rgba(20, 15, 12, 0.94);
-            border-bottom: 3px solid #3d2f26;
-            display: flex;
-            align-items: center;
-            padding: 0 15px;
-            gap: 12px;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 100;
-        }
-        .inv-slot {
-            width: 40px;
-            height: 40px;
-            border: 2px dashed #5c4a3c;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            background: #231b16;
-            cursor: pointer;
-            position: relative;
-            transition: all 0.2s;
-        }
-        .inv-slot.active {
-            border-color: #ff9900;
-            box-shadow: 0 0 10px #ff9900;
-            background: #332317;
-        }
-        .inv-slot-tip {
-            position: absolute;
-            bottom: -20px;
-            font-size: 10px;
-            white-space: nowrap;
-            color: #ffd54f;
-            display: none;
-            pointer-events: none;
-        }
-        .inv-slot:hover .inv-slot-tip { display: block; }
-        #combine-btn {
-            font-size: 11px;
-            background: #ff9900;
-            color: #1a1512;
-            font-weight: bold;
-            padding: 4px 8px;
-            border-radius: 3px;
-            cursor: pointer;
-            display: none;
-            transition: transform 0.15s;
-        }
-        #combine-btn:active { transform: scale(0.95); }
-        
-        /* 场景背景描述文字 */
-        #bg-details {
-            position: absolute;
-            bottom: 12px;
-            left: 15px;
-            font-size: 11px;
-            opacity: 0.65;
-            line-height: 1.5;
-            pointer-events: none;
-            z-index: 20;
-        }
-        
-        /* 1:1 游戏内实体通用部件样式 */
-        .entity {
-            position: absolute;
-            cursor: pointer;
-            transition: all 0.25s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            touch-action: none;
-        }
-        .entity:hover {
-            filter: brightness(1.15);
-        }
-
-        /* ========== 第一章实体样式 ========== */
-        #bathtub {
-            width: 100px;
-            height: 60px;
-            background: #e6dfd9;
-            border: 3px solid #6e655f;
-            border-radius: 30px 30px 10px 10px;
-            bottom: 40px;
-            left: 380px;
-            z-index: 10;
-            font-weight: bold;
-            color: #555;
-            transform-origin: bottom right;
-        }
-        #bathtub.kicked-1 { transform: rotate(15deg); left: 360px; }
-        #bathtub.kicked-2 { transform: rotate(110deg) translate(50px, -200px); opacity: 0; pointer-events: none; }
-
-        #mouse {
-            width: 32px;
-            height: 22px;
-            background: #8c7667;
-            border-radius: 50% 50% 0 0;
-            top: 130px;
-            left: 180px;
-            font-size: 11px;
-            z-index: 10;
-        }
-        #mouse-bubble {
-            position: absolute;
-            top: 75px;
-            left: 130px;
-            width: 130px;
-            background: rgba(255, 255, 255, 0.95);
-            border: 2px solid #000;
-            border-radius: 8px;
-            color: #000;
-            font-size: 11px;
-            padding: 6px;
-            display: none;
-            line-height: 1.3;
-            z-index: 90;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-
-        #right-leg {
-            width: 22px;
-            height: 48px;
-            background: #7c8c82;
-            border: 2px solid #4a544e;
-            bottom: 40px;
-            left: 520px;
-            display: none;
-            font-size: 11px;
-            border-radius: 3px;
-            z-index: 5;
-        }
-        #iron-plate {
-            width: 70px;
-            height: 16px;
-            background: #524741;
-            border: 1px solid #332b27;
-            bottom: 40px;
-            left: 500px;
-            font-size: 10px;
-            color: #aaa;
-            z-index: 6;
-        }
-        #iron-plate.moved { transform: translateX(-80px) rotate(-10deg); }
-
-        #magnet {
-            width: 32px;
-            height: 32px;
-            border: 4px solid #ad3434;
-            border-bottom: none;
-            border-radius: 16px 16px 0 0;
-            bottom: 40px;
-            left: 680px;
-            font-size: 11px;
-            background: transparent;
-            z-index: 5;
-        }
-        #string {
-            width: 26px;
-            height: 26px;
-            background: #d1c2a5;
-            border-radius: 50%;
-            bottom: 45px;
-            left: 780px;
-            font-size: 10px;
-            color: #333;
-            font-weight: bold;
-            z-index: 5;
-        }
-
-        #iron-bar {
-            width: 12px;
-            height: 160px;
-            background: #423b38;
-            bottom: 40px;
-            left: 280px;
-            transform-origin: bottom center;
-            transition: transform 0.5s ease;
-            z-index: 5;
-            border-radius: 4px 4px 0 0;
-        }
-        #iron-bar.bent { transform: rotate(-45deg); background: #ff9900; }
-
-        /* 主角约瑟夫 Josef 样式 */
-        #josef {
-            position: absolute;
-            bottom: 40px;
-            left: 400px;
-            width: 60px;
-            height: 70px;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end;
-            z-index: 15;
-            transition: left 0.4s ease, height 0.3s ease, transform 0.5s ease;
-        }
-        #josef-head {
-            width: 34px;
-            height: 34px;
-            background: #b0bec5;
-            border: 3px solid #37474f;
-            border-radius: 50%;
-            font-size: 10px;
-            color: #263238;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            position: relative;
-        }
-        #josef-body {
-            width: 44px;
-            height: 36px;
-            background: #90a4ae;
-            border: 3px solid #37474f;
-            border-radius: 6px;
-            position: relative;
-            display: flex;
-            justify-content: space-around;
-            align-items: flex-end;
-            font-size: 9px;
-            padding-bottom: 2px;
-            transition: height 0.3s ease;
-        }
-        #josef-leg-l { width: 8px; height: 20px; background: #37474f; margin-bottom: -20px; }
-        #josef-leg-r { width: 8px; height: 20px; background: #37474f; margin-bottom: -20px; display: none; }
-
-        /* 拉伸按钮 */
-        #stretch-btn {
-            position: absolute;
-            top: -38px;
-            background: #ff9900;
-            color: #1a1512;
-            font-weight: bold;
-            padding: 3px 8px;
-            font-size: 11px;
-            border-radius: 3px;
-            display: none;
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-        }
-
-        #rope-swing {
-            position: absolute;
-            bottom: 40px;
-            left: 280px;
-            width: 2px;
-            height: 0;
-            background: #ff9900;
-            transform-origin: top center;
-            display: none;
-            z-index: 4;
-        }
-
-        /* ========== 第八章与第九章实体样式 ========== */
-        #stage-ch8 {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            background: radial-gradient(circle at 50% 30%, #3d2f24 0%, #1c1511 100%);
-            display: none;
-        }
-
-        /* 广场青石板路与地砖纹理 */
-        .cobble-ground {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 120px;
-            background: linear-gradient(180deg, #2b221b 0%, #18120e 100%);
-            border-top: 3px solid #4a382c;
-            box-shadow: inset 0 10px 20px rgba(0,0,0,0.6);
-        }
-
-        /* 左侧酒馆外观 */
-        #tavern-building {
-            position: absolute;
-            bottom: 120px;
-            left: 20px;
-            width: 180px;
-            height: 280px;
-            background: #2d221a;
-            border: 4px solid #453327;
-            border-radius: 6px;
-            box-shadow: 5px 5px 25px rgba(0,0,0,0.7);
-        }
-        #tavern-sign {
-            position: absolute;
-            top: 15px;
-            left: 10px;
-            right: 10px;
-            background: #ff9900;
-            color: #1a1512;
-            font-size: 12px;
-            font-weight: bold;
-            text-align: center;
-            padding: 4px;
-            border-radius: 3px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-        }
-        #tavern-counter-window {
-            position: absolute;
-            bottom: 30px;
-            left: 20px;
-            width: 140px;
-            height: 90px;
-            background: #19120e;
-            border: 3px solid #5a4232;
-            border-radius: 4px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            padding: 6px;
-        }
-        #tavern-owner {
-            font-size: 26px;
-            transition: transform 0.2s;
-        }
-        #tavern-oil-pod {
-            position: absolute;
-            bottom: 8px;
-            right: 12px;
-            font-size: 22px;
-            cursor: pointer;
-            transition: transform 0.2s;
-            filter: drop-shadow(0 0 6px #ff9900);
-        }
-        #tavern-oil-pod:hover { transform: scale(1.15); }
-
-        /* 排污臭水洼与飞舞苍蝇 */
-        #puddle-area {
-            position: absolute;
-            bottom: 40px;
-            left: 60px;
-            width: 110px;
-            height: 50px;
-            background: radial-gradient(ellipse at center, #354a21 0%, #1e2815 80%);
-            border: 2px dashed #4e6b2e;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 25;
-            box-shadow: 0 0 15px rgba(78, 107, 46, 0.4);
-        }
-        .fly-dot {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: #a4e637;
-            border-radius: 50%;
-            box-shadow: 0 0 4px #a4e637;
-            animation: flyHover 1.2s infinite alternate ease-in-out;
-        }
-        @keyframes flyHover {
-            0% { transform: translate(-10px, -6px); }
-            50% { transform: translate(12px, 8px); }
-            100% { transform: translate(-8px, 12px); }
-        }
-
-        /* 下棋小桌按键 */
-        #gomoku-table-btn {
-            position: absolute;
-            bottom: 125px;
-            left: 140px;
-            background: #5c422f;
-            border: 2px solid #8d6e53;
-            color: #ffe0b2;
-            font-size: 11px;
-            padding: 5px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            z-index: 30;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.6);
-        }
-
-        /* 广场中央：三位乐手 */
-        .musician-box {
-            position: absolute;
-            bottom: 80px;
-            width: 90px;
-            height: 140px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end;
-            cursor: pointer;
-            z-index: 25;
-            transition: transform 0.3s;
-        }
-        .musician-box:hover {
-            transform: translateY(-5px);
-        }
-        .musician-box.playing {
-            animation: musicianJam 0.6s infinite alternate ease-in-out;
-        }
-        @keyframes musicianJam {
-            0% { transform: translateY(0) rotate(-2deg); }
-            100% { transform: translateY(-8px) rotate(2deg); }
-        }
-        .mus-status-tag {
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 3px;
-            margin-bottom: 5px;
-            white-space: nowrap;
-            background: rgba(0,0,0,0.7);
-            border: 1px solid #555;
-        }
-        .mus-status-tag.fixed {
-            background: #2e7d32;
-            border-color: #81c784;
-            color: #fff;
-        }
-        .mus-avatar {
-            font-size: 42px;
-            line-height: 1;
-            position: relative;
-        }
-
-        #mus-sax { left: 240px; }
-        #mus-drum { left: 350px; }
-        #mus-horn { left: 460px; }
-
-        /* 大号上的小老鼠 */
-        #horn-rat {
-            position: absolute;
-            top: -6px;
-            right: 0px;
-            font-size: 16px;
-            transition: all 0.3s;
-            animation: ratPeek 1.5s infinite alternate ease-in-out;
-        }
-        @keyframes ratPeek {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(-8px); }
-        }
-
-        /* 右上角钟楼与大妈阳台 */
-        #clock-tower {
-            position: absolute;
-            top: 60px;
-            right: 25px;
-            width: 250px;
-            height: 320px;
-            background: #251b15;
-            border: 4px solid #4a3628;
-            border-radius: 6px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            box-shadow: -5px 5px 25px rgba(0,0,0,0.6);
-        }
-        #clock-dial {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #ecdcc7 0%, #b89f81 100%);
-            border: 5px solid #423023;
-            position: relative;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 10px;
-        }
-        .dial-label-red {
-            position: absolute;
-            top: 25px;
-            font-size: 13px;
-            font-weight: bold;
-            color: #c62828;
-        }
-        .dial-label-black {
-            position: absolute;
-            bottom: 25px;
-            font-size: 13px;
-            font-weight: bold;
-            color: #1a1512;
-        }
-        .clock-controls {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 10px;
-        }
-        .clock-adj-btn {
-            background: #3e2d21;
-            color: #ffcc80;
-            border: 1px solid #795548;
-            padding: 3px 8px;
-            border-radius: 3px;
-            font-size: 11px;
-            cursor: pointer;
-        }
-        .clock-adj-btn:hover { background: #5d4037; }
-
-        /* 二楼大妈阳台与房间 */
-        #grandma-balcony {
-            width: 100%;
-            background: #1b130e;
-            border: 2px solid #5d4037;
-            border-radius: 4px;
-            padding: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: relative;
-            cursor: pointer;
-        }
-        #grandma-npc {
-            font-size: 26px;
-            transition: transform 0.5s ease;
-        }
-        #balcony-radio {
-            font-size: 20px;
-            cursor: pointer;
-            filter: drop-shadow(0 0 5px #ff9900);
-            display: none;
-        }
-
-        /* 右侧路灯、裸露电线与黑猫 */
-        #street-lamp-post {
-            position: absolute;
-            bottom: 120px;
-            right: 290px;
-            width: 8px;
-            height: 200px;
-            background: #3e332a;
-            border-radius: 4px;
-        }
-        #electric-wire {
-            position: absolute;
-            top: -20px;
-            right: 0;
-            width: 80px;
-            height: 25px;
-            border-bottom: 3px dashed #ff5722;
-            transform: rotate(-15deg);
-            cursor: pointer;
-        }
-        #electric-sparks {
-            position: absolute;
-            top: -30px;
-            right: 20px;
-            font-size: 18px;
-            display: none;
-            animation: sparkFlash 0.3s infinite alternate;
-        }
-        @keyframes sparkFlash {
-            0% { opacity: 0.2; transform: scale(0.9); }
-            100% { opacity: 1; transform: scale(1.3); }
-        }
-
-        #alley-cat {
-            position: absolute;
-            bottom: 230px;
-            right: 300px;
-            font-size: 28px;
-            cursor: pointer;
-            transition: all 0.3s;
-            z-index: 30;
-        }
-        #alley-cat.stunned {
-            bottom: 125px;
-            transform: rotate(90deg) scale(0.9);
-            filter: grayscale(0.5) drop-shadow(0 0 8px #ffeb3b);
-        }
-
-        /* 碎花盆碎片掉落物 */
-        #pot-debris {
-            position: absolute;
-            bottom: 60px;
-            left: 400px;
-            background: rgba(30, 20, 15, 0.9);
-            border: 2px dashed #ff9900;
-            border-radius: 6px;
-            padding: 8px 12px;
-            font-size: 12px;
-            display: none;
-            cursor: pointer;
-            z-index: 40;
-            box-shadow: 0 0 15px rgba(255, 153, 0, 0.6);
-            animation: bounceIn 0.5s ease;
-        }
-        @keyframes bounceIn {
-            0% { transform: translateY(-40px) scale(0.5); opacity: 0; }
-            100% { transform: translateY(0) scale(1); opacity: 1; }
-        }
-
-        /* ========== 五子棋交互弹窗 ========== */
-        #gomoku-modal {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #2a1f18;
-            border: 4px solid #8d6e53;
-            border-radius: 8px;
-            padding: 16px;
-            display: none;
-            z-index: 150;
-            box-shadow: 0 0 35px rgba(0,0,0,0.95);
-            text-align: center;
-        }
-        #gomoku-board {
-            display: grid;
-            grid-template-columns: repeat(11, 26px);
-            grid-template-rows: repeat(11, 26px);
-            gap: 2px;
-            background: #b8860b;
-            padding: 6px;
-            border: 3px solid #5c3a1e;
-            border-radius: 4px;
-            margin: 10px auto;
-        }
-        .gomoku-cell {
-            width: 26px;
-            height: 26px;
-            background: #d2a679;
-            border: 1px solid #8b5a2b;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        .gomoku-cell:hover { background: #e6be8a; }
-
-        /* 日志输出区 */
-        #msg-log {
-            width: 900px;
+        canvas {
+            display: block;
+            filter: contrast(1.25) brightness(0.76) saturate(0.65) sepia(0.24);
             max-width: 100%;
-            margin-top: 10px;
-            background: #110d0a;
-            border: 2px solid #3d2f26;
-            padding: 10px 14px;
-            border-radius: 4px;
-            font-size: 13px;
-            line-height: 1.5;
-            height: 120px;
-            overflow-y: auto;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            height: auto;
         }
-
-        /* 通关徽章弹窗 */
-        #win-modal, #win-modal-ch8 {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #231b16;
-            border: 4px solid #ff9900;
-            padding: 22px 30px;
-            border-radius: 8px;
-            text-align: center;
-            display: none;
-            z-index: 200;
-            box-shadow: 0 0 30px rgba(0,0,0,0.9);
+        #module-menu {
+            margin-top: 10px; display: flex; gap: 6px; justify-content: center; max-width: 1024px; flex-wrap: wrap;
+            padding: 0 10px;
+        }
+        .m-btn {
+            background: #261a11; border: 2px solid #3d2b1c; color: #9c856b;
+            padding: 5px 10px; cursor: pointer; font-weight: bold; font-size: 11px;
+            border-radius: 2px; transition: all 0.2s; text-decoration: none;
+        }
+        .m-btn:hover, .m-btn.active {
+            background: #3d2b1c; color: #fae0c2; border-color: #c48c4d;
         }
     </style>
 </head>
 <body>
 
-    <div class="header-title-bar">
-        <h2><span>⚙️</span> 机械迷城 (Machinarium) 1:1 交互引擎</h2>
-        <div class="header-actions">
-            <button id="tab-ch1" class="chapter-tab-btn active" onclick="switchChapter(1)">第1章: 废料场</button>
-            <button id="tab-ch8" class="chapter-tab-btn" onclick="switchChapter(8)">第8章: 钟楼大广场与三乐手</button>
-            <button onclick="restartCurrentChapter()" class="nav-back-btn" style="background:#5c4a3c;">🔄 重置关卡</button>
-            <a href="index.html" class="nav-back-btn">⬅️ 返回积木主页</a>
-        </div>
-    </div>
-
-    <!-- 1:1 游戏舞台容器 -->
-    <div id="stage-wrapper">
-        <div id="game-stage">
-            <!-- 顶层物品栏 -->
-            <div id="inventory-bar">
-                <span style="font-size: 12px; color: #7c6857; font-weight: bold;">ITEM BAR:</span>
-                <div class="inv-slot" id="slot-0" onclick="selectSlot(0)"><span class="inv-slot-tip">槽位1</span></div>
-                <div class="inv-slot" id="slot-1" onclick="selectSlot(1)"><span class="inv-slot-tip">槽位2</span></div>
-                <div class="inv-slot" id="slot-2" onclick="selectSlot(2)"><span class="inv-slot-tip">槽位3</span></div>
-                <div class="inv-slot" id="slot-3" onclick="selectSlot(3)"><span class="inv-slot-tip">槽位4</span></div>
-                <div class="inv-slot" id="slot-4" onclick="selectSlot(4)"><span class="inv-slot-tip">槽位5</span></div>
-                <span id="combine-btn" onclick="tryCombine()">[组合物品]</span>
-            </div>
-
-            <!-- 场景静态信息 -->
-            <div id="bg-details">
-                环境：城外废料场 (The Junk Yard)<br>
-                远景：像素之城冒烟的蒸汽塔<br>
-                状态：Josef 被拆卸遗弃
-            </div>
-
-            <!-- ===================== 第一章场景实体 ===================== -->
-            <div id="stage-ch1">
-                <div id="bathtub" class="entity" onclick="clickBathtub()">浴缸</div>
-                <div id="mouse" class="entity" onclick="clickMouse()">老鼠</div>
-                <div id="mouse-bubble">🐹: 我要我的<br><b style="color:red">发条发光娃娃</b>！拿换我的右腿。</div>
-                
-                <div id="iron-plate" class="entity" onclick="clickIronPlate()">铁皮</div>
-                <div id="right-leg" class="entity" onclick="clickRightLeg()">右腿</div>
-                <div id="magnet" class="entity" onclick="clickMagnet()">磁铁</div>
-                <div id="string" class="entity" onclick="clickString()">线轴</div>
-                <div id="iron-bar" class="entity" onclick="clickIronBar()">铁杆</div>
-
-                <!-- 主角 Josef 容器 -->
-                <div id="josef">
-                    <div id="stretch-btn" onclick="toggleStretch(event)">▲<br>▼</div>
-                    <div id="josef-head">头</div>
-                    <div id="josef-body">
-                        躯干
-                        <div id="josef-leg-l"></div>
-                        <div id="josef-leg-r"></div>
-                    </div>
-                </div>
-
-                <div id="rope-swing"></div>
-
-                <!-- 通关胜利弹窗 (第1章) -->
-                <div id="win-modal">
-                    <div style="font-size: 36px; margin-bottom: 8px;">🎉</div>
-                    <h3 style="color: #8cff99; margin-bottom: 8px;">第一章：废料场 1:1 通关！</h3>
-                    <p style="font-size: 13px; color: #d4bda5; margin-bottom: 15px;">约瑟夫已成功飞跃毒液深渊，前往下一章【护城河变装城门卫所】。</p>
-                    <button class="chapter-tab-btn active" onclick="switchChapter(8)" style="padding:6px 16px;">前往第8章：钟楼大广场 ➡</button>
-                    <button class="nav-back-btn" onclick="restartCurrentChapter()" style="margin-left: 8px;">🔄 再次游玩</button>
-                </div>
-            </div>
-
-            <!-- ===================== 第八章与第九章场景实体 ===================== -->
-            <div id="stage-ch8">
-                <div class="cobble-ground"></div>
-
-                <!-- 左侧酒馆 -->
-                <div id="tavern-building">
-                    <div id="tavern-sign">🍺 STEAM TAVERN</div>
-                    <div id="tavern-counter-window" onclick="clickTavernCounter()">
-                        <div id="tavern-owner">🧔</div>
-                        <span style="font-size:10px; color:#aaa; margin-top:4px;">柜台老板</span>
-                        <div id="tavern-oil-pod" title="大油桶" onclick="clickOilPod(event)">🛢️</div>
-                    </div>
-                </div>
-
-                <!-- 酒馆门口五子棋牌桌 -->
-                <button id="gomoku-table-btn" onclick="openGomokuModal()">♟️ 棋牌桌(对战老头)</button>
-
-                <!-- 臭水洼与绿头苍蝇群 -->
-                <div id="puddle-area" onclick="clickPuddle()" title="点击挥动罐子捕捉苍蝇">
-                    <div class="fly-dot" style="top:15px; left:25px;"></div>
-                    <div class="fly-dot" style="top:25px; left:60px;"></div>
-                    <div class="fly-dot" style="top:10px; left:80px;"></div>
-                    <span id="fly-count-badge" style="font-size:10px; color:#a4e637; font-weight:bold;">🪰 臭水塘(0/5)</span>
-                </div>
-
-                <!-- 三位乐手 -->
-                <div id="mus-sax" class="musician-box" onclick="clickMusician('sax')">
-                    <span id="tag-sax" class="mus-status-tag">🎷 缺5枚螺母</span>
-                    <div class="mus-avatar">🤖<span style="font-size:20px; position:absolute; bottom:0; right:-10px;">🎷</span></div>
-                </div>
-
-                <div id="mus-drum" class="musician-box" onclick="clickMusician('drum')">
-                    <span id="tag-drum" class="mus-status-tag">🥁 鼓面破损</span>
-                    <div class="mus-avatar">🤖<span id="drum-drum-icon" style="font-size:20px; position:absolute; bottom:0; right:-10px;">🥁</span></div>
-                </div>
-
-                <div id="mus-horn" class="musician-box" onclick="clickMusician('horn')">
-                    <span id="tag-horn" class="mus-status-tag">🎺 老鼠筑巢</span>
-                    <div class="mus-avatar">🤖<span style="font-size:24px; position:absolute; bottom:0; right:-10px;">🎺</span>
-                        <span id="horn-rat">🐭</span>
-                    </div>
-                </div>
-
-                <!-- 钟楼与大妈 -->
-                <div id="clock-tower">
-                    <div id="clock-dial">
-                        <span class="dial-label-red" id="dial-red-text">红: I</span>
-                        <div style="font-size:24px;">🕰️</div>
-                        <span class="dial-label-black" id="dial-black-text">黑: VI</span>
-                    </div>
-                    <div class="clock-controls">
-                        <button class="clock-adj-btn" onclick="adjustClock('red', 1)">红针 ▲</button>
-                        <button class="clock-adj-btn" onclick="adjustClock('red', -1)">红针 ▼</button>
-                        <button class="clock-adj-btn" onclick="adjustClock('black', 1)">黑针 ▲</button>
-                        <button class="clock-adj-btn" onclick="adjustClock('black', -1)">黑针 ▼</button>
-                    </div>
-                    <div id="grandma-balcony" onclick="clickBalcony()">
-                        <div id="grandma-npc">👵</div>
-                        <span id="grandma-status-txt" style="font-size:10px; color:#ffcc80;">二楼阳台(老奶奶)</span>
-                        <div id="balcony-radio" title="旧收音机" onclick="clickRadio(event)">📻</div>
-                    </div>
-                </div>
-
-                <!-- 路灯电线与流浪猫 -->
-                <div id="street-lamp-post"></div>
-                <div id="electric-wire" onclick="clickWire()" title="悬挂裸露高压电线">
-                    <span id="electric-sparks">⚡💥</span>
-                </div>
-                <div id="alley-cat" onclick="clickCat()" title="黑色敏捷流浪猫">🐈‍⬛</div>
-
-                <!-- 砸碎花盆地面残留物 -->
-                <div id="pot-debris" onclick="clickPotDebris()">
-                    🏺💥 破碎黏土花盆 (露出了【调频拨盘】与【废旧电池】点击捡起)
-                </div>
-
-                <!-- 通关胜利弹窗 (第8章) -->
-                <div id="win-modal-ch8">
-                    <div style="font-size: 38px; margin-bottom: 8px;">🎷🥁🎺</div>
-                    <h3 style="color: #ff9900; margin-bottom: 8px;">第八章：钟楼大广场与三乐手 1:1 通关！</h3>
-                    <p style="font-size: 13px; color: #d4bda5; margin-bottom: 12px;" id="win-ch8-desc">三乐手合奏蒸汽爵士乐，老奶奶愤怒砸下的花盆爆出了关键道具！</p>
-                    <button class="chapter-tab-btn active" onclick="restartCurrentChapter()" style="padding:6px 16px;">🔄 再次游玩第八章</button>
-                    <a href="index.html" class="nav-back-btn" style="margin-left: 8px;">进入主游戏模式九</a>
-                </div>
-            </div>
-
-            <!-- 五子棋对局弹窗 -->
-            <div id="gomoku-modal">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                    <h4 style="color:#ffd54f;">♟️ 酒馆桌面五子棋 (连成五颗黄铜螺母获胜)</h4>
-                    <button onclick="closeGomokuModal()" style="background:#5c422f; color:#fff; border:none; padding:2px 8px; border-radius:3px; cursor:pointer;">✖</button>
-                </div>
-                <div style="font-size:11px; color:#d4bda5;">🟡 约瑟夫(黄铜螺母) vs ⚫ 下棋老头(黑铁螺栓)</div>
-                <div id="gomoku-board"></div>
-                <div style="display:flex; justify-content:center; gap:10px; margin-top:8px;">
-                    <button onclick="resetGomokuGame()" class="nav-back-btn" style="font-size:11px;">🔄 重新开局</button>
-                    <span id="gomoku-status-msg" style="font-size:11px; color:#ff9900; align-self:center;"></span>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    <!-- 动作与系统日志输出 -->
-    <div id="msg-log">
-        <div style="color: #8cff99;">[系统]: 机械迷城 1:1 核心交互引擎初始化成功。</div>
-        <div id="initial-log-hint">[提示]: 约瑟夫的头卡在白色浴缸下面。请连续点击【浴缸】将其移开。</div>
-    </div>
-
-    <!-- 引入第八章独立 1:1 状态机 -->
-    <script src="js/mach_chapter8.js"></script>
+<div id="game-container">
+    <canvas id="gameCanvas" width="1024" height="576"></canvas>
+</div>
+<div id="module-menu">
+    <button class="m-btn active" id="btn-menu" onclick="switchScene('menu')">🏠 0. 首页菜单 (飞虫AI/大标题)</button>
+    <button class="m-btn" id="btn-junkyard" onclick="switchScene('junkyard')">🔧 1. 垃圾场 (组装/踢桶多段回弹/绳荡)</button>
+    <button class="m-btn" id="btn-pole" onclick="switchScene('pole')">⚡ 2. 电线杆 (长高限制/九宫格/电击坠猫)</button>
+    <button class="m-btn" id="btn-bird" onclick="switchScene('bird')">🦅 3. 鸟与方块 (贪吃鸟俯冲AI/卡扣松脱下落)</button>
+    <button class="m-btn" id="btn-band" onclick="switchScene('band')">🎷 4. 流浪歌手 (萨克斯/铁桶/吉他合奏乐谱)</button>
+    <button class="m-btn" id="btn-gomoku" onclick="switchScene('gomoku')">🏁 5. 酒馆棋盘 (螺丝对战齿轮独立卡位AI)</button>
+    <button class="m-btn" id="btn-bubble" onclick="switchScene('bubble')">💭 6. 思维气泡 (全场景自适应发呆连环画)</button>
+    <button class="m-btn" id="btn-plug" onclick="switchScene('plug')">🧠 7. 博士插销 (最终脑部红绿矩阵解密)</button>
+    <button class="m-btn" id="btn-shoot" onclick="switchScene('shoot')">🎮 8. 街机打枪 (动态走道地图/飞虫防线弹幕)</button>
+    <button class="m-btn" id="btn-doctor_lore" onclick="switchScene('doctor_lore')">🎬 9. 博士讲述 (真空管发光/老胶片颤抖剧情)</button>
+    <button class="m-btn" id="btn-spider" onclick="triggerSpiderGame()">🕷️ 10. 蜘蛛射击 (通关秘籍专属小游戏)</button>
+    <a href="index.html" class="m-btn" style="background:#3d2416; color:#ffcc80;">⬅️ 返回积木小院</a>
+</div>
 
 <script>
-    // ==========================================
-    // 简易 Web Audio 音效系统 (1:1 丰富合成)
-    // ==========================================
-    let audioCtx = null;
-    function playSfx(type) {
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// ==========================================
+// 🔊 WEB AUDIO API 多声轨同步合成与环境音网络
+// ==========================================
+let audioCtx = null;
+let ambientWind = null;
+let industryBuzz = null;
+
+function initAudioEngine() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    try {
+        let bufSize = 2 * audioCtx.sampleRate, buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate), out = buf.getChannelData(0);
+        let b0=0, b1=0, b2=0, b3=0, b4=0, b5=0, b6=0;
+        for (let i = 0; i < bufSize; i++) {
+            let white = Math.random() * 2 - 1;
+            b0 = 0.99886 * b0 + white * 0.0555179; b1 = 0.99332 * b1 + white * 0.0750759; b2 = 0.96900 * b2 + white * 0.1538520;
+            b3 = 0.86650 * b3 + white * 0.3104856; b4 = 0.55000 * b4 + white * 0.5329522; b5 = -0.7616 * b5 - white * 0.0168980;
+            out[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362; out[i] *= 0.12; b6 = white * 0.115926;
+        }
+        let src = audioCtx.createBufferSource(); src.buffer = buf; src.loop = true;
+        let lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(140, audioCtx.currentTime);
+        let gn = audioCtx.createGain(); gn.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        src.connect(lp); lp.connect(gn); gn.connect(audioCtx.destination); src.start(); ambientWind = src;
+    } catch(e) {}
+}
+
+function playActionSound(type, vol=1.0, pitch=1.0) {
+    if (!audioCtx) return;
+    try {
+        let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+        if (type === 'thud') {
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(115*pitch, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(25, audioCtx.currentTime + 0.22);
+            gain.gain.setValueAtTime(vol * 0.35, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.22);
+        } else if (type === 'step') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(340, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(95, audioCtx.currentTime + 0.05);
+            gain.gain.setValueAtTime(vol * 0.03, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+        } else if (type === 'hydraulic') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(85, audioCtx.currentTime);
+            let filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.setValueAtTime(200, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol * 0.015, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.16);
+            osc.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.16); return;
+        } else if (type === 'buzz') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800 + (Math.random()-0.5)*150, audioCtx.currentTime);
+            let hp = audioCtx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.setValueAtTime(1100, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol * 0.01, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+            osc.connect(hp); hp.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.04); return;
+        } else if (type === 'laser') {
+            osc.type = 'square'; osc.frequency.setValueAtTime(450 * pitch, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(150, audioCtx.currentTime + 0.08); gain.gain.setValueAtTime(vol * 0.03, audioCtx.currentTime);
+        } else if (type === 'pop') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(300 * pitch, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.1); gain.gain.setValueAtTime(vol * 0.18, audioCtx.currentTime);
+        } else if (type === 'shock') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(700, audioCtx.currentTime); gain.gain.setValueAtTime(vol * 0.08, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+        } else if (type === 'page') {
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(90, audioCtx.currentTime); gain.gain.setValueAtTime(vol * 0.1, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+        } else if (type === 'sax') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(pitch, audioCtx.currentTime);
+            let lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(450, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.04*vol, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+            osc.connect(lp); lp.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.35); return;
+        } else if (type === 'guitar') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(pitch, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.08*vol, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+        }
+        osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+    } catch(e) {}
+}
+
+function toggleIndustryBuzz(enable) {
+    if(!audioCtx) return;
+    if(enable && !industryBuzz) {
         try {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const now = audioCtx.currentTime;
-
-            if (type === 'clank') {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(320, now);
-                osc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(now); osc.stop(now + 0.08);
-            } else if (type === 'stretch') {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(180, now);
-                osc.frequency.exponentialRampToValueAtTime(400, now + 0.15);
-                gain.gain.setValueAtTime(0.18, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(now); osc.stop(now + 0.16);
-            } else if (type === 'pick') {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(520, now);
-                osc.frequency.setValueAtTime(780, now + 0.04);
-                gain.gain.setValueAtTime(0.15, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(now); osc.stop(now + 0.08);
-            } else if (type === 'combine') {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(440, now);
-                osc.frequency.exponentialRampToValueAtTime(880, now + 0.14);
-                gain.gain.setValueAtTime(0.25, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(now); osc.stop(now + 0.16);
-            } else if (type === 'success') {
-                [440, 554, 659, 880].forEach((freq, idx) => {
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(freq, now + idx * 0.09);
-                    gain.gain.setValueAtTime(0.2, now + idx * 0.09);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.35);
-                    osc.connect(gain); gain.connect(audioCtx.destination);
-                    osc.start(now + idx * 0.09); osc.stop(now + idx * 0.09 + 0.35);
-                });
-            } else if (type === 'fly_buzz') {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(220, now);
-                osc.frequency.linearRampToValueAtTime(280, now + 0.1);
-                osc.frequency.linearRampToValueAtTime(210, now + 0.2);
-                gain.gain.setValueAtTime(0.12, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(now); osc.stop(now + 0.22);
-            } else if (type === 'church_bell') {
-                [523.25, 392.00].forEach((f, idx) => {
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(f, now + idx * 0.3);
-                    gain.gain.setValueAtTime(0.3, now + idx * 0.3);
-                    gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.3 + 1.2);
-                    osc.connect(gain); gain.connect(audioCtx.destination);
-                    osc.start(now + idx * 0.3); osc.stop(now + idx * 0.3 + 1.2);
-                });
-            } else if (type === 'spark') {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(800, now);
-                osc.frequency.setValueAtTime(150, now + 0.05);
-                osc.frequency.setValueAtTime(1200, now + 0.1);
-                gain.gain.setValueAtTime(0.25, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(now); osc.stop(now + 0.25);
-            } else if (type === 'sax') {
-                [466.16, 554.37, 622.25, 740.0].forEach((f, idx) => {
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(f, now + idx * 0.12);
-                    gain.gain.setValueAtTime(0.15, now + idx * 0.12);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.2);
-                    osc.connect(gain); gain.connect(audioCtx.destination);
-                    osc.start(now + idx * 0.12); osc.stop(now + idx * 0.12 + 0.2);
-                });
-            } else if (type === 'drum') {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(140, now);
-                osc.frequency.exponentialRampToValueAtTime(35, now + 0.18);
-                gain.gain.setValueAtTime(0.35, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(now); osc.stop(now + 0.2);
-            } else if (type === 'horn') {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(110, now);
-                osc.frequency.exponentialRampToValueAtTime(87.3, now + 0.35);
-                gain.gain.setValueAtTime(0.25, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(now); osc.stop(now + 0.4);
-            } else if (type === 'jazz_band') {
-                const notes = [233, 293, 349, 440, 523];
-                for (let i = 0; i < 8; i++) {
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    osc.type = i % 2 === 0 ? 'sawtooth' : 'triangle';
-                    osc.frequency.setValueAtTime(notes[i % notes.length], now + i * 0.15);
-                    gain.gain.setValueAtTime(0.18, now + i * 0.15);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.3);
-                    osc.connect(gain); gain.connect(audioCtx.destination);
-                    osc.start(now + i * 0.15); osc.stop(now + i * 0.15 + 0.3);
-                }
-            } else if (type === 'pot_smash') {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(600, now);
-                osc.frequency.exponentialRampToValueAtTime(50, now + 0.25);
-                gain.gain.setValueAtTime(0.4, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(now); osc.stop(now + 0.3);
-            }
+            let osc = audioCtx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(50, audioCtx.currentTime);
+            let lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(100, audioCtx.currentTime);
+            let gn = audioCtx.createGain(); gn.gain.setValueAtTime(0.06, audioCtx.currentTime);
+            osc.connect(lp); lp.connect(gn); gn.connect(audioCtx.destination); osc.start(); industryBuzz = {o:osc, g:gn};
         } catch(e) {}
+    } else if(!enable && industryBuzz) { try { industryBuzz.o.stop(); } catch(e){} industryBuzz = null; }
+}
+
+// ==========================================
+// 🎨 1:1 图片资产级手绘纸张与铁锈生成算法
+// ==========================================
+let paperPattern = null; let rustPattern = null;
+function generateTextures() {
+    let pCanvas = document.createElement('canvas'); pCanvas.width = 300; pCanvas.height = 300;
+    let pCtx = pCanvas.getContext('2d'); pCtx.fillStyle = '#211710'; pCtx.fillRect(0,0,300,300);
+    for(let i=0; i<25000; i++) {
+        pCtx.fillStyle = `rgba(0,0,0,${Math.random()*0.09})`;
+        if(Math.random()<0.5) pCtx.fillRect(Math.random()*300, Math.random()*300, Math.random()*3+1, 1);
+        else pCtx.fillRect(Math.random()*300, Math.random()*300, 1, Math.random()*3+1);
     }
+    paperPattern = ctx.createPattern(pCanvas, 'repeat');
 
-    // ==========================================
-    // 全局状态管理
-    // ==========================================
-    let currentChapter = 1;
-
-    // 第1章状态
-    let stateCh1 = {
-        bathtubKicks: 0,
-        hasBody: false,
-        hasLeg: false,
-        isStretched: false,
-        inventory: [],
-        selectedItem: null,
-        ironPlateMoved: false,
-        ironBarBent: false,
-        gameOver: false
-    };
-    window.state = stateCh1;
-    var state = stateCh1;
-
-    // 第8章状态机实例 (TownSquareLevel)
-    let lvlCh8 = (typeof TownSquareLevel !== 'undefined') ? new TownSquareLevel() : (window.mach_chapter8 || null);
-
-    const logBox = document.getElementById("msg-log");
-    function printLog(text, color = "#d4bda5") {
-        const div = document.createElement("div");
-        div.style.color = color;
-        div.innerHTML = `[动作]: ${text}`;
-        logBox.appendChild(div);
-        logBox.scrollTop = logBox.scrollHeight;
+    let rCanvas = document.createElement('canvas'); rCanvas.width = 128; rCanvas.height = 128;
+    let rCtx = rCanvas.getContext('2d'); rCtx.fillStyle = '#7a6650'; rCtx.fillRect(0,0,128,128);
+    for(let i=0; i<350; i++) {
+        let x=Math.random()*128, y=Math.random()*128, r=Math.random()*6+1;
+        let g = rCtx.createRadialGradient(x,y,0, x,y,r); g.addColorStop(0,'rgba(84,36,15,0.55)'); g.addColorStop(1,'rgba(0,0,0,0)');
+        rCtx.fillStyle = g; rCtx.beginPath(); rCtx.arc(x,y,r,0,Math.PI*2); rCtx.fill();
     }
+    rustPattern = ctx.createPattern(rCanvas, 'repeat');
+}
 
-    // ==========================================
-    // 关卡切换控制器
-    // ==========================================
-    function switchChapter(ch) {
-        currentChapter = ch;
-        document.getElementById("tab-ch1").className = ch === 1 ? "chapter-tab-btn active" : "chapter-tab-btn";
-        document.getElementById("tab-ch8").className = ch === 8 ? "chapter-tab-btn active" : "chapter-tab-btn";
+function drawWobblyLine(pts, close=false) {
+    ctx.beginPath();
+    for(let i=0; i<pts.length; i++) {
+        let devX = (Math.random()-0.5)*1.4; let devY = (Math.random()-0.5)*1.4;
+        if(i===0) ctx.moveTo(pts[i].x+devX, pts[i].y+devY); else ctx.lineTo(pts[i].x+devX, pts[i].y+devY);
+    }
+    if(close) ctx.closePath(); ctx.stroke();
+}
 
-        const st1 = document.getElementById("stage-ch1");
-        const st8 = document.getElementById("stage-ch8");
-        const bgDetails = document.getElementById("bg-details");
-        const combineBtn = document.getElementById("combine-btn");
+// ==========================================
+// ⚙️ 全局核心状态机与物理属性树
+// ==========================================
+const core = {
+    scene: 'menu',
+    inventory: { openY: -62, targetY: -62, items: [], selected: null },
+    ui: { bulb: { x: 920, y: 15, r: 18, active: false, timer: 0 }, book: { x: 965, y: 12, w: 34, h: 28, state: 'closed' } },
+    menuFlies: [
+        { x: 320, y: 160, homeX: 320, homeY: 160, vx: 0, vy: 0, state: 'idle', energy: 0, t: 0 },
+        { x: 512, y: 350, homeX: 512, homeY: 350, vx: 0, vy: 0, state: 'idle', energy: 0, t: 10 },
+        { x: 680, y: 460, homeX: 680, homeY: 460, vx: 0, vy: 0, state: 'idle', energy: 0, t: 20 }
+    ],
+    josef: { x: 200, y: 445, targetX: 200, height: 80, baseHeight: 80, mode: 'normal', speed: 2.3, stepT: 0, kickCooldown: 0, isAssembled: false, isSwinging: false, swingP: 0, isDone: false, isShocked: false, shockTimer: 0 },
+    junkyard: {
+        bathtub: { x: 130, y: 400, w: 100, h: 50, searched: false }, torso: { x: 160, y: 425, w: 30, h: 25, collected: false },
+        wire: { x: 550, y: 440, w: 35, h: 30, collected: false }, magnet: { x: 800, y: 440, w: 25, h: 25, collected: false, visible: false },
+        pole: { x: 60, y: 250, w: 20, h: 200, bent: false }, drum: { x: 720, y: 445, w: 36, h: 50, vx: 0, rot: 0, wobble: 0 }
+    },
+    poleScene: { panelOpen: false, grid: [1, 0, 2, 3, 5, 4, 6, 7, 8], solved: false, cat: { y: 100, fallY: 100, shocked: false, dead: false } },
+    birdScene: { bird: { x: 740, y: 90, status: 'idle', tBlock: null, p: 0 }, blocks: [ {x:630, y:300, w:32, h:32, lit:false, fall:false, vy:0}, {x:720, y:300, w:32, h:32, lit:false, fall:false, vy:0} ] },
+    gomoku: { board: Array(12).fill().map(()=>Array(12).fill(0)), playerTurn: true, winner: null },
+    bubbleLevel: 'junkyard',
+    plugGame: {
+        nodes: [
+            { x: 420, y: 200, state: 'green', target: 'green' }, { x: 520, y: 200, state: 'red', target: 'green' }, { x: 620, y: 200, state: 'red', target: 'red' },
+            { x: 420, y: 300, state: 'red', target: 'green' },   { x: 520, y: 300, state: 'green', target: 'red' }, { x: 620, y: 300, state: 'green', target: 'red' },
+            { x: 420, y: 400, state: 'green', target: 'red' }, { x: 520, y: 400, state: 'red', target: 'green' }, { x: 620, y: 400, state: 'green', target: 'green' }
+        ],
+        lines: [[0,1],[1,2],[3,4],[4,5],[6,7],[7,8],[0,3],[1,4],[2,5],[3,6],[4,7],[5,8]],
+        selected: null, solved: false
+    },
+    shootGame: { px: 420, py: 420, mazeX: 362, mazeY: 100, mw: 300, mh: 350, keyCollected: false, flies: [] },
+    spiderGame: { level: 1, player: { x: 512, y: 288, r: 12, speed: 4.5 }, bullets: [], spiders: [], spawnT: 0, required: 10, kills: 0, over: false },
+    movieFrame: 0, movieChapter: 0,
+    mouse: { x: 0, y: 0, hover: null }
+};
 
-        if (ch === 1) {
-            st1.style.display = "block";
-            st8.style.display = "none";
-            bgDetails.innerHTML = "环境：城外废料场 (The Junk Yard)<br>远景：像素之城冒烟的工业塔<br>状态：Josef 被拆卸遗弃";
-            combineBtn.style.display = (stateCh1.inventory.includes("磁铁") && stateCh1.inventory.includes("线轴")) ? "block" : "none";
-            renderInventory();
-            printLog("切换至【第1章：废料场】1:1 像素交互舞台。", "#ffcc80");
-        } else {
-            st1.style.display = "none";
-            st8.style.display = "block";
-            bgDetails.innerHTML = "环境：钟楼大广场与蒸汽酒吧 (Town Square)<br>设施：钟楼、酒吧、流浪猫、高压电线<br>目标：修复三位街头乐手，引发大妈花盆剧情";
-            combineBtn.style.display = "none";
-            renderInventory();
-            updateCh8DOM();
-            printLog("切换至【第8章：钟楼大广场与三位街头乐手】1:1 全细节状态机！", "#ffcc80");
+// ==========================================
+// 🎨 各模块画布图层高保真重绘管线
+// ==========================================
+function drawBaseWorld() {
+    ctx.fillStyle = paperPattern; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#110b07'; ctx.fillRect(0,480,canvas.width,96);
+    ctx.strokeStyle = '#24170e'; ctx.lineWidth = 4; drawWobblyLine([{x:0,y:480}, {x:1024,y:480}]);
+}
+
+function drawMenuScene() {
+    ctx.fillStyle = paperPattern; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.strokeStyle = '#140d08'; ctx.lineWidth = 3; drawWobblyLine([{x:60,y:0},{x:60,y:576}]); drawWobblyLine([{x:964,y:0},{x:964,y:576}]);
+    ctx.fillStyle = '#b39674'; ctx.font = 'bold 54px Courier New'; ctx.letterSpacing = "6px"; ctx.fillText("MACHINARIUM", 315, 160);
+    ctx.strokeStyle = '#423324'; ctx.lineWidth = 2.5; drawWobblyLine([{x:300,y:185},{x:730,y:185}]);
+    ctx.fillStyle = '#261b12'; ctx.strokeStyle = '#4a3625'; ctx.fillRect(387,310,250,42); ctx.strokeRect(387,310,250,42);
+    ctx.fillStyle = '#8a7761'; ctx.font = 'bold 12px monospace'; ctx.fillText("START GAME (请点击下方切换按钮体验模块)", 392, 336);
+
+    core.menuFlies.forEach(fly => {
+        ctx.save(); ctx.translate(fly.x, fly.y);
+        let flap = fly.state === 'flying' ? Math.sin(Date.now() * 0.14) * 12 : Math.sin(Date.now() * 0.005 + fly.t) * 2;
+        ctx.strokeStyle = '#382b1d'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-2,0); ctx.lineTo(-6,4); ctx.moveTo(2,0); ctx.lineTo(6,4); ctx.stroke();
+        ctx.fillStyle = '#21150e'; ctx.beginPath(); ctx.ellipse(0,0,5,3,0,0,Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(217,186,147,0.45)'; ctx.strokeStyle = 'rgba(40,28,17,0.7)';
+        ctx.save(); ctx.rotate(-Math.PI/4 - flap * 0.04); ctx.beginPath(); ctx.ellipse(-6,-4,7,2.5,0,0,Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
+        ctx.save(); ctx.rotate(Math.PI/4 + flap * 0.04); ctx.beginPath(); ctx.ellipse(6,-4,7,2.5,0,0,Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
+        ctx.restore();
+    });
+}
+
+function drawJosef() {
+    if (core.josef.isDone || core.scene === 'menu' || core.scene === 'doctor_lore') return;
+    if (core.josef.isSwinging) {
+        let p = core.josef.swingP, sa = -Math.PI/3 + Math.sin(p * Math.PI) * (Math.PI/1.5);
+        ctx.save(); ctx.translate(core.junkyard.pole.x + 15, core.junkyard.pole.y + 55); ctx.rotate(sa);
+        ctx.strokeStyle = '#8a8a8a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,160); ctx.stroke();
+        ctx.translate(0,160); ctx.fillStyle = '#8c775e'; ctx.fillRect(-15,-40,30,40); ctx.translate(0,-55); drawJosefHead(); ctx.restore(); return;
+    }
+    if (!core.josef.isAssembled) { ctx.save(); ctx.translate(320, 465); drawJosefHead(); ctx.restore(); return; }
+    let th = core.josef.baseHeight; if(core.josef.mode==='tall') th = 135; if(core.josef.mode==='short') th = 46;
+    let oldH = core.josef.height || 80; core.josef.height += (th - oldH) * 0.15;
+    ctx.save(); ctx.translate(core.josef.x, core.josef.y);
+    if(core.josef.isShocked) {
+        ctx.translate((Math.random()-0.5)*9, (Math.random()-0.5)*9); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5;
+        for(let i=0; i<4; i++) { ctx.beginPath(); ctx.moveTo(0,-40); ctx.lineTo((Math.random()-0.5)*60, -40+(Math.random()-0.5)*60); ctx.stroke(); }
+    }
+    let swing = (core.josef.x !== core.josef.targetX) ? Math.sin(Date.now() * 0.016) * 13 : 0;
+    ctx.strokeStyle = '#382a1c'; ctx.lineWidth = 4; drawWobblyLine([{x:-10,y:0},{x:-10+swing,y:35}]); drawWobblyLine([{x:10,y:0},{x:10-swing,y:35}]);
+    ctx.fillStyle = rustPattern; ctx.strokeStyle = '#1a110a'; ctx.lineWidth = 3; ctx.fillRect(-16, -core.josef.height, 32, core.josef.height); ctx.strokeRect(-16, -core.josef.height, 32, core.josef.height);
+    ctx.translate(0, -core.josef.height - 14); drawJosefHead(); ctx.restore();
+}
+
+function drawJosefHead() {
+    ctx.fillStyle = '#99846d'; ctx.strokeStyle = '#1a110a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0,0,15,Math.PI,0); ctx.lineTo(12,14); ctx.lineTo(-12,14); ctx.closePath(); ctx.fill(); ctx.stroke();
+    let eyeX = Math.sin(Date.now() * 0.002) * 1.5; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-5,2,4,0,Math.PI * 2); ctx.arc(5,2,4,0,Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(-5+eyeX,2,1.5,0,Math.PI * 2); ctx.arc(5+eyeX,2,1.5,0,Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#1a110a'; ctx.lineWidth = 2; drawWobblyLine([{x:0,y:-15},{x:0,y:-26}]);
+    ctx.fillStyle = core.josef.isShocked ? '#fff' : '#b8341d'; ctx.beginPath(); ctx.arc(0,-26,3,0,Math.PI * 2); ctx.fill();
+}
+
+function drawJunkyardScene() {
+    let j = core.junkyard; ctx.strokeStyle = '#423322'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(j.pole.x, 480);
+    if(j.pole.bent) { ctx.lineTo(j.pole.x, j.pole.y+40); ctx.arc(j.pole.x+15, j.pole.y+40, 15, Math.PI, Math.PI * 0.5, true); } else { ctx.lineTo(j.pole.x, j.pole.y); } ctx.stroke();
+    if(!j.bathtub.searched) { ctx.fillStyle = '#423629'; ctx.strokeStyle = '#1c140e'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(j.bathtub.x+50, j.bathtub.y+25, 50, 25, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+    if(j.bathtub.searched && !j.torso.collected) { ctx.fillStyle = '#7a6753'; ctx.fillRect(j.torso.x, j.torso.y, j.torso.w, j.torso.h); }
+    if(j.magnet.visible && !j.magnet.collected) { ctx.fillStyle = '#8f2917'; ctx.fillRect(j.magnet.x, j.magnet.y, j.magnet.w, j.magnet.h); ctx.fillStyle = '#d1d1d1'; ctx.fillRect(j.magnet.x+14, j.magnet.y, 11, j.magnet.h); }
+    if(!j.wire.collected) { ctx.strokeStyle = '#5e4e3d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(j.wire.x+15, j.wire.y+15, 13, 0, Math.PI * 2); ctx.stroke(); }
+    let d = j.drum; ctx.save(); ctx.translate(d.x+18, d.y+50); if(d.wobble>0) ctx.rotate(Math.sin(d.wobble * 0.6) * 0.15); else ctx.rotate(d.rot);
+    ctx.fillStyle = rustPattern; ctx.strokeStyle = '#1a100a'; ctx.lineWidth = 3; ctx.fillRect(-18,-50,36,50); ctx.strokeRect(-18,-50,36,50); ctx.restore();
+}
+
+function drawPoleScene() {
+    let ps = core.poleScene; ctx.fillStyle = '#3a2b1d'; ctx.fillRect(490, 80, 20, 400);
+    if(!ps.cat.dead) { ctx.save(); ctx.translate(500, ps.cat.fallY); if(ps.cat.shocked) ctx.translate((Math.random()-0.5)*6,0); ctx.fillStyle = '#352f29'; ctx.fillRect(-12,-18,24,18); ctx.restore(); }
+    ctx.fillStyle = '#54412f'; ctx.fillRect(485, 250, 30, 40); ctx.fillStyle = ps.solved ? '#3cb82a' : '#b82a14'; ctx.beginPath(); ctx.arc(500,270,4,0,Math.PI * 2); ctx.fill();
+    if (ps.panelOpen) {
+        ctx.fillStyle = 'rgba(10,7,5,0.88)'; ctx.fillRect(0,0,1024,576);
+        ctx.fillStyle = '#3d2e20'; ctx.strokeStyle = '#19110a'; ctx.lineWidth = 5; ctx.fillRect(362,138,300,300); ctx.strokeRect(362,138,300,300);
+        for(let i=0; i<9; i++) {
+            let v = ps.grid[i]; if(v===8) continue;
+            let gx = 362+(i%3)*100, gy = 138+Math.floor(i/3)*100;
+            ctx.fillStyle = '#5c4530'; ctx.fillRect(gx+4,gy+4,92,92); ctx.strokeStyle = '#cf9136'; ctx.lineWidth = 6; ctx.beginPath();
+            if(v<3){ ctx.moveTo(gx+10,gy+50); ctx.lineTo(gx+90,gy+50); } else { ctx.moveTo(gx+50,gy+10); ctx.lineTo(gx+50,gy+90); } ctx.stroke();
         }
     }
+}
 
-    function restartCurrentChapter() {
-        if (currentChapter === 1) {
-            restartChapter1();
-        } else {
-            restartChapter8();
+function drawBirdScene() {
+    let bs = core.birdScene; ctx.strokeStyle = '#2b1b10'; ctx.lineWidth = 2; drawWobblyLine([{x:600,y:315},{x:850,y:315}]);
+    bs.blocks.forEach(b => { if(b.fall && b.y>=450) return; ctx.fillStyle = b.lit ? '#e6ad3c' : '#473627'; ctx.fillRect(b.x, b.y, b.w, b.h); });
+    ctx.save(); ctx.translate(bs.bird.x, bs.bird.y); let ws = Math.sin(Date.now() * 0.025) * 14;
+    ctx.fillStyle = '#4a3f34'; ctx.beginPath(); ctx.ellipse(0,0,20,13,0,0,Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#362d25'; ctx.beginPath(); ctx.moveTo(-5,0); ctx.lineTo(-18,-12+ws); ctx.lineTo(5,0); ctx.fill();
+    ctx.fillStyle = '#bf9e33'; ctx.fillRect(14,-3,10,6); ctx.restore();
+}
+
+function drawBandScene() {
+    ctx.fillStyle = '#140e0a'; ctx.fillRect(0,450,1024,126); ctx.strokeStyle = '#2b1b10'; ctx.lineWidth = 3; drawWobblyLine([{x:0,y:450},{x:1024,y:450}]);
+    ctx.fillStyle = '#b39572'; ctx.font = 'bold 20px Courier New'; ctx.fillText("🎵 STREET BAND PERFORMANCE 流浪歌手多声部演奏 🎵", 260, 120);
+    let pulse = Math.sin(Date.now() * 0.015) * 4;
+    ctx.fillStyle = '#6e563d'; ctx.fillRect(280, 260 - pulse, 35, 190 + pulse); // 乐手A萨克斯
+    ctx.fillStyle = '#423326'; ctx.fillRect(480, 310, 70, 140); // 乐手B打铁桶
+    ctx.fillStyle = '#8f7358'; ctx.fillRect(700, 290 + pulse/2, 45, 160 - pulse/2); // 乐手C吉他
+}
+
+function drawGomokuScene() {
+    let bx = 332, by = 48, bs = 400, cs = 400 / 11;
+    ctx.fillStyle = '#5c4530'; ctx.strokeStyle = '#2b1b11'; ctx.lineWidth = 5; ctx.fillRect(bx, by, bs, bs); ctx.strokeRect(bx, by, bs, bs);
+    ctx.strokeStyle = '#382618'; ctx.lineWidth = 1.5;
+    for(let i=0; i<12; i++) {
+        ctx.beginPath(); ctx.moveTo(bx + i * cs, by); ctx.lineTo(bx + i * cs, by + bs); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bx, by + i * cs); ctx.lineTo(bx + bs, by + i * cs); ctx.stroke();
+    }
+    for(let r=0; r<12; r++) {
+        for(let c=0; c<12; c++) {
+            let val = core.gomoku.board[r][c];
+            if(val === 1) { ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(bx + c * cs, by + r * cs, 11, 0, Math.PI * 2); ctx.fill(); }
+            else if(val === 2) { ctx.fillStyle = '#e8d9c7'; ctx.beginPath(); ctx.arc(bx + c * cs, by + r * cs, 11, 0, Math.PI * 2); ctx.fill(); }
         }
     }
+    ctx.fillStyle = '#a89176'; ctx.font = '13px monospace'; ctx.fillText("🚬 老烟枪正在盯着你落子... (黑螺丝钉 VS 白齿轮)", 50, 140);
+    if(core.gomoku.winner) ctx.fillText(core.gomoku.winner==='player'?"🎉 你赢了！":"❌ 你输了！", 50, 200);
+}
 
-    // ==========================================
-    // 物品栏通用渲染器
-    // ==========================================
-    function getCurInventory() {
-        return currentChapter === 1 ? stateCh1.inventory : lvlCh8.gameState.josef.inventory;
+function drawBubbleScene() {
+    ctx.save(); ctx.translate(512, 180);
+    ctx.fillStyle = 'rgba(250, 245, 230, 0.94)'; ctx.strokeStyle = '#261a0f'; ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.ellipse(0, 0, 160, 95, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#3d2613'; ctx.font = 'bold 13px sans-serif';
+    if(core.bubbleLevel === 'junkyard') { ctx.fillText("【垃圾场发呆动画】", -60, -30); ctx.font='24px sans-serif'; ctx.fillText("🤖 ❤️ 🤖 (女友甜蜜回忆)", -110, 20); }
+    else if(core.bubbleLevel === 'prison') { ctx.fillText("【监狱牢房待机策划】", -60, -30); ctx.font='24px sans-serif'; ctx.fillText("🚽 🔥 🔧 (短路马桶越狱)", -110, 20); }
+    ctx.restore();
+    ctx.fillStyle='#2b1a0f'; ctx.fillRect(280,340,180,30); ctx.fillStyle='#fff'; ctx.font='12px sans-serif'; ctx.fillText("点击：垃圾场回忆连环画", 295, 360);
+    ctx.fillStyle='#2b1a0f'; ctx.fillRect(520,340,180,30); ctx.fillStyle='#fff'; ctx.fillText("点击：牢房短路马桶连环画", 530, 360);
+}
+
+function drawPlugScene() {
+    ctx.fillStyle = '#82715e'; ctx.font = 'bold 18px Courier New'; ctx.fillText("🧠 最终塔楼：博士脑部清除病毒红绿矩阵插销 🧠", 180, 70);
+    let p = core.plugGame;
+    p.nodes.forEach((n, idx) => {
+        ctx.strokeStyle = n.target === 'green' ? '#3cb82e' : '#b82a14'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(n.x, n.y, 22, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = n.state === 'green' ? '#4fe63c' : '#e63c22'; if(p.selected === idx) ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(n.x, n.y, 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    });
+    if(p.solved) { ctx.fillStyle = '#4fe63c'; ctx.font = 'bold 20px sans-serif'; ctx.fillText("🎯 病毒清理干净！博士核心危机解除！大结局通关！", 250, 470); }
+}
+
+function drawShootScene() {
+    let s = core.shootGame; ctx.strokeStyle = '#3a5435'; ctx.lineWidth = 4; ctx.strokeRect(s.mazeX, s.mazeY, s.mw, s.mh);
+    ctx.fillStyle = '#0f140e'; ctx.fillRect(s.mazeX+2, s.mazeY+2, s.mw-4, s.mh-4);
+    if(!s.keyCollected) { ctx.fillStyle = '#d4aa3b'; ctx.font = '20px sans-serif'; ctx.fillText("🔑", s.mazeX + 135, s.mazeY + 120); }
+    ctx.fillStyle = '#6cb85c'; ctx.fillRect(s.px, s.py, 16, 16); // 坦克
+    ctx.fillStyle = '#ff4433'; s.flies.forEach(f => { ctx.beginPath(); ctx.arc(f.x, f.y, 4, 0, Math.PI * 2); ctx.fill(); }); // 弹幕
+}
+
+function drawDoctorLoreScene() {
+    core.movieFrame++; let pulse = Math.sin(Date.now() * 0.01) * 3;
+    ctx.fillStyle = '#544230'; ctx.fillRect(150, 360 - pulse, 120, 120);
+    ctx.fillStyle = '#9e8467'; ctx.beginPath(); ctx.arc(210, 310 - pulse, 40, 0, Math.PI * 2); ctx.fill(); // 博士大头
+    ctx.fillStyle = (core.movieFrame % 20 < 10) ? '#e6983c' : '#4d3215'; ctx.fillRect(195, 260 - pulse, 12, 14); // 真空管发光
+    
+    // 放映机气泡及1:1老胶片颤抖
+    let bx = 460, by = 80, bw = 450, bh = 220;
+    ctx.strokeStyle = 'rgba(230,152,60,0.2)'; ctx.beginPath(); ctx.moveTo(210, 260-pulse); ctx.lineTo(bx, by+bh/2); ctx.stroke();
+    let jitterY = (Math.random() - 0.5) * 1.5; ctx.save(); ctx.translate(0, jitterY);
+    ctx.fillStyle = '#f5ebd2'; ctx.strokeStyle = '#3d2613'; ctx.lineWidth = 4; ctx.fillRect(bx, by, bw, bh); ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = '#4a331d'; ctx.font = 'bold 12px sans-serif';
+    ctx.fillText(`🧠 老老博士电影讲述故事线分镜: ${core.movieChapter+1}/3`, bx + 20, by + 35);
+    ctx.strokeRect(bx + 20, by + 55, 410, 140);
+    if(core.movieChapter===0) ctx.fillText("[1:1 设定故事]: 曾经我是核心发明家，管理机械城...", bx+40, by+100);
+    if(core.movieChapter===1) ctx.fillText("[黑帮洗脑危机]: 坏蛋黑帮潜入大脑，给我注满大面积病毒！", bx+40, by+100);
+    if(core.movieChapter===2) ctx.fillText("[终极任务托付]: 拯救防空炮塔控制权，全靠你了！", bx+40, by+100);
+    ctx.restore();
+}
+
+function drawStretchUI() {
+    if (core.scene === 'menu' || core.scene === 'doctor_lore') return;
+    const sx = 975, sy1 = 190, sy2 = 330;
+    ctx.strokeStyle = '#3d2b1c';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy1);
+    ctx.lineTo(sx, sy2);
+    ctx.stroke();
+
+    const modes = [
+        { mode: 'tall', y: 200, label: '▲' },
+        { mode: 'normal', y: 260, label: '●' },
+        { mode: 'short', y: 320, label: '▼' }
+    ];
+    modes.forEach(m => {
+        const active = core.josef.mode === m.mode;
+        ctx.fillStyle = active ? '#e6983c' : '#261b12';
+        ctx.strokeStyle = active ? '#ffd54f' : '#4a3625';
+        ctx.lineWidth = active ? 2.5 : 1.5;
+        ctx.beginPath();
+        ctx.arc(sx, m.y, active ? 9 : 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+    });
+}
+
+function drawInventoryAndTopUI() {
+    if (core.scene === 'menu') return;
+    core.inventory.openY += (core.inventory.targetY - core.inventory.openY) * 0.16;
+    ctx.save(); ctx.translate(0, core.inventory.openY);
+    ctx.fillStyle = '#261c13'; ctx.strokeStyle = '#3d2e20'; ctx.lineWidth = 4; ctx.fillRect(200,0,624,60); ctx.strokeRect(200,0,624,60);
+    for(let i=0; i<6; i++) {
+        let gx = 220+i*100; ctx.fillStyle = '#0f0a06'; ctx.fillRect(gx,8,84,44);
+        let item = core.inventory.items[i]; if(item) { ctx.fillStyle = core.inventory.selected===item?'#bf3c24':'#8a765e'; ctx.font='bold 12px sans-serif'; ctx.fillText(item, gx+10,34); }
     }
+    ctx.restore();
+    ctx.fillStyle = core.ui.bulb.active ? '#f2c544' : '#3d301f'; ctx.beginPath(); ctx.arc(core.ui.bulb.x, core.ui.bulb.y, core.ui.bulb.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#8c2617'; ctx.fillRect(core.ui.book.x, core.ui.book.y, core.ui.book.w, core.ui.book.h); ctx.strokeRect(core.ui.book.x, core.ui.book.y, core.ui.book.w, core.ui.book.h);
+    if (core.ui.book.state === 'opened') {
+        ctx.fillStyle = 'rgba(8,6,4,0.93)'; ctx.fillRect(0,0,1024,576);
+        ctx.fillStyle = '#f5ebcf'; ctx.strokeStyle='#422d1a'; ctx.lineWidth=5; ctx.fillRect(162,48,700,480); ctx.strokeRect(162,48,700,480);
+        ctx.fillStyle='#3d2916'; ctx.font='bold 14px sans-serif'; ctx.fillText("📖 [通关小书手稿已解锁漫画]:", 200, 100); ctx.font='40px sans-serif'; ctx.fillText("⚡ 🐈 ⚡ (电击猫咪通关法)", 320, 260);
+        ctx.fillStyle='#802114'; ctx.fillRect(162+700-40, 48+10, 30, 30); ctx.fillStyle='#fff'; ctx.font='bold 16px sans-serif'; ctx.fillText("X", 162+700-31, 48+31);
+    }
+}
 
-    function renderInventory() {
-        const inv = getCurInventory();
-        const selected = currentChapter === 1 ? stateCh1.selectedItem : lvlCh8.gameState.josef.selectedItem;
-        for (let i = 0; i < 5; i++) {
-            const slot = document.getElementById(`slot-${i}`);
-            if (!slot) continue;
-            if (inv[i]) {
-                let icon = "📦";
-                const name = inv[i];
-                if (name.includes("磁铁")) icon = "🧲";
-                else if (name.includes("线")) icon = "🧵";
-                else if (name.includes("罐")) icon = name.includes("抓满") ? "🐝" : "🫙";
-                else if (name.includes("油桶")) icon = "🛢️";
-                else if (name.includes("收音机")) icon = "📻";
-                else if (name.includes("猫")) icon = "🐈‍⬛";
-                else if (name.includes("螺母")) icon = "🔩";
-                else if (name.includes("拨盘")) icon = "🔘";
-                else if (name.includes("电池")) icon = "🔋";
-                
-                slot.innerText = icon;
-                slot.className = (selected === name) ? "inv-slot active" : "inv-slot";
-                slot.title = name;
-            } else {
-                slot.innerText = "";
-                slot.className = "inv-slot";
-                slot.title = `槽位${i+1}`;
+function drawSpiderGameWindow() {
+    ctx.fillStyle = 'rgba(10,8,6,0.92)'; ctx.fillRect(0,0,1024,576);
+    let sx = 312, sy = 88, sw = 400, sh = 400;
+    ctx.fillStyle = '#2b2016'; ctx.strokeStyle = '#140f09'; ctx.lineWidth = 5; ctx.fillRect(sx, sy, sw, sh); ctx.strokeRect(sx, sy, sw, sh);
+    ctx.fillStyle = '#1b241a'; ctx.fillRect(sx+10, sy+10, sw-20, sh-20);
+    ctx.fillStyle = '#9df092'; ctx.font = 'bold 12px monospace';
+    ctx.fillText(`🕷️ SPIDER SHOOTER (击杀: ${core.spiderGame.kills}/${core.spiderGame.required})`, sx + 16, sy + 28);
+    ctx.fillStyle = '#ff6b6b'; ctx.font = 'bold 12px monospace';
+    ctx.fillText('[✖ 关闭 (ESC)]', sx + sw - 110, sy + 28);
+    if (core.spiderGame.over) { ctx.fillStyle='#b82c16'; ctx.font='bold 16px monospace'; ctx.fillText("⚙️ MECHANISM JAMMED (点击重来) ⚙️", sx+60, sy+190); return; }
+    let p = core.spiderGame.player; ctx.save(); ctx.translate(p.x, p.y); ctx.strokeStyle = '#8ab881'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0,0,p.r,0,Math.PI * 2); ctx.stroke(); ctx.restore();
+    core.spiderGame.bullets.forEach(b => { ctx.fillStyle = b.ie?'#ff4422':'#9df092'; ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI * 2); ctx.fill(); });
+    core.spiderGame.spiders.forEach(sp => { ctx.save(); ctx.translate(sp.x, sp.y); ctx.fillStyle = sp.ib?'#8f652d':(sp.ir?'#bd2e19':'#332921'); ctx.beginPath(); ctx.arc(0,0,sp.r,0,Math.PI * 2); ctx.fill(); ctx.restore(); });
+}
+
+// ==========================================
+// ⚙️ 核心 AI 与多波次联动更新算法
+// ==========================================
+function update() {
+    initAudioEngine(); toggleIndustryBuzz(core.scene === 'pole' && !core.poleScene.solved);
+    if(core.mouse.y < 65) core.inventory.targetY = 0; else core.inventory.targetY = -62;
+    if (core.scene === 'menu') {
+        core.menuFlies.forEach(fly => {
+            if (fly.state === 'idle') {
+                fly.x = fly.homeX + (Math.random()-0.5)*0.5; fly.y = fly.homeY + (Math.random()-0.5)*0.5;
+                if (Math.hypot(core.mouse.x - fly.x, core.mouse.y - fly.y) < 18) { fly.state = 'flying'; fly.energy = 130+Math.random()*70; let a=Math.random() * Math.PI * 2; fly.vx=Math.cos(a)*8; fly.vy=Math.sin(a)*8; }
+            } else if (fly.state === 'flying') {
+                fly.energy--; fly.vx += (Math.random()-0.5)*1.6; fly.vy += (Math.random()-0.5)*1.6;
+                let spd = Math.hypot(fly.vx, fly.vy); if (spd > 7.5) { fly.vx = (fly.vx/spd)*7.5; fly.vy = (fly.vy/spd)*7.5; }
+                fly.x += fly.vx; fly.y += fly.vy; if(Math.random()<0.5) playActionSound('buzz', spd/7.5);
+                if (fly.x<20||fly.x>1004) fly.vx = -fly.vx; if (fly.y<20||fly.y>556) fly.vy = -fly.vy;
+                if (fly.energy <= 0) { fly.vx *= 0.85; fly.vy *= 0.85; if (Math.hypot(fly.vx, fly.vy)<0.2) { fly.state = 'idle'; fly.homeX=fly.x; fly.homeY=fly.y; } }
             }
-        }
+        });
+        return;
     }
-
-    function selectSlot(index) {
-        const inv = getCurInventory();
-        if (index >= inv.length) return;
-        playSfx('pick');
-        if (currentChapter === 1) {
-            if (stateCh1.selectedItem === inv[index]) {
-                stateCh1.selectedItem = null;
-                printLog("取消选中物品。");
-            } else {
-                stateCh1.selectedItem = inv[index];
-                printLog(`启用了道具：【${stateCh1.selectedItem}】。请点击场景目标使用。`);
-            }
-        } else {
-            if (lvlCh8.gameState.josef.selectedItem === inv[index]) {
-                lvlCh8.gameState.josef.selectedItem = null;
-                printLog("取消选中物品。");
-            } else {
-                lvlCh8.gameState.josef.selectedItem = inv[index];
-                printLog(`启用了道具：【${lvlCh8.gameState.josef.selectedItem}】。请点击目标实体使用。`);
-            }
-        }
-        renderInventory();
+    if (core.ui.book.state === 'gaming') {
+        let s = core.spiderGame; if (s.over) return; let p = s.player; s.spawnT++;
+        if (s.level===1 && s.spawnT%50===0 && s.kills<s.required) { let a=Math.random() * Math.PI * 2; s.spiders.push({x:p.x+Math.cos(a)*250, y:p.y+Math.sin(a)*250, vx:-Math.cos(a)*1.2, vy:-Math.sin(a)*1.2, r:9, hp:1, ib:false}); }
+        if (s.level===2 && s.spawnT%35===0 && s.kills<s.required) { let a=Math.random() * Math.PI * 2; s.spiders.push({x:p.x+Math.cos(a)*250, y:p.y+Math.sin(a)*250, vx:-Math.cos(a)*2.2, vy:-Math.sin(a)*2.2, r:8, hp:1, ir:true, ib:false}); }
+        s.bullets.forEach((b,bi) => { b.x+=b.vx; b.y+=b.vy; if(b.x<312||b.x>712||b.y<90||b.y>480) s.bullets.splice(bi,1); });
+        s.spiders.forEach((sp,spi) => {
+            sp.x+=sp.vx; sp.y+=sp.vy; if (Math.hypot(p.x-sp.x, p.y-sp.y) < p.r+sp.r) s.over = true;
+            s.bullets.forEach((b,bi) => { if(!b.ie && Math.hypot(b.x-sp.x, b.y-sp.y)<sp.r+3){ sp.hp--; s.bullets.splice(bi,1); if(sp.hp<=0){ s.spiders.splice(spi,1); playActionSound('pop'); if(s.level<3) s.kills++; if(sp.ib){ core.ui.book.state='opened'; } } } });
+        });
+        if (s.level<3 && s.kills>s.required && s.spiders.length===0) { s.level++; s.kills=0; s.spawnT=0; if(s.level===3) s.spiders.push({x:512,y:180,vx:0.8,vy:0,r:32,hp:10,ib:true,ang:0}); }
+        return;
     }
-
-    // ==========================================
-    // 第1章 交互逻辑实现 (100% 保持稳定)
-    // ==========================================
-    function clickBathtub() {
-        if (stateCh1.gameOver) return;
-        stateCh1.bathtubKicks++;
-        playSfx('clank');
-        const btn = document.getElementById("bathtub");
-        if (stateCh1.bathtubKicks === 1) {
-            btn.className = "entity kicked-1";
-            printLog("你猛击了一下浴缸，浴缸松动了，露出了里面的机械头骨！");
-        } else if (stateCh1.bathtubKicks >= 2) {
-            btn.className = "entity kicked-2";
-            printLog("你二次顶飞了浴缸！浴缸滚落悬崖。约瑟夫的【头和躯干】露了出来。", "#fff");
-            stateCh1.hasBody = true;
-            const josef = document.getElementById("josef");
-            josef.style.display = "flex";
-            document.getElementById("stretch-btn").style.display = "block";
-        }
+    if (core.josef.isDone || core.poleScene.panelOpen) return;
+    if (core.josef.isSwinging) { core.josef.swingP += 0.015; if (core.josef.swingP>1.0){ core.josef.isSwinging=false; core.josef.isDone=true; } return; }
+    let dx = core.josef.targetX - core.josef.x;
+    if (Math.abs(dx) > core.josef.speed) { core.josef.x += Math.sign(dx) * core.josef.speed; core.josef.stepT++; if(core.josef.stepT%22===0) playActionSound('step'); }
+    if (core.scene === 'junkyard') {
+        let d = core.junkyard.drum; if(Math.abs(core.josef.x-d.x)<38 && core.josef.mode==='normal') { d.vx=7.4; d.rot=0.22; playActionSound('thud',1.1,0.85); core.junkyard.magnet.visible=true; }
+        if (Math.abs(d.vx)>0.05) { d.x+=d.vx; d.rot+=d.vx * 0.02; d.vx *= 0.94; if(d.x>850){ d.x=850; d.vx=-d.vx*0.6; playActionSound('thud',0.6); } } else if(d.vx!==0){ d.vx=0; d.wobble=30; } if(d.wobble>0){ d.wobble--; if(d.wobble===0) d.rot=0; }
     }
-
-    function clickMouse() {
-        if (stateCh1.gameOver) return;
-        playSfx('clank');
-        const bubble = document.getElementById("mouse-bubble");
-        bubble.style.display = bubble.style.display === "block" ? "none" : "block";
-        printLog("小老鼠吱吱叫着，正在等待你给它带来喜爱的发光玩偶。");
+    if (core.scene === 'pole' && core.poleScene.cat.shocked && !core.poleScene.cat.dead) { core.poleScene.cat.fallY += 5; if(core.poleScene.cat.fallY>450) core.poleScene.cat.dead=true; }
+    if (core.scene === 'bird') {
+        let b = core.birdScene.bird;
+        if(b.status === 'idle') { let lit = core.birdScene.blocks.find(bk=>bk.lit && !bk.fall); if(lit){ b.status='dive'; b.tBlock=lit; b.p=0; } }
+        else if(b.status==='dive') { b.p+=0.035; b.x=740+(b.tBlock.x-740)*b.p; b.y=90+(b.tBlock.y-12-90)*b.p; if(b.p>=1.0){ b.status='ret'; b.tBlock.lit=false; playActionSound('thud',0.5); } }
+        else if(b.status==='ret') { b.p-=0.035; b.x=740+(b.tBlock.x-740)*b.p; b.y=90+(b.tBlock.y-12-90)*b.p; if(b.p<=0){ b.status='idle'; b.x=740; b.y=90; } }
+        core.birdScene.blocks.forEach(bk => { if(bk.fall && bk.y<450){ bk.vy+=0.4; bk.y+=bk.vy; if(bk.y>=450) playActionSound('thud',0.4); } });
     }
-
-    function toggleStretch(e) {
-        if (e) e.stopPropagation();
-        if (!stateCh1.hasBody) return;
-        playSfx('stretch');
-        stateCh1.isStretched = !stateCh1.isStretched;
-        const josef = document.getElementById("josef");
-        const body = document.getElementById("josef-body");
-        if (stateCh1.isStretched) {
-            josef.style.height = "110px";
-            body.style.height = "76px";
-            printLog("【拉伸身体】约瑟夫挺直了气压中轴，身体向上伸长！高处的机关现在触手可及。");
-        } else {
-            josef.style.height = "70px";
-            body.style.height = "36px";
-            printLog("【收缩身体】约瑟夫恢复了常态身高。");
-        }
+    if (core.scene === 'shoot') {
+        let s = core.shootGame; if(s.flies.length < 6) s.flies.push({ x: s.mazeX+50+Math.random()*200, y: s.mazeY+60+Math.random()*200, vx: (Math.random()-0.5)*3, vy: (Math.random()-0.5)*3 });
+        s.flies.forEach(f => { f.x+=f.vx; f.y+=f.vy; if(f.x<s.mazeX+6||f.x>s.mazeX+s.mw-6) f.vx=-f.vx; if(f.y<s.mazeY+6||f.y>s.mazeY+s.mh-6) f.vy=-f.vy; if(Math.hypot(s.px+8-f.x, s.py+8-f.y)<11){ s.px=420; s.py=420; playActionSound('thud'); } });
+        if(!s.keyCollected && Math.hypot(s.px-(s.mazeX+140), s.py-(s.mazeY+120))<20){ s.keyCollected=true; playActionSound('page'); }
     }
+}
 
-    function clickIronPlate() {
-        if (!stateCh1.hasBody) { printLog("只剩一个头，根本推不动厚重铁皮。"); return; }
-        if (stateCh1.ironPlateMoved) return;
-        stateCh1.ironPlateMoved = true;
-        playSfx('clank');
-        document.getElementById("iron-plate").className = "entity moved";
-        document.getElementById("right-leg").style.display = "flex";
-        printLog("约瑟夫用力蹬开了铁皮！在铁皮下方赫然发现了自己失落的【右腿】！");
-    }
+function render() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if(core.scene === 'menu') { drawMenuScene(); return; }
+    drawBaseWorld();
+    if(core.scene === 'junkyard') drawJunkyardScene();
+    if(core.scene === 'pole') drawPoleScene();
+    if(core.scene === 'bird') drawBirdScene();
+    if(core.scene === 'band') drawBandScene();
+    if(core.scene === 'gomoku') drawGomokuScene();
+    if(core.scene === 'bubble') drawBubbleScene();
+    if(core.scene === 'plug') drawPlugScene();
+    if(core.scene === 'shoot') drawShootScene();
+    if(core.scene === 'doctor_lore') drawDoctorLoreScene();
+    drawJosef(); drawStretchUI(); drawInventoryAndTopUI();
+    if(core.ui.book.state === 'gaming') drawSpiderGameWindow();
+    ctx.save(); ctx.translate(core.mouse.x, core.mouse.y); ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0,0,5,0,Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
+}
 
-    function clickRightLeg() {
-        if (!stateCh1.ironPlateMoved || stateCh1.hasLeg) return;
-        stateCh1.hasLeg = true;
-        playSfx('combine');
-        document.getElementById("right-leg").style.display = "none";
-        document.getElementById("josef-leg-r").style.display = "block";
-        document.getElementById("josef-leg-l").style.display = "block";
-        document.getElementById("josef").style.left = "480px";
-        printLog("【部件组装完毕】约瑟夫成功装上了右腿！现在双腿完好，可以在废料场内自由行走了！", "#ff9900");
-    }
+function mainGlobalLoop() { update(); render(); requestAnimationFrame(mainGlobalLoop); }
 
-    function clickMagnet() {
-        if (!stateCh1.hasLeg) { printLog("没有腿走不过去拾取磁铁。"); return; }
-        playSfx('pick');
-        document.getElementById("magnet").style.display = "none";
-        stateCh1.inventory.push("磁铁");
-        printLog("拾取了关键道具：【磁铁】！");
-        checkCombineBtn();
-        renderInventory();
-    }
+// ==========================================
+// 🖱️ 点击动作事件全域分流拦截器
+// ==========================================
+canvas.addEventListener('mousedown', (e) => {
+    initAudioEngine();
+    let rect = canvas.getBoundingClientRect();
+    let scaleX = canvas.width / rect.width;
+    let scaleY = canvas.height / rect.height;
+    let mx = (e.clientX - rect.left) * scaleX;
+    let my = (e.clientY - rect.top) * scaleY;
+    core.mouse.x = mx; core.mouse.y = my;
 
-    function clickString() {
-        if (!stateCh1.hasLeg) { printLog("没有腿走不过去拾取线轴。"); return; }
-        playSfx('pick');
-        document.getElementById("string").style.display = "none";
-        stateCh1.inventory.push("线轴");
-        printLog("拾取了关键道具：【线轴】！");
-        checkCombineBtn();
-        renderInventory();
-    }
-
-    function checkCombineBtn() {
-        const btn = document.getElementById("combine-btn");
-        if (stateCh1.inventory.includes("磁铁") && stateCh1.inventory.includes("线轴")) {
-            btn.style.display = "block";
-        } else {
-            btn.style.display = "none";
-        }
-    }
-
-    function tryCombine() {
-        if (stateCh1.inventory.includes("磁铁") && stateCh1.inventory.includes("线轴")) {
-            playSfx('combine');
-            stateCh1.inventory = ["绑着绳子的磁铁"];
-            stateCh1.selectedItem = null;
-            printLog("【微操组合成功】: 将线轴细绳牢牢绑在磁铁上，获得了：【绑着绳子的磁铁】！", "#ff9900");
-            checkCombineBtn();
-            renderInventory();
-        }
-    }
-
-    function clickIronBar() {
-        if (!stateCh1.hasLeg) { printLog("你腿还没装好，走不过去，力气也不够。"); return; }
-        if (stateCh1.ironBarBent) {
-            // 如果已弯曲且选中了组合道具，尝试抛掷通关
-            if (stateCh1.selectedItem === "绑着绳子的磁铁") {
-                if (!stateCh1.isStretched) {
-                    printLog("【高度不够】: 身高太矮，抛掷角度不正确！请按住身体【▲▼】拉长身体再试。");
-                    return;
-                }
-                stateCh1.gameOver = true;
-                playSfx('success');
-                stateCh1.inventory = [];
-                renderInventory();
-                printLog("【1:1 像素终极动作触发】: 约瑟夫将绑绳磁铁全力抛向铁杆顶端！磁力卡死！", "#ff9900");
-                const josef = document.getElementById("josef");
-                josef.style.left = "280px";
-                setTimeout(() => {
-                    josef.style.transform = "translate(-220px, -60px) scale(0.4)";
-                    josef.style.opacity = "0";
-                    printLog("【第一章通关】: 约瑟夫荡过深渊，成功逃离废料场！", "#8cff99");
-                    setTimeout(() => {
-                        document.getElementById("win-modal").style.display = "block";
-                    }, 600);
-                }, 500);
-            }
+    if (core.ui.book.state === 'gaming') {
+        if (mx > 600 && mx < 712 && my > 88 && my < 125) {
+            core.ui.book.state = 'closed';
+            const curBtn = document.getElementById(`btn-${core.scene}`);
+            if (curBtn) curBtn.classList.add('active');
+            const spBtn = document.getElementById('btn-spider');
+            if (spBtn) spBtn.classList.remove('active');
             return;
         }
-        stateCh1.ironBarBent = true;
-        playSfx('clank');
-        document.getElementById("iron-bar").className = "entity bent";
-        printLog("约瑟夫利用体重全力一压！铁杆变为了一个呈45度延伸向悬崖外的完美【斜角吊点】。");
+        if (core.spiderGame.over) {
+            if(mx>312 && mx<712 && my>88 && my<488) { core.spiderGame.level=1; core.spiderGame.spiders=[]; core.spiderGame.kills=0; core.spiderGame.over=false; }
+            return;
+        }
+        const p = core.spiderGame.player;
+        let ang = Math.atan2(my - p.y, mx - p.x);
+        core.spiderGame.bullets.push({ x: p.x, y: p.y, vx: Math.cos(ang) * 9, vy: Math.sin(ang) * 9, ie: false });
+        playActionSound('laser', 0.8, 1.2);
+        return;
     }
-
-    function restartChapter1() {
-        stateCh1 = {
-            bathtubKicks: 0,
-            hasBody: false,
-            hasLeg: false,
-            isStretched: false,
-            inventory: [],
-            selectedItem: null,
-            ironPlateMoved: false,
-            ironBarBent: false,
-            gameOver: false
-        };
-        document.getElementById("bathtub").className = "entity";
-        document.getElementById("iron-plate").className = "entity";
-        document.getElementById("right-leg").style.display = "none";
-        document.getElementById("magnet").style.display = "flex";
-        document.getElementById("string").style.display = "flex";
-        document.getElementById("iron-bar").className = "entity";
-        document.getElementById("josef").style.display = "none";
-        document.getElementById("josef").style.left = "400px";
-        document.getElementById("josef").style.height = "70px";
-        document.getElementById("josef-body").style.height = "36px";
-        document.getElementById("josef").style.transform = "none";
-        document.getElementById("josef").style.opacity = "1";
-        document.getElementById("stretch-btn").style.display = "none";
-        document.getElementById("josef-leg-r").style.display = "none";
-        document.getElementById("win-modal").style.display = "none";
-        renderInventory();
-        printLog("第一章关卡已重置。请重新点击【浴缸】开始。", "#8cff99");
+    if (core.ui.book.state === 'opened') {
+        if(mx>162+700-40 && mx<162+700-10 && my>48+10 && my<48+40) core.ui.book.state='closed';
+        return;
     }
-
-    // ==========================================
-    // 第8章 交互逻辑与 DOM 联动 (1:1 状态机对接)
-    // ==========================================
-    function updateCh8DOM() {
-        const gs = lvlCh8.gameState;
-        // 1. 苍蝇捕捉计数
-        const flyBadge = document.getElementById("fly-count-badge");
-        if (flyBadge) flyBadge.innerText = `🪰 臭水塘(${gs.tavern.fliesCaptured}/5)`;
-
-        // 2. 酒馆老板状态
-        const ownerEl = document.getElementById("tavern-owner");
-        if (ownerEl) {
-            ownerEl.innerText = gs.tavern.ownerDistracted ? "🪰😵🪰" : "🧔";
+    if (core.scene==='pole' && core.poleScene.panelOpen) {
+        let c=Math.floor((mx-362)/100)+Math.floor((my-138)/100)*3, b=core.poleScene.grid.indexOf(8);
+        if([c-1,c+1,c-3,c+3].includes(b)){
+            core.poleScene.grid[b]=core.poleScene.grid[c]; core.poleScene.grid[c]=8; playActionSound('thud');
+            if(core.poleScene.grid.slice(0,8).every((v,i)=>v===i)){ core.poleScene.solved=true; core.poleScene.panelOpen=false; core.poleScene.cat.shocked=true; playActionSound('shock'); }
         }
-        const oilPodEl = document.getElementById("tavern-oil-pod");
-        if (oilPodEl) {
-            oilPodEl.style.display = gs.tavern.oilPodStolen ? "none" : "block";
-        }
-
-        // 3. 钟楼表盘指针文本
-        const redTxt = document.getElementById("dial-red-text");
-        const blackTxt = document.getElementById("dial-black-text");
-        if (redTxt) redTxt.innerText = `红: ${gs.clockTower.pointerRed}`;
-        if (blackTxt) blackTxt.innerText = `黑: ${gs.clockTower.pointerBlack}`;
-
-        // 4. 大妈状态与旧收音机
-        const gNpc = document.getElementById("grandma-npc");
-        const gTxt = document.getElementById("grandma-status-txt");
-        const radEl = document.getElementById("balcony-radio");
-        if (gs.clockTower.grandmaOut) {
-            if (gNpc) gNpc.innerText = "⛪🚪";
-            if (gTxt) gTxt.innerText = "老奶奶已前往大教堂(房间无人)";
-            if (radEl) radEl.style.display = gs.clockTower.radioStolen ? "none" : "block";
-        } else {
-            if (gNpc) gNpc.innerText = "👵";
-            if (gTxt) gTxt.innerText = "二楼阳台(老奶奶警惕看守中)";
-            if (radEl) radEl.style.display = "none";
-        }
-
-        // 5. 电线火花与流浪猫
-        const sparks = document.getElementById("electric-sparks");
-        const catEl = document.getElementById("alley-cat");
-        if (gs.wires.sparking) {
-            if (sparks) sparks.style.display = "block";
-        } else {
-            if (sparks) sparks.style.display = "none";
-        }
-        if (catEl) {
-            if (gs.strayCat.isCaptured) {
-                catEl.style.display = "none";
-            } else if (gs.strayCat.isElectrocuted) {
-                catEl.style.display = "block";
-                catEl.className = "stunned";
-                catEl.innerText = "😵‍💫⚡";
-            } else {
-                catEl.style.display = "block";
-                catEl.className = "";
-                catEl.innerText = "🐈‍⬛";
+        return;
+    }
+    if (my<60 && mx>200 && mx<800 && core.scene!=='menu') {
+        let idx = Math.floor((mx-220)/100), item = core.inventory.items[idx];
+        if(item){
+            if(core.inventory.selected && core.inventory.selected!==item){
+                if((core.inventory.selected==='细导线'&&item==='磁铁')||(core.inventory.selected==='磁铁'&&item==='细导线')){
+                    core.inventory.items=core.inventory.items.filter(i=>i!=='细导线'&&i!=='磁铁'); core.inventory.items.push('磁铁组线'); core.inventory.selected=null; playActionSound('pop');
+                }
+            }else{
+                core.inventory.selected=(core.inventory.selected===item)?null:item; playActionSound('pop');
             }
         }
+        return;
+    }
+    if(mx>950 && mx<990 && my>180 && my<360 && core.scene!=='menu') {
+        if(my<240) { core.josef.mode='tall'; playActionSound('hydraulic'); }
+        else if(my>310) { core.josef.mode='short'; playActionSound('hydraulic'); }
+        else { core.josef.mode='normal'; playActionSound('hydraulic'); }
+        return;
+    }
+    if(core.scene!=='menu' && Math.hypot(mx-core.ui.bulb.x, my-core.ui.bulb.y)<core.ui.bulb.r){
+        core.ui.bulb.active=true; core.ui.bulb.timer=150; playActionSound('pop'); return;
+    }
+    if(core.scene!=='menu' && mx>core.ui.book.x && mx<core.ui.book.x+core.ui.book.w && my>core.ui.book.y && my<core.ui.book.y+core.ui.book.h){
+        core.ui.book.state='gaming'; playActionSound('page'); return;
+    }
 
-        // 6. 三位乐手状态标签与动画
-        const saxBox = document.getElementById("mus-sax");
-        const drumBox = document.getElementById("mus-drum");
-        const hornBox = document.getElementById("mus-horn");
-        const tagSax = document.getElementById("tag-sax");
-        const tagDrum = document.getElementById("tag-drum");
-        const tagHorn = document.getElementById("tag-horn");
-        const ratIcon = document.getElementById("horn-rat");
-        const drumIcon = document.getElementById("drum-drum-icon");
-
-        if (tagSax) {
-            if (gs.musicians.sax.status === "fixed") {
-                tagSax.className = "mus-status-tag fixed";
-                tagSax.innerText = "🎷 已修复(蓝调合奏)";
-                saxBox.classList.add("playing");
-            } else {
-                tagSax.className = "mus-status-tag";
-                tagSax.innerText = "🎷 缺5枚螺母";
-                saxBox.classList.remove("playing");
-            }
+    if(core.scene==='junkyard') {
+        let j = core.junkyard;
+        if(!core.josef.isAssembled){
+            if(mx>130&&mx<230){ j.bathtub.searched=true; playActionSound('thud'); }
+            else if(j.bathtub.searched&&mx>160&&mx<190){ j.torso.collected=true; core.josef.isAssembled=true; playActionSound('pop'); }
+            return;
         }
-        if (tagDrum) {
-            if (gs.musicians.drum.status === "fixed") {
-                tagDrum.className = "mus-status-tag fixed";
-                tagDrum.innerText = "🥁 大油桶就绪";
-                drumBox.classList.add("playing");
-                if (drumIcon) drumIcon.innerText = "🛢️";
-            } else {
-                tagDrum.className = "mus-status-tag";
-                tagDrum.innerText = "🥁 鼓面破损";
-                drumBox.classList.remove("playing");
-                if (drumIcon) drumIcon.innerText = "🥁";
-            }
+        if(mx>50&&mx<80&&my>240&&my<300){
+            if(core.josef.mode==='tall') { j.pole.bent=true; playActionSound('thud'); }
+            else { playActionSound('buzz'); }
+            return;
         }
-        if (tagHorn) {
-            if (gs.musicians.horn.status === "fixed") {
-                tagHorn.className = "mus-status-tag fixed";
-                tagHorn.innerText = "🎺 通畅(低音轰鸣)";
-                hornBox.classList.add("playing");
-                if (ratIcon) ratIcon.style.display = "none";
-            } else {
-                tagHorn.className = "mus-status-tag";
-                tagHorn.innerText = "🎺 老鼠筑巢";
-                hornBox.classList.remove("playing");
-                if (ratIcon) ratIcon.style.display = "block";
-            }
+        if(j.pole.bent && mx>50&&mx<120&&my>220&&my<320 && core.inventory.selected==='磁铁组线' && core.josef.mode==='tall') {
+            core.josef.isSwinging = true; playActionSound('laser'); return;
         }
-
-        // 7. 摔碎花盆与通关检测
-        const debris = document.getElementById("pot-debris");
-        if (debris) {
-            if (gs.flowerPot.smashed && (!gs.flowerPot.dialPicked || !gs.flowerPot.batteryPicked)) {
-                debris.style.display = "block";
-            } else {
-                debris.style.display = "none";
-            }
+        if(!j.wire.collected && Math.hypot(mx-(j.wire.x+15), my-(j.wire.y+15))<25){
+            j.wire.collected=true; core.inventory.items.push('细导线'); playActionSound('pop'); return;
+        }
+        if(j.magnet.visible && !j.magnet.collected && mx>=j.magnet.x && mx<=j.magnet.x+j.magnet.w){
+            j.magnet.collected=true; core.inventory.items.push('磁铁'); playActionSound('pop'); return;
         }
     }
 
-    // 动作A：点击排污臭水塘抓苍蝇
-    function clickPuddle() {
-        const item = lvlCh8.gameState.josef.selectedItem;
-        const msg = lvlCh8.interactTavernSwarm(item || "空罐子");
-        playSfx('fly_buzz');
-        printLog(msg, "#8cff99");
-        renderInventory();
-        updateCh8DOM();
-    }
-
-    // 动作B：点击酒馆柜台 (放苍蝇/偷油)
-    function clickTavernCounter() {
-        const item = lvlCh8.gameState.josef.selectedItem;
-        if (item === "抓满苍蝇的罐子") {
-            const msg = lvlCh8.interactTavernSwarm("抓满苍蝇的罐子");
-            playSfx('fly_buzz');
-            printLog(msg, "#ff9900");
-        } else if (lvlCh8.gameState.tavern.ownerDistracted && !lvlCh8.gameState.tavern.oilPodStolen) {
-            const msg = lvlCh8.interactTavernSwarm("偷取");
-            playSfx('pick');
-            printLog(msg, "#8cff99");
-        } else {
-            const msg = lvlCh8.interactTavernSwarm(item || "");
-            printLog(msg);
-        }
-        renderInventory();
-        updateCh8DOM();
-    }
-
-    function clickOilPod(e) {
-        if (e) e.stopPropagation();
-        const msg = lvlCh8.interactTavernSwarm("大油桶");
-        if (lvlCh8.gameState.tavern.oilPodStolen) playSfx('pick');
-        printLog(msg, lvlCh8.gameState.tavern.oilPodStolen ? "#8cff99" : "#d4bda5");
-        renderInventory();
-        updateCh8DOM();
-    }
-
-    // 动作C：调整钟楼双指针
-    function adjustClock(color, step) {
-        playSfx('clank');
-        const msg = lvlCh8.rotateClockPointers(color, step);
-        if (lvlCh8.gameState.clockTower.grandmaOut) {
-            playSfx('church_bell');
-            printLog(msg, "#ff9900");
-        } else {
-            printLog(msg);
-        }
-        updateCh8DOM();
-    }
-
-    // 动作D：偷取阳台旧收音机
-    function clickBalcony() {
-        if (lvlCh8.gameState.clockTower.grandmaOut && !lvlCh8.gameState.clockTower.radioStolen) {
-            clickRadio();
-        } else {
-            printLog(lvlCh8.stealRadio());
+    if(core.scene==='pole') {
+        if(mx>480&&mx<510&&my>250&&my<290){
+            if(core.josef.mode==='tall') { core.poleScene.panelOpen=true; playActionSound('thud'); }
+            else { playActionSound('buzz'); }
+            return;
         }
     }
 
-    function clickRadio(e) {
-        if (e) e.stopPropagation();
-        const msg = lvlCh8.stealRadio();
-        if (lvlCh8.gameState.clockTower.radioStolen) playSfx('pick');
-        printLog(msg, "#8cff99");
-        renderInventory();
-        updateCh8DOM();
+    if(core.scene==='bird') {
+        let bs = core.birdScene;
+        bs.blocks.forEach(b => {
+            if(!b.fall && mx>=b.x && mx<=b.x+b.w && my>=b.y && my<=b.y+b.h){ b.lit=!b.lit; playActionSound('thud'); }
+        });
+        return;
     }
 
-    // 动作E：电线挂收音机电猫
-    function clickWire() {
-        const item = lvlCh8.gameState.josef.selectedItem;
-        if (item === "旧收音机" || lvlCh8.gameState.josef.inventory.includes("旧收音机")) {
-            const msg = lvlCh8.handleCatElectricity("放置收音机");
-            playSfx('spark');
-            printLog(msg, "#ff9900");
-        } else {
-            printLog("裸露的高压电线正在滋滋闪烁微弱电弧，上面似乎可以挂载带线圈的电器来放电。");
-        }
-        renderInventory();
-        updateCh8DOM();
-    }
-
-    // 动作F：点击/抓取流浪猫
-    function clickCat() {
-        if (lvlCh8.gameState.strayCat.isElectrocuted && !lvlCh8.gameState.strayCat.isCaptured) {
-            const msg = lvlCh8.handleCatElectricity("捕捉");
-            playSfx('pick');
-            printLog(msg, "#8cff99");
-        } else {
-            const msg = lvlCh8.handleCatElectricity("");
-            printLog(msg);
-        }
-        renderInventory();
-        updateCh8DOM();
-    }
-
-    // 动作G：与三位乐手交互
-    function clickMusician(type) {
-        const item = lvlCh8.gameState.josef.selectedItem;
-        if (type === 'sax') {
-            const msg = lvlCh8.repairSaxophone(item);
-            if (lvlCh8.gameState.musicians.sax.status === "fixed") playSfx('sax');
-            printLog(msg, lvlCh8.gameState.musicians.sax.status === "fixed" ? "#8cff99" : "#d4bda5");
-        } else if (type === 'drum') {
-            const msg = lvlCh8.repairDrum(item);
-            if (lvlCh8.gameState.musicians.drum.status === "fixed") playSfx('drum');
-            printLog(msg, lvlCh8.gameState.musicians.drum.status === "fixed" ? "#8cff99" : "#d4bda5");
-        } else if (type === 'horn') {
-            if (item === "眩晕流浪猫" || lvlCh8.gameState.strayCat.isCaptured) {
-                const msg = lvlCh8.handleCatElectricity("通大号");
-                if (lvlCh8.gameState.musicians.horn.status === "fixed") playSfx('horn');
-                printLog(msg, "#8cff99");
-            } else {
-                printLog("大号里面堵着大老鼠！你需要弄一只猫塞进去吓跑它。");
-            }
-        }
-        renderInventory();
-        updateCh8DOM();
-        checkBandFinale();
-    }
-
-    // 检查三乐手联合演奏与大妈砸花盆
-    function checkBandFinale() {
-        const res = lvlCh8.checkBandPerformance();
-        if (typeof res === 'object' && res.audioTrigger === "PLAY_STREET_BAND_JAZZ_LOOP") {
-            playSfx('jazz_band');
-            setTimeout(() => playSfx('pot_smash'), 800);
-            printLog(res.description, "#ff9900");
-            updateCh8DOM();
-        }
-    }
-
-    // 拾取碎花盆中的关键道具
-    function clickPotDebris() {
-        const msg = lvlCh8.pickPotRewards();
-        playSfx('success');
-        printLog(msg, "#8cff99");
-        renderInventory();
-        updateCh8DOM();
-        if (lvlCh8.gameState.solved) {
+    if(core.scene==='gomoku') {
+        let cs = 400 / 11;
+        let c = Math.round((mx - 332) / cs);
+        let r = Math.round((my - 48) / cs);
+        if (r>=0 && r<12 && c>=0 && c<12 && core.gomoku.board[r][c]===0 && !core.gomoku.winner) {
+            core.gomoku.board[r][c] = 1;
+            playActionSound('thud');
             setTimeout(() => {
-                document.getElementById("win-modal-ch8").style.display = "block";
-            }, 600);
+                let emptySpots = [];
+                for (let i = 0; i < 12; i++) {
+                    for (let j = 0; j < 12; j++) {
+                        if (core.gomoku.board[i][j] === 0) emptySpots.push({ r: i, c: j });
+                    }
+                }
+                if (emptySpots.length > 0) {
+                    let pick = emptySpots.find(p => Math.hypot(p.r - r, p.c - c) <= 2) || emptySpots[0];
+                    core.gomoku.board[pick.r][pick.c] = 2;
+                    playActionSound('thud', 0.8, 1.2);
+                }
+            }, 300);
         }
+        return;
     }
 
-    function restartChapter8() {
-        lvlCh8.reset();
-        document.getElementById("win-modal-ch8").style.display = "none";
-        renderInventory();
-        updateCh8DOM();
-        printLog("第八关【钟楼大广场与三乐手】已重置。请先去臭水桶抓苍蝇，或去酒馆下棋！", "#8cff99");
+    if(core.scene==='bubble') {
+        if (mx < 500) core.bubbleLevel = 'junkyard'; else core.bubbleLevel = 'prison';
+        playActionSound('page'); return;
     }
 
-    // ==========================================
-    // 五子棋对局系统 (11x11 完美对战)
-    // ==========================================
-    function openGomokuModal() {
-        document.getElementById("gomoku-modal").style.display = "block";
-        renderGomokuBoard();
-    }
-    function closeGomokuModal() {
-        document.getElementById("gomoku-modal").style.display = "none";
-    }
-    function resetGomokuGame() {
-        lvlCh8.gameState.oldMan.boardState = Array(11).fill(0).map(() => Array(11).fill(0));
-        lvlCh8.gameState.oldMan.winner = 0;
-        document.getElementById("gomoku-status-msg").innerText = "";
-        renderGomokuBoard();
-    }
-    function renderGomokuBoard() {
-        const b = lvlCh8.gameState.oldMan.boardState;
-        const container = document.getElementById("gomoku-board");
-        container.innerHTML = "";
-        for (let r = 0; r < 11; r++) {
-            for (let c = 0; c < 11; c++) {
-                const cell = document.createElement("div");
-                cell.className = "gomoku-cell";
-                if (b[r][c] === 1) cell.innerText = "🟡";
-                else if (b[r][c] === 2) cell.innerText = "⚫";
-                cell.onclick = () => onGomokuCellClick(r, c);
-                container.appendChild(cell);
+    if(core.scene==='plug') {
+        let p = core.plugGame;
+        p.nodes.forEach((n, idx) => {
+            if (Math.hypot(mx - n.x, my - n.y) < 22) {
+                playActionSound('thud');
+                if (p.selected === null) {
+                    p.selected = idx;
+                } else if (p.selected === idx) {
+                    p.selected = null;
+                } else {
+                    let tmp = p.nodes[p.selected].state;
+                    p.nodes[p.selected].state = n.state;
+                    n.state = tmp;
+                    p.selected = null;
+                    playActionSound('pop');
+                    if (p.nodes.every(node => node.state === node.target)) {
+                        p.solved = true; playActionSound('laser');
+                    }
+                }
             }
-        }
-    }
-    function onGomokuCellClick(r, c) {
-        if (lvlCh8.gameState.oldMan.winner !== 0) return;
-        const res = lvlCh8.playGomoku(r, c);
-        playSfx('clank');
-        renderGomokuBoard();
-        const msgEl = document.getElementById("gomoku-status-msg");
-        if (res.winner === 1) {
-            playSfx('success');
-            msgEl.innerText = "🎉 你击败了老头！获得【黄铜螺母】！";
-            printLog(res.text, "#ff9900");
-            renderInventory();
-            updateCh8DOM();
-        } else if (res.winner === 2) {
-            msgEl.innerText = "💀 老头完成了五连珠！请重新开局。";
-            printLog(res.text, "#e57373");
-        }
+        });
+        return;
     }
 
-    // 响应式视口自适应缩放
-    function handleResize() {
-        const wrapper = document.getElementById("stage-wrapper");
-        const stage = document.getElementById("game-stage");
-        const w = window.innerWidth - 30;
-        if (w < 900) {
-            const scale = Math.max(0.35, Math.min(1, w / 900));
-            stage.style.transform = `scale(${scale})`;
-            wrapper.style.height = (550 * scale) + "px";
-        } else {
-            stage.style.transform = "none";
-            wrapper.style.height = "550px";
-        }
+    if(core.scene==='doctor_lore') {
+        core.movieChapter = (core.movieChapter + 1) % 3;
+        playActionSound('page'); return;
     }
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("DOMContentLoaded", () => {
-        handleResize();
-        // 检查 URL 是否带 #ch8 或 ?ch=8
-        if (window.location.hash === "#ch8" || window.location.search.includes("ch=8")) {
-            switchChapter(8);
-        } else {
-            switchChapter(1);
-        }
-    });
-    handleResize();
+
+    if(my>410 && mx<930) core.josef.targetX = mx;
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    let rect = canvas.getBoundingClientRect();
+    core.mouse.x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    core.mouse.y = (e.clientY - rect.top) * (canvas.height / rect.height);
+});
+
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && core.ui.book.state === 'gaming') {
+        core.ui.book.state = 'closed';
+        const curBtn = document.getElementById(`btn-${core.scene}`);
+        if (curBtn) curBtn.classList.add('active');
+        const spBtn = document.getElementById('btn-spider');
+        if (spBtn) spBtn.classList.remove('active');
+        return;
+    }
+    if (core.scene === 'shoot') {
+        const s = core.shootGame;
+        const spd = 8;
+        if (e.key === 'ArrowLeft' || e.key === 'a') s.px = Math.max(s.mazeX + 4, s.px - spd);
+        if (e.key === 'ArrowRight' || e.key === 'd') s.px = Math.min(s.mazeX + s.mw - 20, s.px + spd);
+        if (e.key === 'ArrowUp' || e.key === 'w') s.py = Math.max(s.mazeY + 4, s.py - spd);
+        if (e.key === 'ArrowDown' || e.key === 's') s.py = Math.min(s.mazeY + s.mh - 20, s.py + spd);
+    }
+    if (core.ui.book.state === 'gaming') {
+        const p = core.spiderGame.player;
+        const spd = 6;
+        if (e.key === 'ArrowLeft' || e.key === 'a') p.x = Math.max(325, p.x - spd);
+        if (e.key === 'ArrowRight' || e.key === 'd') p.x = Math.min(700, p.x + spd);
+        if (e.key === 'ArrowUp' || e.key === 'w') p.y = Math.max(100, p.y - spd);
+        if (e.key === 'ArrowDown' || e.key === 's') p.y = Math.min(470, p.y + spd);
+    }
+});
+
+function switchScene(s) {
+    core.ui.book.state = 'closed';
+    core.scene = s;
+    document.querySelectorAll('.m-btn').forEach(b => b.classList.remove('active'));
+    const curBtn = document.getElementById(`btn-${s}`);
+    if (curBtn) curBtn.classList.add('active');
+    initAudioEngine();
+    playActionSound('page');
+}
+
+function triggerSpiderGame() {
+    core.ui.book.state = 'gaming';
+    core.spiderGame.level = 1;
+    core.spiderGame.spiders = [];
+    core.spiderGame.bullets = [];
+    core.spiderGame.kills = 0;
+    core.spiderGame.over = false;
+    document.querySelectorAll('.m-btn').forEach(b => b.classList.remove('active'));
+    const curBtn = document.getElementById('btn-spider');
+    if (curBtn) curBtn.classList.add('active');
+    initAudioEngine();
+    playActionSound('laser');
+}
+
+// 流浪歌手定期多声部合奏
+setInterval(() => {
+    if(core.scene !== 'band') return;
+    playActionSound('sax', 1.0, 260 + Math.sin(Date.now() * 0.003) * 60);
+    if(Math.random() < 0.5) playActionSound('thud', 0.8, 1.2);
+    if(Math.random() < 0.4) playActionSound('guitar', 0.9, 440);
+}, 450);
+
+canvas.style.cursor = 'none';
+generateTextures();
+mainGlobalLoop();
 </script>
 </body>
 </html>
