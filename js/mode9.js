@@ -2235,7 +2235,11 @@
             // 右上角按钮
             if (x >= w - 325 && x <= w - 249) {
                 playSound('gear');
-                window.location.href = 'machinarium.html';
+                if (typeof window.openMachinariumModal === 'function') {
+                    window.openMachinariumModal();
+                } else {
+                    window.location.href = 'machinarium.html';
+                }
                 return;
             }
             if (x >= w - 240 && x <= w - 172) {

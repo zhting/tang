@@ -2178,7 +2178,7 @@
         <h1 id="homeTitle">积木小院</h1>
         <div class="home-buttons">
             <button class="btn-home" id="startBtn" onclick="startGame(gameState.mode)">▶ 开始游戏</button>
-            <button class="btn-home" id="m9OneToOneBtn" onclick="window.location.href='machinarium.html'" style="display: none; background: linear-gradient(135deg, #ff9900 0%, #d35400 100%); color: white; border: 2px solid #ffe082;">🤖 废料场 1:1 交互版</button>
+            <button class="btn-home" id="m9OneToOneBtn" onclick="openMachinariumModal()" style="display: none; background: linear-gradient(135deg, #ff9900 0%, #d35400 100%); color: white; border: 2px solid #ffe082;">🤖 废料场 1:1 交互版</button>
             <button class="btn-home" onclick="openLeaderboard()">🏆 排行榜</button>
             <button class="btn-home" onclick="openModeModal()">⚙️ 选择模式 (<span id="modeDisplayBtn">一</span>)</button>
             <button class="btn-home" onclick="openInstructionsModal()">📖 游戏说明</button>
@@ -2452,6 +2452,19 @@
                 <!-- 动态注入内容 -->
             </div>
             <button class="btn-primary" onclick="closeInstructionsModal()">我知道了</button>
+        </div>
+    </div>
+
+    <!-- 🤖 机械迷城 1:1 像素交互舞台弹窗 -->
+    <div id="machinariumModal" class="modal-overlay hidden" style="z-index: 1500; background: rgba(0, 0, 0, 0.88); padding: 10px;">
+        <div class="modal-content" style="max-width: 950px; width: 100%; height: 90vh; max-height: 800px; padding: 15px; display: flex; flex-direction: column; background: #1a1512; border: 3px solid #ff9900; box-shadow: 0 0 35px rgba(255,153,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="color: #ff9900; margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px;">
+                    <span>🤖</span> 机械迷城 - 废料场 1:1 像素交互版
+                </h3>
+                <button class="btn-secondary" onclick="closeMachinariumModal()" style="margin: 0; padding: 4px 14px; font-size: 13px; color: #fff; background: #3d2f26; border: 1px solid #5c4a3c; cursor: pointer;">关闭 ✖</button>
+            </div>
+            <iframe id="machinariumIframe" src="about:blank" style="flex: 1; width: 100%; border: none; border-radius: 4px; background: #1a1512;"></iframe>
         </div>
     </div>
 
@@ -4934,7 +4947,7 @@
                         • 顶楼天台收音机与琴键：<b>7.0:108 / 1-4-2-3-5-2-3</b>
                     </p>
                     <div style="margin-top: 14px; text-align: center;">
-                        <a href="machinarium.html" class="mc-btn" style="display: inline-block; background: #ff9900; color: #1a1512; font-weight: bold; text-decoration: none; padding: 8px 18px; border-radius: 4px; box-shadow: 0 4px 12px rgba(255,153,0,0.45); font-size: 13px;">
+                        <a href="machinarium.html" onclick="openMachinariumModal(); closeInstructionsModal(); return false;" class="mc-btn" style="display: inline-block; background: #ff9900; color: #1a1512; font-weight: bold; text-decoration: none; padding: 8px 18px; border-radius: 4px; box-shadow: 0 4px 12px rgba(255,153,0,0.45); font-size: 13px;">
                             🤖 开启【废料场 1:1 像素级交互独立版】
                         </a>
                     </div>
@@ -4950,6 +4963,21 @@
             document.getElementById('instructionsModal').classList.remove('hidden'); 
         }
         function closeInstructionsModal() { document.getElementById('instructionsModal').classList.add('hidden'); }
+
+        function openMachinariumModal() {
+            const modal = document.getElementById('machinariumModal');
+            const iframe = document.getElementById('machinariumIframe');
+            if (iframe && (iframe.src === 'about:blank' || !iframe.src.includes('machinarium.html'))) {
+                iframe.src = 'machinarium.html';
+            }
+            if (modal) modal.classList.remove('hidden');
+        }
+        function closeMachinariumModal() {
+            const modal = document.getElementById('machinariumModal');
+            if (modal) modal.classList.add('hidden');
+        }
+        window.openMachinariumModal = openMachinariumModal;
+        window.closeMachinariumModal = closeMachinariumModal;
 
         // ===== 🧑‍🌾 村民交易商铺控制逻辑 =====
         function openVillagerModal() {
@@ -12573,6 +12601,20 @@
             document.getElementById('usernameModal').classList.add('hidden');
             if (typeof window.startMinecraftPaintingStudio === 'function') {
                 window.startMinecraftPaintingStudio();
+            }
+        }
+
+        // 🟢 模式九与机械迷城 1:1 独立版快捷访问入口：支持 #m9、#machinarium、?mode=9、?m9=1
+        const isPathM9 = window.location.hash === '#m9' || 
+                         window.location.hash === '#machinarium' || 
+                         new URLSearchParams(window.location.search).get('mode') === '9' ||
+                         new URLSearchParams(window.location.search).get('m9') === '1';
+
+        if (isPathM9) {
+            selectMode(9);
+            document.getElementById('usernameModal').classList.add('hidden');
+            if (window.location.hash === '#machinarium' || new URLSearchParams(window.location.search).get('m9') === '1') {
+                setTimeout(() => openMachinariumModal(), 100);
             }
         }
     </script>
