@@ -1899,8 +1899,9 @@
             }
         }
 
-        // 3. 右上角功能按钮：📖 秘籍画册 | 🗺️ 选关 | 🎵 音乐 | 🔊 音效
+        // 3. 右上角功能按钮：🕹️ 1:1版 | 📖 秘籍画册 | 🗺️ 选关 | 🎵 音乐 | 🔊 音效
         const btns = [
+            { id: '1to1', icon: '🕹️ 1:1版', x: w - 325 },
             { id: 'book', icon: '📖 秘籍', x: w - 240 },
             { id: 'map', icon: '🗺️ 选关', x: w - 165 },
             { id: 'bgm', icon: soundSettings.bgmMuted ? '🔇' : '🎵', x: w - 90 },
@@ -1908,11 +1909,12 @@
         ];
 
         btns.forEach(b => {
-            ctx.fillStyle = '#4e342e';
-            ctx.strokeStyle = '#bcaaa4';
+            ctx.fillStyle = b.id === '1to1' ? '#b26a00' : '#4e342e';
+            ctx.strokeStyle = b.id === '1to1' ? '#ffb74d' : '#bcaaa4';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.roundRect(b.x, 10, b.id === 'book' || b.id === 'map' ? 68 : 34, 34, [6]);
+            const bw = (b.id === 'book' || b.id === 'map' || b.id === '1to1') ? 76 : 34;
+            ctx.roundRect(b.x, 10, bw, 34, [6]);
             ctx.fill();
             ctx.stroke();
 
@@ -1920,7 +1922,7 @@
             ctx.font = 'bold 12px sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(b.icon, b.x + (b.id === 'book' || b.id === 'map' ? 34 : 17), 27);
+            ctx.fillText(b.icon, b.x + bw / 2, 27);
         });
 
         // 4. 左下角主角伸展/压缩快捷控制按钮
@@ -2231,6 +2233,11 @@
         // 1. 顶部 HUD 按钮点击
         if (y <= 54) {
             // 右上角按钮
+            if (x >= w - 325 && x <= w - 249) {
+                playSound('gear');
+                window.location.href = 'machinarium.html';
+                return;
+            }
             if (x >= w - 240 && x <= w - 172) {
                 m9.state = 'book_hint';
                 m9.hintBook.currentPage = m9.currentChapter;
