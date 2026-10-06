@@ -2178,6 +2178,7 @@
         <h1 id="homeTitle">积木小院</h1>
         <div class="home-buttons">
             <button class="btn-home" id="startBtn" onclick="startGame(gameState.mode)">▶ 开始游戏</button>
+            <button class="btn-home" id="m9OneToOneBtn" onclick="window.location.href='machinarium.html'" style="display: none; background: linear-gradient(135deg, #ff9900 0%, #d35400 100%); color: white; border: 2px solid #ffe082;">🤖 废料场 1:1 交互版</button>
             <button class="btn-home" onclick="openLeaderboard()">🏆 排行榜</button>
             <button class="btn-home" onclick="openModeModal()">⚙️ 选择模式 (<span id="modeDisplayBtn">一</span>)</button>
             <button class="btn-home" onclick="openInstructionsModal()">📖 游戏说明</button>
@@ -4932,13 +4933,18 @@
                         • 大脑电梯九宫格：<b>1-4-7-2-5-8-3-6-1</b><br>
                         • 顶楼天台收音机与琴键：<b>7.0:108 / 1-4-2-3-5-2-3</b>
                     </p>
+                    <div style="margin-top: 14px; text-align: center;">
+                        <a href="machinarium.html" class="mc-btn" style="display: inline-block; background: #ff9900; color: #1a1512; font-weight: bold; text-decoration: none; padding: 8px 18px; border-radius: 4px; box-shadow: 0 4px 12px rgba(255,153,0,0.45); font-size: 13px;">
+                            🤖 开启【废料场 1:1 像素级交互独立版】
+                        </a>
+                    </div>
                 `;
             } else {
                 content.innerHTML = `
                     <p style="margin-bottom: 8px; color: #FFF;"><b>【玩法：神秘领域】</b></p>
                     <p style="margin-bottom: 12px;">全新的挑战正在开发中，这里将会有更加复杂的物理效果和互动机制。</p>
                     <p style="margin-bottom: 8px; color: #FFF;"><b>【敬请期待】</b></p>
-                    <p style="margin-bottom: 0;">目前开放至第 8 模式（坚果保龄球·种植版）。</p>
+                    <p style="margin-bottom: 0;">目前开放至第 9 模式（机械迷城）。</p>
                 `;
             }
             document.getElementById('instructionsModal').classList.remove('hidden'); 
@@ -11924,6 +11930,8 @@
                 startBtn.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
                 startBtn.style.color = "white";
             }
+            const m9Btn = document.getElementById('m9OneToOneBtn');
+            if (m9Btn) m9Btn.style.display = (mode === 9) ? 'block' : 'none';
         }
 
         // ===== 通用核心控制 =====

@@ -22,6 +22,11 @@ app.get(['/001', '/001/', '*/001', '*/001/'], (req, res) => {
   res.sendFile(path.join(__dirname, '../index.html'));
 });
 
+// 模式九专属快捷访问入口 /machinarium 与 /m9
+app.get(['/machinarium', '/machinarium.html', '*/machinarium', '*/machinarium.html', '/m9', '/m9.html'], (req, res) => {
+  res.sendFile(path.join(__dirname, '../machinarium.html'));
+});
+
 // Global state
 const players = {}; // socket.id -> { username, id, roomId, color, avatar }
 const rooms = {};   // roomId -> { id, players: [socket.id], host: socket.id, status: 'waiting'|'playing'|'finished', password: '...', capacity: 2, gameMode: 1, levels: {}, durationLeft: 60, timerId: null }

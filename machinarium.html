@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>机械迷城 (Machinarium) - 废料场 1:1 像素级交互逻辑</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+        body {
+            background: #1a1512;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: monospace;
+            color: #d4bda5;
+            padding: 15px;
+            overflow-x: hidden;
+        }
+
+        .header-title-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .header-title-bar h2 {
+            color: #e6c29e;
+            letter-spacing: 2px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-back-btn {
+            background: #3d2f26;
+            color: #e6c29e;
+            border: 1px solid #5c4a3c;
+            padding: 6px 14px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .nav-back-btn:hover {
+            background: #5c4a3c;
+            color: #fff;
+        }
+
+        /* 响应式自适应舞台外框 */
+        #stage-wrapper {
+            width: 900px;
+            max-width: 100%;
+            position: relative;
+        }
+
+        /* 游戏主舞台 */
+        #game-stage {
+            width: 900px;
+            height: 550px;
+            background: linear-gradient(180deg, #5c4a3c, #2a1f18);
+            border: 8px solid #3d2f26;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            transform-origin: top left;
+        }
+        
+        /* 顶层物品栏 */
+        #inventory-bar {
+            width: 100%;
+            height: 50px;
+            background: rgba(20, 15, 12, 0.92);
+            border-bottom: 3px solid #3d2f26;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 15px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+        .inv-slot {
+            width: 40px;
+            height: 40px;
+            border: 2px dashed #5c4a3c;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            background: #231b16;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+        .inv-slot.active {
+            border-color: #ff9900;
+            box-shadow: 0 0 10px #ff9900;
+            background: #332317;
+        }
+        #combine-btn {
+            font-size: 11px;
+            background: #ff9900;
+            color: #1a1512;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            display: none;
+            transition: transform 0.15s;
+        }
+        #combine-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* 场景废铁环境背景描述 */
+        #bg-details {
+            position: absolute;
+            bottom: 12px;
+            left: 15px;
+            font-size: 11px;
+            opacity: 0.65;
+            line-height: 1.5;
+            pointer-events: none;
+        }
+        
+        /* 1:1 游戏内实体部件样式 */
+        .entity {
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+        }
+        .entity:hover {
+            filter: brightness(1.15);
+        }
+        
+        #bathtub {
+            width: 100px;
+            height: 60px;
+            background: #e6dfd9;
+            border: 3px solid #6e655f;
+            border-radius: 30px 30px 10px 10px;
+            bottom: 40px;
+            left: 380px;
+            z-index: 10;
+            font-weight: bold;
+            color: #555;
+            transform-origin: bottom right;
+            box-shadow: inset 0 -4px 8px rgba(0,0,0,0.25);
+        }
+        #bathtub.kicked-1 { transform: rotate(15deg); left: 360px; }
+        #bathtub.kicked-2 { transform: rotate(110deg) translate(50px, -200px); opacity: 0; pointer-events: none; }
+
+        #mouse {
+            width: 32px;
+            height: 22px;
+            background: #8c7667;
+            border-radius: 50% 50% 0 0;
+            top: 120px;
+            left: 180px;
+            font-size: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+        }
+        #mouse-bubble {
+            position: absolute;
+            top: 60px;
+            left: 140px;
+            width: 125px;
+            background: white;
+            border: 2px solid #000;
+            border-radius: 10px;
+            color: black;
+            font-size: 11px;
+            padding: 8px 10px;
+            display: none;
+            line-height: 1.35;
+            z-index: 90;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        #right-leg {
+            width: 22px;
+            height: 45px;
+            background: #7c8c82;
+            border: 2px solid #4a544e;
+            border-radius: 3px;
+            bottom: 40px;
+            left: 520px;
+            display: none;
+            font-size: 11px;
+            color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+        }
+        #iron-plate {
+            width: 75px;
+            height: 18px;
+            background: #524741;
+            border: 1px solid #332b27;
+            border-radius: 2px;
+            bottom: 40px;
+            left: 500px;
+            font-size: 11px;
+            color: #bbb;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        #iron-plate.moved { transform: translateX(-80px) rotate(-10deg); }
+
+        #magnet {
+            width: 32px;
+            height: 32px;
+            border: 4px solid #ad3434;
+            border-bottom: none;
+            border-radius: 16px 16px 0 0;
+            bottom: 40px;
+            left: 680px;
+            font-size: 11px;
+            background: transparent;
+            color: #fff;
+        }
+        #string {
+            width: 28px;
+            height: 28px;
+            background: #d1c2a5;
+            border-radius: 50%;
+            bottom: 45px;
+            left: 780px;
+            font-size: 11px;
+            color: #333;
+            font-weight: bold;
+            box-shadow: inset 0 0 4px rgba(0,0,0,0.4);
+        }
+
+        #iron-bar {
+            width: 12px;
+            height: 160px;
+            background: #423b38;
+            bottom: 40px;
+            left: 280px;
+            transform-origin: bottom center;
+            transition: transform 0.5s ease;
+            border-radius: 6px 6px 0 0;
+        }
+        #iron-bar.bent {
+            transform: rotate(-45deg);
+            background: #ff9900;
+            box-shadow: 0 0 12px rgba(255,153,0,0.6);
+        }
+
+        /* 主角约瑟夫 Josef 骨骼与拉伸控制器 */
+        #josef {
+            position: absolute;
+            bottom: 40px;
+            left: 400px;
+            width: 60px;
+            height: 70px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            z-index: 5;
+            transition: left 0.4s ease, height 0.3s ease;
+        }
+        #josef-head {
+            width: 36px;
+            height: 36px;
+            background: #b0bec5;
+            border: 3px solid #37474f;
+            border-radius: 50%;
+            font-size: 11px;
+            color: #263238;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            position: relative;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        #josef-body {
+            width: 44px;
+            height: 36px;
+            background: #90a4ae;
+            border: 3px solid #37474f;
+            border-radius: 6px;
+            position: relative;
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            font-size: 9px;
+            padding-bottom: 2px;
+            transition: height 0.3s ease;
+        }
+        #josef-leg-l { width: 8px; height: 20px; background: #37474f; margin-bottom: -20px; border-radius: 0 0 2px 2px; }
+        #josef-leg-r { width: 8px; height: 20px; background: #37474f; margin-bottom: -20px; display: none; border-radius: 0 0 2px 2px; }
+
+        /* 拉伸箭头按钮 */
+        #stretch-btn {
+            position: absolute;
+            top: -40px;
+            background: #ff9900;
+            color: white;
+            padding: 3px 8px;
+            font-size: 11px;
+            border-radius: 4px;
+            display: none;
+            cursor: ns-resize;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            font-weight: bold;
+            line-height: 1.1;
+            text-align: center;
+            touch-action: none;
+        }
+
+        /* 绳子荡秋千线条 */
+        #rope-swing {
+            position: absolute;
+            bottom: 40px;
+            left: 280px;
+            width: 2px;
+            height: 0;
+            background: #ff9900;
+            transform-origin: top center;
+            display: none;
+            z-index: 4;
+        }
+
+        /* 动作与系统日志输出 */
+        #msg-log {
+            width: 900px;
+            max-width: 100%;
+            background: #231b16;
+            border: 2px solid #3d2f26;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+            font-size: 13px;
+            line-height: 1.5;
+            height: 130px;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        /* 通关徽章弹窗 */
+        #win-modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #231b16;
+            border: 4px solid #ff9900;
+            padding: 25px 35px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+            z-index: 200;
+            box-shadow: 0 0 30px rgba(0,0,0,0.9);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-title-bar">
+        <h2><span>🤖</span> 机械迷城 (Machinarium) - 废料场 1:1 交互引擎</h2>
+        <a href="index.html" class="nav-back-btn">⬅️ 返回积木小院</a>
+    </div>
+
+    <!-- 1:1 游戏舞台容器 -->
+    <div id="stage-wrapper">
+        <div id="game-stage">
+            <!-- 顶层物品栏 -->
+            <div id="inventory-bar">
+                <span style="font-size: 12px; color: #7c6857; font-weight: bold;">ITEM BAR:</span>
+                <div class="inv-slot" id="slot-0" onclick="selectSlot(0)"></div>
+                <div class="inv-slot" id="slot-1" onclick="selectSlot(1)"></div>
+                <span id="combine-btn" onclick="tryCombine()">[组合物品]</span>
+            </div>
+
+            <!-- 场景静态信息 -->
+            <div id="bg-details">
+                环境：城外废料场 (The Junk Yard)<br>
+                远景：像素之城（Machinarium）冒烟的工业塔<br>
+                状态：Josef 被拆卸遗弃
+            </div>
+
+            <!-- 机关实体 -->
+            <div id="bathtub" class="entity" onclick="clickBathtub()">浴缸</div>
+            <div id="mouse" class="entity" onclick="clickMouse()">老鼠</div>
+            <div id="mouse-bubble">🐹: 我要我的<br><b style="color:red">发条发光娃娃</b>！拿换我的右腿。</div>
+            
+            <div id="iron-plate" class="entity" onclick="clickIronPlate()">铁皮</div>
+            <div id="right-leg" class="entity" onclick="clickRightLeg()">右腿</div>
+            <div id="magnet" class="entity" onclick="clickMagnet()">磁铁</div>
+            <div id="string" class="entity" onclick="clickString()">线轴</div>
+            <div id="iron-bar" class="entity" onclick="clickIronBar()">铁杆</div>
+
+            <!-- 主角 Josef 容器 -->
+            <div id="josef">
+                <div id="stretch-btn">▲<br>▼</div>
+                <div id="josef-head">头</div>
+                <div id="josef-body">
+                    躯干
+                    <div id="josef-leg-l"></div>
+                    <div id="josef-leg-r"></div>
+                </div>
+            </div>
+
+            <!-- 绳子荡秋千线条 -->
+            <div id="rope-swing"></div>
+
+            <!-- 通关胜利弹窗 -->
+            <div id="win-modal">
+                <div style="font-size: 40px; margin-bottom: 10px;">🎉</div>
+                <h3 style="color: #8cff99; margin-bottom: 8px;">第一章：废料场 通关！</h3>
+                <p style="font-size: 13px; color: #d4bda5; margin-bottom: 15px;">约瑟夫已成功飞跃毒液深渊，前往下一章【护城河吊桥】。</p>
+                <button class="nav-back-btn" onclick="restartChapter()" style="background:#ff9900; color:#1a1512; font-weight:bold; border:none; padding:8px 20px;">🔄 再次游玩本章</button>
+                <a href="index.html" class="nav-back-btn" style="margin-left: 10px;">进入主游戏模式九</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 动作与系统日志输出 -->
+    <div id="msg-log">
+        <div style="color: #8cff99;">[系统]: 机械迷城 1:1 核心交互引擎初始化成功。当前关卡：第1章 - 废料场。</div>
+        <div>[提示]: 约瑟夫的头卡在白色浴缸下面。请连续点击【浴缸】将其移开。</div>
+    </div>
+
+<script>
+    // 简易 Web Audio 音效系统
+    let audioCtx = null;
+    function playSfx(type) {
+        try {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+
+            if (type === 'clank') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(now); osc.stop(now + 0.08);
+            } else if (type === 'stretch') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.exponentialRampToValueAtTime(400, now + 0.15);
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(now); osc.stop(now + 0.16);
+            } else if (type === 'pick') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(520, now);
+                osc.frequency.setValueAtTime(780, now + 0.04);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(now); osc.stop(now + 0.08);
+            } else if (type === 'combine') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.14);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(now); osc.stop(now + 0.16);
+            } else if (type === 'success') {
+                [440, 554, 659, 880].forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+                    gain.gain.setValueAtTime(0.2, now + idx * 0.09);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.35);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(now + idx * 0.09); osc.stop(now + idx * 0.09 + 0.35);
+                });
+            }
+        } catch(e) {}
+    }
+
+    // 游戏核心状态机
+    let state = {
+        bathtubKicks: 0,
+        hasBody: false,
+        hasLeg: false,
+        isStretched: false,
+        inventory: [],
+        selectedItem: null,
+        ironPlateMoved: false,
+        ironBarBent: false,
+        gameOver: false
+    };
+
+    const logBox = document.getElementById("msg-log");
+
+    function printLog(text, color = "#d4bda5") {
+        const div = document.createElement("div");
+        div.style.color = color;
+        div.innerHTML = `[动作]: ${text}`;
+        logBox.appendChild(div);
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    // 1. 点击浴缸逻辑
+    function clickBathtub() {
+        if (state.gameOver) return;
+        state.bathtubKicks++;
+        playSfx('clank');
+        const btn = document.getElementById("bathtub");
+        if (state.bathtubKicks === 1) {
+            btn.className = "entity kicked-1";
+            printLog("你猛击了一下浴缸，浴缸松动了，露出了里面的机械头骨！");
+        } else if (state.bathtubKicks >= 2) {
+            btn.className = "entity kicked-2";
+            printLog("你二次顶飞了浴缸！浴缸滚落悬崖。约瑟夫的【头和躯干】露了出来。", "#fff");
+            document.getElementById("josef").style.display = "flex";
+            printLog("[提示]: 点击地上的【头】，把头组装回身体上。");
+        }
+    }
+
+    // 2. 点击自身组装身体
+    document.getElementById("josef-head").addEventListener("click", () => {
+        if (!state.hasBody && state.bathtubKicks >= 2) {
+            state.hasBody = true;
+            playSfx('combine');
+            document.getElementById("josef-body").style.background = "#90a4ae";
+            printLog("咔哒！头和身体成功用弹簧颈接上了。但现在只有左腿，一瘸一拐。");
+            document.getElementById("stretch-btn").style.display = "block";
+            printLog("[提示]: 鼠标或触摸按住主角头顶的【▲▼】拖拽，可以改变约瑟夫的身高！");
+        }
+    });
+
+    // 3. 拉伸与缩短身体逻辑 (同时支持鼠标与触摸屏)
+    let isDragging = false;
+    const stretchBtn = document.getElementById("stretch-btn");
+
+    function handleStartStretch(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        isDragging = true;
+        playSfx('stretch');
+        window.addEventListener("mousemove", onStretch, { passive: false });
+        window.addEventListener("mouseup", stopStretch);
+        window.addEventListener("touchmove", onStretchTouch, { passive: false });
+        window.addEventListener("touchend", stopStretch);
+    }
+
+    stretchBtn.addEventListener("mousedown", handleStartStretch);
+    stretchBtn.addEventListener("touchstart", handleStartStretch, { passive: false });
+
+    function onStretch(e) {
+        if (!isDragging) return;
+        applyStretch(e.clientY);
+    }
+
+    function onStretchTouch(e) {
+        if (!isDragging || !e.touches || !e.touches[0]) return;
+        e.preventDefault();
+        applyStretch(e.touches[0].clientY);
+    }
+
+    function applyStretch(clientY) {
+        const stage = document.getElementById("game-stage");
+        const stageRect = stage.getBoundingClientRect();
+        // 计算缩放比率
+        const scale = stageRect.height / 550;
+        const relativeY = (stageRect.bottom - clientY) / scale - 40;
+        
+        if (relativeY >= 70 && relativeY <= 210) {
+            document.getElementById("josef").style.height = relativeY + "px";
+            document.getElementById("josef-body").style.height = (relativeY - 40) + "px";
+            if (relativeY > 150) {
+                if (!state.isStretched) {
+                    state.isStretched = true;
+                    printLog("约瑟夫已充分【向上拉伸】身体！现在的身高足够触发高处机关了。");
+                }
+            } else {
+                state.isStretched = false;
+            }
+        }
+    }
+
+    function stopStretch() {
+        if (isDragging) {
+            isDragging = false;
+            window.removeEventListener("mousemove", onStretch);
+            window.removeEventListener("mouseup", stopStretch);
+            window.removeEventListener("touchmove", onStretchTouch);
+            window.removeEventListener("touchend", stopStretch);
+        }
+    }
+
+    // 4. 老鼠与交换右腿交互
+    function clickMouse() {
+        if (!state.hasBody) { printLog("你现在只有一个头，老鼠根本不理你。"); return; }
+        const bubble = document.getElementById("mouse-bubble");
+        bubble.style.display = "block";
+        if (state.selectedItem === "绑着绳子的磁铁") {
+            playSfx('pick');
+            bubble.innerHTML = "🐹: 哇！这就是我的发条磁铁玩具！谢谢你！";
+            printLog("你将【绑着绳子的磁铁】交给了小老鼠。老鼠高兴地咬断了控制线。");
+            removeItem("绑着绳子的磁铁");
+            setTimeout(() => { bubble.style.display = "none"; }, 2500);
+            return;
+        }
+        printLog("小老鼠说它需要它的发条小玩具。");
+        setTimeout(() => { bubble.style.display = "none"; }, 4000);
+    }
+
+    // 5. 移开铁皮发现右腿
+    function clickIronPlate() {
+        if (state.ironPlateMoved) return;
+        state.ironPlateMoved = true;
+        playSfx('clank');
+        document.getElementById("iron-plate").className = "entity moved";
+        document.getElementById("right-leg").style.display = "flex";
+        printLog("你飞起一脚踢开了生锈的铁皮，压在底下的【机械右腿】露出来了！");
+    }
+
+    function clickRightLeg() {
+        if (!state.hasBody) { printLog("你得先把头和身体连上才能捡腿。"); return; }
+        state.hasLeg = true;
+        playSfx('combine');
+        document.getElementById("right-leg").style.display = "none";
+        document.getElementById("josef-leg-r").style.display = "block";
+        document.getElementById("josef").style.left = "320px"; // 自动向左移动两步
+        printLog("成功装回右腿！约瑟夫恢复了正常的双腿平衡，并自动向左移动到铁杆旁！", "#8cff99");
+    }
+
+    // 6. 道具收集与栏位逻辑
+    function clickMagnet() {
+        playSfx('pick');
+        pushInventory("磁铁");
+        document.getElementById("magnet").style.display = "none";
+    }
+
+    function clickString() {
+        playSfx('pick');
+        pushInventory("线轴");
+        document.getElementById("string").style.display = "none";
+    }
+
+    function pushInventory(item) {
+        state.inventory.push(item);
+        printLog(`获得了物品：【${item}】`);
+        renderInventory();
+    }
+
+    function removeItem(item) {
+        state.inventory = state.inventory.filter(i => i !== item);
+        state.selectedItem = null;
+        renderInventory();
+    }
+
+    function renderInventory() {
+        const s0 = document.getElementById("slot-0");
+        const s1 = document.getElementById("slot-1");
+        s0.innerText = state.inventory[0] === "磁铁" ? "🧲" : (state.inventory[0] === "线轴" ? "🧵" : (state.inventory[0] === "绑着绳子的磁铁" ? "🎣" : ""));
+        s0.title = state.inventory[0] || "";
+        s1.innerText = state.inventory[1] === "磁铁" ? "🧲" : (state.inventory[1] === "线轴" ? "🧵" : (state.inventory[1] === "绑着绳子的磁铁" ? "🎣" : ""));
+        s1.title = state.inventory[1] || "";
+
+        if (state.inventory.includes("磁铁") && state.inventory.includes("线轴")) {
+            document.getElementById("combine-btn").style.display = "inline-block";
+        } else {
+            document.getElementById("combine-btn").style.display = "none";
+        }
+    }
+
+    function selectSlot(index) {
+        if (!state.inventory[index]) return;
+        document.getElementById("slot-0").className = "inv-slot";
+        document.getElementById("slot-1").className = "inv-slot";
+        if (state.selectedItem === state.inventory[index]) {
+            state.selectedItem = null;
+            printLog("取消选中当前物品。");
+        } else {
+            state.selectedItem = state.inventory[index];
+            document.getElementById(`slot-${index}`).className = "inv-slot active";
+            printLog(`当前启用了物品：【${state.selectedItem}】。请点击场景中的目标实体使用。`);
+        }
+    }
+
+    function tryCombine() {
+        if (state.inventory.includes("磁铁") && state.inventory.includes("线轴")) {
+            playSfx('combine');
+            state.inventory = ["绑着绳子的磁铁"];
+            state.selectedItem = null;
+            printLog("【微操组合成功】: 你将线轴的细绳牢牢绑在马蹄形磁铁上，获得了：【绑着绳子的磁铁】！", "#ff9900");
+            renderInventory();
+        }
+    }
+
+    // 7. 破坏铁杆环境
+    function clickIronBar() {
+        if (!state.hasLeg) { printLog("你腿还没装好，走不过去，力气也不够。"); return; }
+        if (state.ironBarBent) return;
+        state.ironBarBent = true;
+        playSfx('clank');
+        document.getElementById("iron-bar").className = "entity bent";
+        printLog("约瑟夫双手握住微弯的铁杆，利用全身重量全力一压！铁杆变为了一个呈45度延伸向悬崖外的完美【斜角吊点】。");
+    }
+
+    // 8. 终极抛掷：使用组合道具在弯铁杆上荡秋千逃离
+    document.getElementById("iron-bar").addEventListener("click", (e) => {
+        if (state.ironBarBent && state.selectedItem === "绑着绳子的磁铁") {
+            if (!state.isStretched) {
+                printLog("【高度不够】: 现在的身高太矮了，抛掷角度不正确！请按住头顶【▲▼】先【向上拉长身体】再试。");
+                return;
+            }
+            // 触发通关动作
+            state.gameOver = true;
+            playSfx('success');
+            removeItem("绑着绳子的磁铁");
+            printLog("【1:1 像素终极动作触发】: 约瑟夫将绑着绳子的磁铁全力抛向直角铁杆顶端！磁力卡死！", "#ff9900");
+            
+            // 播放荡秋千飞跃动画
+            const josef = document.getElementById("josef");
+            josef.style.left = "280px";
+            setTimeout(() => {
+                josef.style.transform = "translate(-220px, -60px) scale(0.4)";
+                josef.style.opacity = "0";
+                printLog("【通关成功】: 约瑟夫抓着绳子如同秋千一般荡向了深渊对岸，成功逃离废料场！即将进入下一章：【护城河变装城门卫所】。", "#8cff99");
+                setTimeout(() => {
+                    document.getElementById("win-modal").style.display = "block";
+                }, 800);
+            }, 600);
+        }
+    });
+
+    function restartChapter() {
+        state = {
+            bathtubKicks: 0,
+            hasBody: false,
+            hasLeg: false,
+            isStretched: false,
+            inventory: [],
+            selectedItem: null,
+            ironPlateMoved: false,
+            ironBarBent: false,
+            gameOver: false
+        };
+        document.getElementById("bathtub").className = "entity";
+        document.getElementById("iron-plate").className = "entity";
+        document.getElementById("right-leg").style.display = "none";
+        document.getElementById("magnet").style.display = "flex";
+        document.getElementById("string").style.display = "flex";
+        document.getElementById("iron-bar").className = "entity";
+        document.getElementById("josef").style.display = "none";
+        document.getElementById("josef").style.left = "400px";
+        document.getElementById("josef").style.height = "70px";
+        document.getElementById("josef-body").style.height = "36px";
+        document.getElementById("josef-body").style.background = "#90a4ae";
+        document.getElementById("josef").style.transform = "none";
+        document.getElementById("josef").style.opacity = "1";
+        document.getElementById("stretch-btn").style.display = "none";
+        document.getElementById("josef-leg-r").style.display = "none";
+        document.getElementById("win-modal").style.display = "none";
+        renderInventory();
+        printLog("关卡已重置。请重新点击【浴缸】开始。", "#8cff99");
+    }
+
+    // 响应式视口自动缩放（适配手机与平板小屏）
+    function handleResize() {
+        const wrapper = document.getElementById("stage-wrapper");
+        const stage = document.getElementById("game-stage");
+        const w = window.innerWidth - 30;
+        if (w < 900) {
+            const scale = Math.max(0.35, Math.min(1, w / 900));
+            stage.style.transform = `scale(${scale})`;
+            wrapper.style.height = (550 * scale) + "px";
+        } else {
+            stage.style.transform = "none";
+            wrapper.style.height = "550px";
+        }
+    }
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("DOMContentLoaded", handleResize);
+    handleResize();
+</script>
+</body>
+</html>
