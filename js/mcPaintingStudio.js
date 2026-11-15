@@ -6,6 +6,42 @@
 (function() {
   'use strict';
 
+  // 动态懒加载模式六重型资源 (C418录音BGM、竹门音效、高清画作预设)，首屏无需加载，节省约 4.8MB
+  let _mode6AssetsPromise = null;
+  function loadMode6Assets() {
+    if (_mode6AssetsPromise) return _mode6AssetsPromise;
+    const loadScript = (src) => new Promise((resolve) => {
+      if (document.querySelector(`script[src*="${src}"]`)) return resolve();
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = () => resolve();
+      s.onerror = (e) => {
+        console.warn('Mode 6 asset failed to load:', src, e);
+        resolve();
+      };
+      document.head.appendChild(s);
+    });
+
+    _mode6AssetsPromise = Promise.all([
+      loadScript('assets/bamboo_door_open.js?v=1.0.1'),
+      loadScript('js/presetSamples_river.js?v=1.0.1'),
+      loadScript('assets/c418_bgm.js?v=1.0.1')
+    ]).then(() => {
+      if (window.sound && typeof window.sound.initBgmAudio === 'function') {
+        window.sound.initBgmAudio();
+      }
+      if (window.sound && typeof window.sound.loadBambooSound === 'function') {
+        window.sound.loadBambooSound();
+      }
+      if (window.mcPaintingApp && typeof window.mcPaintingApp.renderPresetGrid === 'function') {
+        window.mcPaintingApp.renderPresetGrid();
+      }
+    });
+    return _mode6AssetsPromise;
+  }
+  window.loadMode6Assets = loadMode6Assets;
+
   // ==========================================
   // 1. 原版 Minecraft 竹板门音效与 C418 原版录音背景音乐引擎
   // ==========================================
@@ -21,11 +57,15 @@
       this.bgmAudio = null;
       this.blobUrl = null;
 
-      this.initBgmAudio();
+      if (window.C418_BGM_SOUND_BASE64) {
+        this.initBgmAudio();
+      }
 
       const userGestureHandler = () => {
         this.ensureContext();
-        this.loadBambooSound();
+        if (window.BAMBOO_DOOR_SOUND_BASE64) {
+          this.loadBambooSound();
+        }
       };
 
       // 绑定手势监听
@@ -64,7 +104,8 @@
     }
 
     initBgmAudio() {
-      if (this.bgmAudio) return;
+      if (this.bgmAudio && this.bgmAudio.src && !this.bgmAudio.src.endsWith('/')) return;
+      if (!window.C418_BGM_SOUND_BASE64) return;
       
       let domAudio = document.getElementById('c418-bgm-audio-player');
       if (!domAudio) {
@@ -79,9 +120,7 @@
       this.bgmAudio = domAudio;
 
       // 加载 C418 传世钢琴原声《Wet Hands》
-      const srcUrl = window.C418_BGM_SOUND_BASE64 
-        ? this.base64ToBlobUrl(window.C418_BGM_SOUND_BASE64)
-        : 'assets/c418_wet_hands_piano.wav';
+      const srcUrl = this.base64ToBlobUrl(window.C418_BGM_SOUND_BASE64);
 
       this.bgmAudio.src = srcUrl;
       this.bgmAudio.volume = this.bgmVolume;
@@ -93,9 +132,13 @@
       });
     }
 
-    playBgm() {
+    async playBgm() {
       this.ensureContext();
       this.bgmMuted = false;
+
+      if (!window.C418_BGM_SOUND_BASE64) {
+        await loadMode6Assets();
+      }
 
       if (!this.bgmAudio) {
         this.initBgmAudio();
@@ -1700,6 +1743,7 @@
   };
 
   window.startMinecraftPaintingStudio = function() {
+    loadMode6Assets();
     const devConsole = document.getElementById('devConsole');
     if (devConsole) devConsole.style.display = 'none';
 

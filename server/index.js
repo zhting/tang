@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const zlib = require('zlib');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http, {
@@ -9,9 +10,37 @@ const io = require('socket.io')(http, {
   }
 });
 
+// 全局静态与文本资源 Gzip 压缩加速中间件 (零外部依赖，使用 Node.js 内置 zlib)
+app.use((req, res, next) => {
+  const acceptEncoding = req.headers['accept-encoding'] || '';
+  if (!acceptEncoding.includes('gzip')) return next();
+
+  const originalSend = res.send;
+  res.send = function (body) {
+    if ((typeof body === 'string' || Buffer.isBuffer(body)) && body.length > 1024) {
+      const contentType = res.getHeader('Content-Type') || '';
+      if (/text|javascript|json|css|svg|xml/i.test(contentType) || !contentType) {
+        res.setHeader('Content-Encoding', 'gzip');
+        res.removeHeader('Content-Length');
+        return zlib.gzip(body, (err, gzipped) => {
+          if (err) return originalSend.call(res, body);
+          return originalSend.call(res, gzipped);
+        });
+      }
+    }
+    return originalSend.apply(res, arguments);
+  };
+  next();
+});
+
+const staticOptions = {
+  maxAge: '1h',
+  etag: true
+};
+
 // Serve static files from the parent directory
-app.use(express.static(path.join(__dirname, '../')));
-app.use('/001', express.static(path.join(__dirname, '../')));
+app.use(express.static(path.join(__dirname, '../'), staticOptions));
+app.use('/001', express.static(path.join(__dirname, '../'), staticOptions));
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../index.html'));

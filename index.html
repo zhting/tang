@@ -3232,9 +3232,7 @@
     <!-- 引入 Socket.IO 客户端 -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script src="assets/mc_textures.js?v=20260924_v107"></script>
-    <script src="assets/c418_bgm.js?v=1.0.1"></script>
-    <script src="assets/bamboo_door_open.js?v=1.0.1"></script>
-    <script src="js/presetSamples_river.js?v=1.0.1"></script>
+    <!-- 性能与首屏优化：模式六重型资源(C418原声、竹门音效、河流预设约4.8MB)已改为按需动态加载 -->
     <script src="js/gameEconomy.js?v=20260924_v107"></script>
     <script src="js/mcPaintingStudio.js?v=20261006_v110"></script>
     <script src="js/mode7.js?v=20260924_v107"></script>
@@ -3467,7 +3465,7 @@
                     
                     // 重置 UI 主题
                     updateHomeTheme();
-                    requestAnimationFrame(loop);
+                    scheduleNextFrame();
                 });
 
                 // 我的世界联机动作同步
@@ -4619,7 +4617,7 @@
                 isGamePausedForLB = false;
                 gameState.isPlaying = true;
                 gameState.lastTime = performance.now();
-                requestAnimationFrame(loop);
+                scheduleNextFrame();
             } else if (gameState.timeLeft <= 0 && gameState.level > 0) {
                 document.getElementById('gameOverModal').classList.remove('hidden');
             } else {
@@ -4808,6 +4806,9 @@
                     gameState.mode7Difficulty = isMode7NormalUnlocked() ? 'normal' : 'easy';
                     currentMode7Difficulty = gameState.mode7Difficulty;
                 }
+            }
+            if (modeId === 6 && typeof window.loadMode6Assets === 'function') {
+                window.loadMode6Assets();
             }
             updateHomeTheme();
             const modeNames = ["一", "二", "三", "四", "五", "六", "七", "八", "九"];
@@ -5481,13 +5482,14 @@
 
             // 动画渲染循环：平缓呼吸与目光交互、5秒原版哼叫、30秒甩动掉落
             const startTime = performance.now();
+            let villagerRafId = null;
             function renderLoop() {
-                requestAnimationFrame(renderLoop);
-
                 const wrapper = document.getElementById('homeVillagerNpc');
-                if (!wrapper || wrapper.offsetParent === null || wrapper.style.display === 'none') {
-                    return; // 未展示时跳过渲染，节约性能
+                if (!wrapper || wrapper.offsetParent === null || wrapper.style.display === 'none' || gameState.isPlaying) {
+                    villagerRafId = null;
+                    return; // 未展示或游戏中时暂停渲染循环，彻底节约CPU与GPU性能
                 }
+                villagerRafId = requestAnimationFrame(renderLoop);
 
                 const currentNow = performance.now();
                 const dt = currentNow - lastLoopTime;
@@ -5542,7 +5544,12 @@
 
                 homeVillager3DRenderer.render(homeVillager3DScene, homeVillager3DCamera);
             }
-            renderLoop();
+            window.resumeVillagerLoop = function() {
+                if (villagerRafId === null) {
+                    villagerRafId = requestAnimationFrame(renderLoop);
+                }
+            };
+            window.resumeVillagerLoop();
         }
 
         function backToHome() {
@@ -5554,11 +5561,18 @@
             document.getElementById('confettiContainer').innerHTML = '';
             document.getElementById('homeScreen').classList.remove('hidden');
             
-            // 隐藏我的世界 HUD 与 3D 渲染画布
+            // 隐藏我的世界 HUD 与 3D 渲染画布并释放 WebGL 资源
             document.getElementById('mcControls').classList.add('hidden');
             document.getElementById('mcItemBar').classList.add('hidden');
-            document.getElementById('minecraft3D').classList.add('hidden');
-            document.getElementById('minecraft3D').innerHTML = '';
+            const mcContainer = document.getElementById('minecraft3D');
+            if (mcContainer) {
+                mcContainer.classList.add('hidden');
+                mcContainer.innerHTML = '';
+            }
+            if (mc3D && mc3D.renderer) {
+                try { mc3D.renderer.dispose(); } catch (e) {}
+                mc3D.renderer = null;
+            }
             const crosshair = document.getElementById('mc3DCrosshair');
             if (crosshair) crosshair.classList.add('hidden');
             
@@ -5598,10 +5612,14 @@
             gameState.mcWorld = null;
             mc3D.scene = null;
 
-            // 返回首页时清空画布和状态
+            // 返回首页时清空画布和状态并重刷首页主题与村民循环
             ctx.clearRect(0, 0, width, height);
             gameState.hidingSpots = [];
             gameState.shapes = [];
+            updateHomeTheme();
+            if (typeof window.resumeVillagerLoop === 'function') {
+                window.resumeVillagerLoop();
+            }
             
             // 重置所有模式的会话进度为 1
             gameState.sessionLevels[1] = 1;
@@ -8482,7 +8500,8 @@
             const mat = getBlockMaterial(type);
             const mesh = new THREE.Mesh(mc3D.blockGeometry, mat);
             mesh.position.set(x + 0.5, y + 0.5, z + 0.5);
-            mesh.castShadow = true;
+            // 优化阴影计算：地下深层方块与基岩无需投射阴影，大幅减少 WebGL 阴影 Pass 绘制开销
+            mesh.castShadow = (y > 0 && type !== 'BEDROCK');
             mesh.receiveShadow = true;
             
             mc3D.scene.add(mesh);
@@ -10251,7 +10270,7 @@
             if (typeof window.startMode7Level === 'function') {
                 window.startMode7Level(mode7SelectedLevel, currentMode7Difficulty);
             }
-            requestAnimationFrame(loop);
+            scheduleNextFrame();
         }
         window.launchMode7Level = launchMode7Level;
 
@@ -10346,11 +10365,12 @@
 
             let renderer;
             try {
-                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
                 renderer.setClearColor(0xb2ebf2, 1);
                 renderer.setSize(window.innerWidth, window.innerHeight);
                 renderer.shadowMap.enabled = true;
-                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                renderer.shadowMap.type = THREE.PCFShadowMap;
                 container.appendChild(renderer.domElement);
                 mc3D.renderer = renderer;
             } catch (err) {
@@ -11005,23 +11025,21 @@
                     mc3D.ambientLight.intensity = sunY > 0 ? (0.25 + sunY * 0.35) : 0.08;
                 }
                 
-                // 插值计算天空与雾颜色
-                let skyColor;
+                // 插值计算天空与雾颜色 (复用颜色对象避免每秒 240+ 次 new Color 导致的 GC 顿卡)
+                if (!mc3D._cDay) mc3D._cDay = new THREE.Color(0xb2ebf2);
+                if (!mc3D._cSunset) mc3D._cSunset = new THREE.Color(0xff8a65);
+                if (!mc3D._cNight) mc3D._cNight = new THREE.Color(0x0c0c1e);
+                if (!mc3D._cSky) mc3D._cSky = new THREE.Color(0xb2ebf2);
+
+                const skyColor = mc3D._cSky;
                 if (sunY > 0.2) {
-                    // 白天
-                    skyColor = new THREE.Color(0xb2ebf2);
+                    skyColor.copy(mc3D._cDay);
                 } else if (sunY > -0.2) {
-                    // 黄昏/黎明
                     const f = (sunY + 0.2) / 0.4;
-                    const daySky = new THREE.Color(0xb2ebf2);
-                    const sunsetSky = new THREE.Color(0xff8a65); // 温暖橘红
-                    skyColor = sunsetSky.clone().lerp(daySky, f);
+                    skyColor.copy(mc3D._cSunset).lerp(mc3D._cDay, f);
                 } else {
-                    // 黑夜
                     const f = Math.min(1, Math.abs(sunY + 0.2) / 0.3);
-                    const sunsetSky = new THREE.Color(0xff8a65);
-                    const nightSky = new THREE.Color(0x0c0c1e);
-                    skyColor = sunsetSky.clone().lerp(nightSky, f);
+                    skyColor.copy(mc3D._cSunset).lerp(mc3D._cNight, f);
                 }
                 
                 mc3D.scene.background = skyColor;
@@ -12038,7 +12056,7 @@
                 }
             }
 
-            requestAnimationFrame(loop);
+            scheduleNextFrame();
         }
         window.startGame = startGame;
 
@@ -12059,7 +12077,22 @@
             modal.classList.remove('hidden');
         }
 
+        const _uiCache = {
+            scoreLabel: null,
+            scoreDisplay: null,
+            isNoTimer: null,
+            timerDisplay: null,
+            mcTimeDisplay: null
+        };
+
         function updateUI() {
+            const elScoreLabel = document.getElementById('scoreLabel');
+            const elScoreDisplay = document.getElementById('scoreDisplay');
+            const elTimerBox = document.getElementById('timerBox');
+            const elBasket = document.getElementById('basket');
+            const elTimerDisplay = document.getElementById('timerDisplay');
+            const timeIndicator = document.getElementById('mcTimeIndicator');
+
             if (gameState.mode === 'mp_pvp') {
                 const p1Level = gameState.levels ? (gameState.levels[gameState.p1.id] || 1) : 1;
                 const p2Level = gameState.levels ? (gameState.levels[gameState.p2.id] || 1) : 1;
@@ -12068,31 +12101,59 @@
                 const p1Name = gameState.p1.id === socket.id ? `${gameState.p1.name}(我)` : gameState.p1.name;
                 const p2Name = gameState.p2.id === socket.id ? `${gameState.p2.name}(我)` : gameState.p2.name;
                 
-                document.getElementById('scoreLabel').textContent = `${p1Name} VS ${p2Name}`;
-                document.getElementById('scoreDisplay').textContent = `第 ${p1Level} 关 : 第 ${p2Level} 关`;
+                const labelText = `${p1Name} VS ${p2Name}`;
+                const dispText = `第 ${p1Level} 关 : 第 ${p2Level} 关`;
+                if (_uiCache.scoreLabel !== labelText && elScoreLabel) {
+                    elScoreLabel.textContent = labelText;
+                    _uiCache.scoreLabel = labelText;
+                }
+                if (_uiCache.scoreDisplay !== dispText && elScoreDisplay) {
+                    elScoreDisplay.textContent = dispText;
+                    _uiCache.scoreDisplay = dispText;
+                }
             } else {
-                document.getElementById('scoreLabel').textContent = "当前目标";
-                document.getElementById('scoreDisplay').textContent = `${gameState.currentLevelCollected} / ${gameState.targetCount}`;
+                if (_uiCache.scoreLabel !== "当前目标" && elScoreLabel) {
+                    elScoreLabel.textContent = "当前目标";
+                    _uiCache.scoreLabel = "当前目标";
+                }
+                const dispText = `${gameState.currentLevelCollected} / ${gameState.targetCount}`;
+                if (_uiCache.scoreDisplay !== dispText && elScoreDisplay) {
+                    elScoreDisplay.textContent = dispText;
+                    _uiCache.scoreDisplay = dispText;
+                }
             }
 
             const isNoTimerMode = gameState.mode === 4 || gameState.mode === 6 || gameState.mode === 7 || gameState.mode === 8 || gameState.mode === 9 || (gameState.mode === 'mp_pvp' && gameState.mpGameMode === 4);
-            if (isNoTimerMode) {
-                document.getElementById('timerBox').classList.add('hidden');
-                document.getElementById('basket').classList.add('hidden');
-            } else {
-                document.getElementById('timerBox').classList.remove('hidden');
-                document.getElementById('basket').classList.remove('hidden');
-                document.getElementById('timerDisplay').textContent = `${Math.ceil(gameState.timeLeft)}s`;
+            if (_uiCache.isNoTimer !== isNoTimerMode) {
+                _uiCache.isNoTimer = isNoTimerMode;
+                if (isNoTimerMode) {
+                    if (elTimerBox) elTimerBox.classList.add('hidden');
+                    if (elBasket) elBasket.classList.add('hidden');
+                } else {
+                    if (elTimerBox) elTimerBox.classList.remove('hidden');
+                    if (elBasket) elBasket.classList.remove('hidden');
+                }
+            }
+            if (!isNoTimerMode && elTimerDisplay) {
+                const secText = `${Math.ceil(gameState.timeLeft)}s`;
+                if (_uiCache.timerDisplay !== secText) {
+                    elTimerDisplay.textContent = secText;
+                    _uiCache.timerDisplay = secText;
+                }
             }
 
-            const timeIndicator = document.getElementById('mcTimeIndicator');
             if (timeIndicator) {
                 if (gameState.mcWorld && typeof mc3D.time !== 'undefined' && gameState.mcDimension === 'OVERWORLD') {
-                    timeIndicator.style.display = 'inline-block';
                     const isNight = Math.sin(mc3D.time) < 0;
-                    timeIndicator.textContent = isNight ? '🌙 夜晚' : '☀️ 白天';
-                } else {
+                    const txt = isNight ? '🌙 夜晚' : '☀️ 白天';
+                    if (_uiCache.mcTimeDisplay !== txt) {
+                        timeIndicator.style.display = 'inline-block';
+                        timeIndicator.textContent = txt;
+                        _uiCache.mcTimeDisplay = txt;
+                    }
+                } else if (_uiCache.mcTimeDisplay !== 'hidden') {
                     timeIndicator.style.display = 'none';
+                    _uiCache.mcTimeDisplay = 'hidden';
                 }
             }
         }
@@ -12362,13 +12423,22 @@
             ctx.restore();
         }
 
+        let mainLoopRafId = null;
+        function scheduleNextFrame() {
+            if (mainLoopRafId === null) {
+                mainLoopRafId = requestAnimationFrame(loop);
+            }
+        }
+        window.scheduleNextFrame = scheduleNextFrame;
+
         function loop(t) {
+            mainLoopRafId = null;
             const dt = t - gameState.lastTime; gameState.lastTime = t;
-            if (dt > 1000) { requestAnimationFrame(loop); return; }
+            if (dt > 1000) { scheduleNextFrame(); return; }
 
             if (!gameState.isPlaying) {
                 drawMinecraftHomeBackground(dt);
-                requestAnimationFrame(loop);
+                scheduleNextFrame();
                 return;
             }
 
@@ -12421,7 +12491,8 @@
                 drawMpOverlay();
             }
 
-            updateUI(); updateHomeTheme(); requestAnimationFrame(loop);
+            updateUI();
+            scheduleNextFrame();
         }
 
         canvas.addEventListener('pointerdown', e => {
@@ -12579,6 +12650,7 @@
         renderLeaderboard();
         updateUI();
         updateHomeTheme();
+        scheduleNextFrame();
 
         // 🟢 自动检测并提醒输入名称，激活 Socket 通信
         const savedUsername = localStorage.getItem('brick_game_username');
@@ -12603,6 +12675,9 @@
 
         if (isPath001) {
             gameState.mode = 6;
+            if (typeof window.loadMode6Assets === 'function') {
+                window.loadMode6Assets();
+            }
             updateHomeTheme();
             document.getElementById('usernameModal').classList.add('hidden');
             if (typeof window.startMinecraftPaintingStudio === 'function') {

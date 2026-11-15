@@ -6,6 +6,10 @@ server/npm-cache/
 info.md
 scratch/deploy_to_tencent.py
 scratch/deploy.sh
+scratch/*.png
+scratch/test_*.js
+scratch/inline_script_*.js
+scratch/generate_*.js
 
 # OS metadata
 .DS_Store

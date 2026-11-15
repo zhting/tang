@@ -3,61 +3,618 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>《机械迷城》1:1 终极完全体独立离线保全拯救工程 - 大集合版</title>
+    <title>Machinarium - 首页动态复刻</title>
+    <!-- 引入接近原版细长手写风格的谷歌字体与本地离线字体回退 -->
+    <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&display=swap" rel="stylesheet">
     <style>
-        body {
-            margin: 0; padding: 0; background-color: #080503;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            min-height: 100vh; overflow-x: hidden; font-family: sans-serif; color: #8e7960; user-select: none;
+        @font-face {
+            font-family: 'Amatic SC';
+            src: url('assets/mode9/AmaticSC-Bold.ttf') format('truetype');
+            font-weight: 700;
+            font-style: normal;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
             -webkit-user-select: none;
         }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #120e0a;
+            font-family: 'Amatic SC', 'Microsoft YaHei', sans-serif;
+            color: #8e7960;
+        }
+
+        /* ================= 通用场景与电影暗角 ================= */
+        .screen {
+            position: absolute;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.9s ease;
+            overflow: hidden;
+        }
+
+        .screen.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* 手绘胶片暗角滤镜，增强原作怀旧氛围 */
+        .vignette-overlay {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 45%, transparent 52%, rgba(18, 13, 9, 0.65) 100%);
+            pointer-events: none;
+            z-index: 15;
+        }
+
+        /* ================= 1. 首页场景 ================= */
+        #home-screen {
+            background: url('bg-main.jpg') no-repeat center center / cover,
+                        linear-gradient(180deg, #b8a37e 0%, #9c825c 55%, #4a3828 100%);
+            z-index: 10;
+        }
+
+        .flyer-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 55%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .robot-flyer {
+            position: absolute;
+            left: -120px;
+            will-change: transform;
+        }
+
+        .propeller {
+            transform-origin: 50px 18px;
+            animation: spinPropeller 0.11s linear infinite;
+        }
+
+        @keyframes spinPropeller {
+            0% { transform: scaleX(1); }
+            50% { transform: scaleX(0.12); }
+            100% { transform: scaleX(1); }
+        }
+
+        .flyer-1 {
+            top: 18%;
+            width: 58px;
+            opacity: 0.85;
+            animation: flyAcross1 28s linear infinite, bobbing 2.4s ease-in-out infinite;
+        }
+
+        .flyer-2 {
+            top: 26%;
+            width: 42px;
+            opacity: 0.68;
+            animation: flyAcross2 36s linear infinite 4s, bobbing 3.1s ease-in-out infinite 0.8s;
+        }
+
+        .flyer-3 {
+            top: 12%;
+            width: 30px;
+            opacity: 0.5;
+            left: auto;
+            right: -100px;
+            animation: flyAcrossReverse 44s linear infinite 2s, bobbing 2.8s ease-in-out infinite 1.5s;
+        }
+
+        @keyframes flyAcross1 {
+            0% { transform: translateX(-100px) translateY(0px); }
+            50% { transform: translateX(55vw) translateY(-18px); }
+            100% { transform: translateX(115vw) translateY(8px); }
+        }
+
+        @keyframes flyAcross2 {
+            0% { transform: translateX(-120px) translateY(0px); }
+            50% { transform: translateX(50vw) translateY(14px); }
+            100% { transform: translateX(115vw) translateY(-10px); }
+        }
+
+        @keyframes flyAcrossReverse {
+            0% { transform: translateX(100px) scaleX(-1); }
+            50% { transform: translateX(-55vw) translateY(12px) scaleX(-1); }
+            100% { transform: translateX(-115vw) translateY(-8px) scaleX(-1); }
+        }
+
+        @keyframes bobbing {
+            0%, 100% { margin-top: 0px; }
+            50% { margin-top: -7px; }
+        }
+
+        .ui-menu {
+            position: absolute;
+            top: 18%;
+            left: 13%;
+            z-index: 20;
+        }
+
+        .game-title {
+            font-size: 5.2rem;
+            font-weight: 700;
+            color: #2b2118;
+            letter-spacing: 3px;
+            line-height: 1;
+            margin-bottom: 24px;
+            text-shadow: 1px 1px 0px rgba(255, 240, 210, 0.35);
+        }
+
+        .menu-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .btn-start {
+            display: inline-flex;
+            align-items: baseline;
+            background: transparent;
+            border: none;
+            font-family: 'Amatic SC', 'Microsoft YaHei', sans-serif;
+            font-size: 2.7rem;
+            font-weight: 700;
+            color: #36291e;
+            cursor: pointer;
+            letter-spacing: 2.5px;
+            padding: 4px 10px;
+            text-decoration: none;
+            transition: color 0.2s ease, transform 0.2s ease, text-shadow 0.2s ease;
+        }
+
+        .btn-start .btn-sub {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #554233;
+            margin-left: 10px;
+            letter-spacing: 1px;
+            transition: color 0.2s ease;
+        }
+
+        .btn-start:hover {
+            color: #f7eedc;
+            text-shadow: 0 0 10px rgba(43, 33, 24, 0.95), 0 0 18px rgba(230, 207, 163, 0.55);
+            transform: translateX(8px);
+        }
+
+        .btn-start:hover .btn-sub {
+            color: #dec8a5;
+        }
+
+        .btn-start:active {
+            transform: translateX(4px) scale(0.98);
+        }
+
+        /* ================= 2. 第一关：废土灯塔与垃圾山开场画面 ================= */
+        #game-screen {
+            background: url('level1-bg.jpg') no-repeat center center / cover,
+                        linear-gradient(180deg, #b8a47e 0%, #a38c65 42%, #755e43 68%, #36291c 100%);
+            z-index: 5;
+        }
+
+        .scenery-layer {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .dust-particles {
+            position: absolute;
+            inset: 0;
+            background-image: 
+                radial-gradient(circle, rgba(255, 242, 210, 0.35) 1px, transparent 1.5px),
+                radial-gradient(circle, rgba(255, 230, 180, 0.25) 1.5px, transparent 2px);
+            background-size: 130px 130px, 210px 210px;
+            background-position: 0 0, 40px 60px;
+            animation: dustFloat 18s linear infinite;
+            pointer-events: none;
+            z-index: 8;
+        }
+
+        @keyframes dustFloat {
+            0% { transform: translateY(0) translateX(0); }
+            50% { transform: translateY(-15px) translateX(12px); }
+            100% { transform: translateY(0) translateX(0); }
+        }
+
+        .lighthouse-beacon {
+            transform-origin: 185px 272px;
+            animation: beaconGlow 2.8s ease-in-out infinite;
+        }
+
+        @keyframes beaconGlow {
+            0%, 100% { opacity: 0.2; transform: scale(0.85); }
+            50% { opacity: 0.95; transform: scale(1.35); }
+        }
+
+        .garbage-ship {
+            position: absolute;
+            left: 11%;
+            top: 41%;
+            width: 195px;
+            z-index: 6;
+            pointer-events: none;
+            transform-origin: center center;
+            opacity: 0;
+            will-change: transform, left, top, opacity, filter;
+        }
+
+        .garbage-ship.fly-in {
+            animation: shipApproach 6.8s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+        }
+
+        .garbage-ship.hovering {
+            opacity: 1;
+            left: 56%;
+            top: 19%;
+            filter: drop-shadow(0 18px 14px rgba(20, 14, 9, 0.35));
+            animation: shipIdleHover 3s ease-in-out infinite;
+        }
+
+        @keyframes shipApproach {
+            0% {
+                left: 10.5%;
+                top: 41.5%;
+                transform: scale(0.11) rotate(4deg);
+                opacity: 0;
+                filter: blur(1.2px) brightness(1.15);
+            }
+            12% {
+                left: 13.5%;
+                top: 39.5%;
+                transform: scale(0.18) rotate(11deg);
+                opacity: 0.72;
+                filter: blur(0.8px) brightness(1.1);
+            }
+            45% {
+                left: 31%;
+                top: 26%;
+                transform: scale(0.52) rotate(13deg);
+                opacity: 0.95;
+                filter: blur(0.2px) brightness(1.03);
+            }
+            78% {
+                left: 50%;
+                top: 17.5%;
+                transform: scale(0.92) rotate(-7deg);
+                opacity: 1;
+                filter: blur(0px) brightness(1);
+            }
+            90% {
+                left: 54.8%;
+                top: 19.5%;
+                transform: scale(0.99) rotate(2deg);
+                opacity: 1;
+            }
+            100% {
+                left: 56%;
+                top: 19%;
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+                filter: drop-shadow(0 18px 14px rgba(20, 14, 9, 0.35));
+            }
+        }
+
+        @keyframes shipIdleHover {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(-1.4deg); }
+        }
+
+        .ship-main-rotor {
+            transform-origin: 105px 24px;
+            animation: rotorSpinFast 0.08s linear infinite;
+        }
+
+        @keyframes rotorSpinFast {
+            0% { transform: scaleX(1); }
+            50% { transform: scaleX(0.1); }
+            100% { transform: scaleX(1); }
+        }
+
+        .ship-tail-rotor {
+            transform-origin: 24px 66px;
+            animation: tailSpinFast 0.09s linear infinite;
+        }
+
+        @keyframes tailSpinFast {
+            0% { transform: scaleY(1); }
+            50% { transform: scaleY(0.15); }
+            100% { transform: scaleY(1); }
+        }
+
+        .exhaust-puff {
+            fill: #292119;
+            opacity: 0;
+        }
+        .puff-1 { animation: smokeDrift 1.4s ease-out infinite; }
+        .puff-2 { animation: smokeDrift 1.4s ease-out infinite 0.45s; }
+        .puff-3 { animation: smokeDrift 1.4s ease-out infinite 0.9s; }
+
+        @keyframes smokeDrift {
+            0% {
+                transform: translate(0, 0) scale(0.4);
+                opacity: 0.65;
+            }
+            100% {
+                transform: translate(-38px, -16px) scale(1.6);
+                opacity: 0;
+            }
+        }
+
+        .game-top-bar {
+            position: absolute;
+            top: 22px;
+            right: 28px;
+            z-index: 30;
+        }
+
+        .btn-restart {
+            background: rgba(34, 26, 19, 0.82);
+            border: 2px solid #7c654b;
+            border-radius: 6px;
+            color: #dfd0b8;
+            font-family: 'Amatic SC', 'Microsoft YaHei', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            padding: 6px 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55);
+            transition: all 0.2s ease;
+        }
+
+        .btn-restart:hover {
+            background: #4d3b29;
+            border-color: #dec69b;
+            color: #fff8eb;
+            transform: scale(1.04);
+        }
+
+        .btn-restart:active {
+            transform: scale(0.97);
+        }
+
+        /* 状态提示（还原原版仪式感黑屏与状态通知） */
+        .stage-status {
+            position: absolute;
+            bottom: 26px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(235, 218, 188, 0.88);
+            font-family: 'Amatic SC', 'Microsoft YaHei', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+            z-index: 40;
+            background: rgba(22, 16, 10, 0.78);
+            border: 1px solid #5a432e;
+            border-radius: 6px;
+            padding: 5px 22px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85);
+            white-space: nowrap;
+        }
+
+        /* 游戏运行舞台容器 */
+        .game-layout {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            overflow-y: auto;
+        }
+
         #game-container {
-            position: relative; box-shadow: 0 0 80px rgba(0, 0, 0, 1);
-            border: 6px solid #1c140d; background: #0f0a06;
+            position: relative;
+            box-shadow: 0 0 80px rgba(0, 0, 0, 0.9);
+            border: 5px solid #261a11;
+            background: rgba(15, 10, 6, 0.85);
             max-width: 100%;
         }
+
         canvas {
             display: block;
             filter: contrast(1.24) brightness(0.77) saturate(0.65) sepia(0.24);
             max-width: 100%;
             height: auto;
         }
+
         #global-ui {
-            margin-top: 8px; display: flex; gap: 5px; justify-content: center; max-width: 1024px; flex-wrap: wrap;
+            margin-top: 8px;
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            max-width: 1024px;
+            flex-wrap: wrap;
             padding: 0 8px;
+            z-index: 25;
         }
+
         .ui-btn {
-            background: #261a11; border: 2px solid #3d2b1c; color: #9c856b;
-            padding: 5px 9px; cursor: pointer; font-weight: bold; font-size: 11px;
-            border-radius: 2px; transition: all 0.2s; text-decoration: none;
+            background: #261a11;
+            border: 2px solid #3d2b1c;
+            color: #9c856b;
+            padding: 5px 9px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 11px;
+            border-radius: 2px;
+            transition: all 0.2s;
+            text-decoration: none;
         }
+
         .ui-btn:hover, .ui-btn.active {
-            background: #3d2b1c; color: #fae0c2; border-color: #c48c4d;
+            background: #3d2b1c;
+            color: #fae0c2;
+            border-color: #c48c4d;
         }
     </style>
 </head>
 <body>
 
-<div id="game-container">
-    <canvas id="gameCanvas" width="1024" height="576"></canvas>
-</div>
-<div id="global-ui">
-    <button class="ui-btn active" id="btn-menu" onclick="changeEngineMode('menu')">🏠 0. 首页菜单 (小飞虫AI)</button>
-    <button class="ui-btn" id="btn-junkyard" onclick="changeEngineMode('junkyard')">🔧 1. 垃圾场 (组装/踢桶/绳荡)</button>
-    <button class="ui-btn" id="btn-pole" onclick="changeEngineMode('pole')">⚡ 2. 电线杆 (铜线拼图/电击坠猫)</button>
-    <button class="ui-btn" id="btn-bird" onclick="changeEngineMode('bird')">🦅 3. 鸟与方块 (贪吃鸟俯冲/卡扣下落)</button>
-    <button class="ui-btn" id="btn-fishing" onclick="changeEngineMode('fishing')">🎣 4. 水池抛竿 (物理钓鱼/鱼线阻尼)</button>
-    <button class="ui-btn" id="btn-fan_quiz" onclick="changeEngineMode('fan_quiz')">💨 5. 温室风扇 (大风扇3关图形解谜)</button>
-    <button class="ui-btn" id="btn-band" onclick="changeEngineMode('band')">🎷 6. 流浪歌手 (多声轨独立同步乐器合奏)</button>
-    <button class="ui-btn" id="btn-gomoku" onclick="changeEngineMode('gomoku')">🏁 7. 酒馆五子棋 (与老烟枪对弈完全AI)</button>
-    <button class="ui-btn" id="btn-bubble" onclick="changeEngineMode('bubble')">💭 8. 思维气泡 (全场景自适应连环画)</button>
-    <button class="ui-btn" id="btn-plug" onclick="changeEngineMode('plug')">🧠 9. 博士病毒插销 (红绿矩阵逻辑对调)</button>
-    <button class="ui-btn" id="btn-shoot" onclick="changeEngineMode('shoot')">🎮 10. 街机打枪 (CRT扫描线/飞虫弹幕)</button>
-    <button class="ui-btn" id="btn-spider" onclick="triggerSpiderGame()">🕷️ 11. 蜘蛛射击 (通关秘籍专属小游戏)</button>
-    <button class="ui-btn" id="btn-movie_gf" onclick="triggerLoreMovie('girlfriend')">🎬 电影A: 女友悲伤回忆连环画</button>
-    <button class="ui-btn" id="btn-movie_doc" onclick="triggerLoreMovie('meet_doctor')">🎬 电影B: 顶层老博士放映机交代</button>
-    <a href="index.html" class="ui-btn" style="background:#3d2416; color:#ffcc80;">⬅️ 返回积木小院</a>
-</div>
+  <!-- ==================== 1. 首页画面 ==================== -->
+  <div id="home-screen" class="screen active">
+    <!-- 手绘胶片电影暗角滤镜 -->
+    <div class="vignette-overlay"></div>
+
+    <!-- 天空巡逻飞行小机器人 -->
+    <div class="flyer-layer">
+      <!-- 机器人 1 (领航机) -->
+      <svg class="robot-flyer flyer-1" viewBox="0 0 100 80">
+        <!-- 顶部旋翼杆与螺旋桨 -->
+        <rect x="48" y="16" width="4" height="10" fill="#231c16"/>
+        <ellipse class="propeller" cx="50" cy="16" rx="34" ry="3" fill="#1a1410"/>
+        <!-- 铁桶形机身 -->
+        <path d="M32,26 L68,26 L64,54 L36,54 Z" fill="#2b231d" stroke="#17120e" stroke-width="2"/>
+        <!-- 机身铆钉横纹 -->
+        <line x1="33" y1="36" x2="67" y2="36" stroke="#17120e" stroke-width="1.5"/>
+        <line x1="35" y1="45" x2="65" y2="45" stroke="#17120e" stroke-width="1.5"/>
+        <!-- 发光小圆眼 -->
+        <circle cx="58" cy="32" r="3" fill="#e6cfa3"/>
+        <!-- 尾部小喷管与尾翼 -->
+        <polygon points="32,34 18,28 22,42 33,44" fill="#231c16"/>
+        <!-- 底部垂下的机械抓钩 -->
+        <path d="M46,54 L46,66 M54,54 L54,66 M42,66 Q50,74 58,66" fill="none" stroke="#1f1813" stroke-width="2"/>
+      </svg>
+
+      <!-- 机器人 2 (伴飞机) -->
+      <svg class="robot-flyer flyer-2" viewBox="0 0 100 80">
+        <rect x="48" y="16" width="4" height="10" fill="#231c16"/>
+        <ellipse class="propeller" cx="50" cy="16" rx="34" ry="3" fill="#1a1410"/>
+        <path d="M32,26 L68,26 L64,54 L36,54 Z" fill="#2b231d" stroke="#17120e" stroke-width="2"/>
+        <circle cx="58" cy="32" r="2.8" fill="#e6cfa3"/>
+        <polygon points="32,34 18,28 22,42 33,44" fill="#231c16"/>
+        <path d="M46,54 L46,65 M54,54 L54,65" fill="none" stroke="#1f1813" stroke-width="2"/>
+      </svg>
+
+      <!-- 机器人 3 (远景小巡逻机) -->
+      <svg class="robot-flyer flyer-3" viewBox="0 0 100 80">
+        <rect x="48" y="16" width="4" height="10" fill="#231c16"/>
+        <ellipse class="propeller" cx="50" cy="16" rx="32" ry="3" fill="#1a1410"/>
+        <path d="M34,26 L66,26 L62,52 L38,52 Z" fill="#2b231d"/>
+        <polygon points="34,34 20,29 23,41 35,43" fill="#231c16"/>
+      </svg>
+    </div>
+
+    <!-- 左侧原版手写菜单 -->
+    <div class="ui-menu">
+      <h1 class="game-title">Machinarium</h1>
+      <div class="menu-options">
+        <button id="btn-start" class="btn-start">Play New Game <span class="btn-sub">/ 开始游戏</span></button>
+        <button id="btn-resume" class="btn-start">Resume Game <span class="btn-sub">/ 继续游戏</span></button>
+      </div>
+    </div>
+  </div>
+  <!-- ==================== 2. 第一关：废土灯塔与垃圾山开场画面 ==================== -->
+  <div id="game-screen" class="screen">
+    <!-- 电影暗角与浮尘颗粒 -->
+    <div class="vignette-overlay"></div>
+    <div class="dust-particles"></div>
+
+    <!-- 右上角返回菜单 / 重新开始按钮 -->
+    <div class="game-top-bar">
+      <button id="btn-restart" class="btn-restart">重新开始 (Restart)</button>
+      <button class="btn-restart" onclick="restartToHome()" style="margin-left: 10px;">🏠 首页菜单 (Menu)</button>
+    </div>
+
+    <!-- 废土灯塔与垃圾山背景风景层 -->
+    <svg class="scenery-layer" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+      <path d="M100,580 Q160,420 200,340 L230,340 Q260,430 340,620 Z" fill="#3b2d1f" opacity="0.65"/>
+      <rect x="175" y="270" width="20" height="70" fill="#261c13"/>
+      <polygon points="168,270 202,270 185,250" fill="#1b130c"/>
+      <circle class="lighthouse-beacon" cx="185" cy="272" r="14" fill="#ffdd77" filter="drop-shadow(0 0 12px #ffbb33)"/>
+      <path d="M0,640 Q240,590 520,680 T1100,690 T1600,660 Q1800,670 1920,720 L1920,1080 L0,1080 Z" fill="#4d3b28"/>
+      <path d="M0,740 Q380,680 780,770 T1480,750 Q1740,780 1920,830 L1920,1080 L0,1080 Z" fill="#38291a"/>
+      <path d="M0,840 Q460,780 920,850 T1680,840 Q1840,860 1920,910 L1920,1080 L0,1080 Z" fill="#241a10"/>
+      <rect x="360" y="730" width="18" height="90" fill="#1a120b" transform="rotate(-12 360 730)"/>
+      <rect x="620" y="760" width="24" height="110" fill="#17100a" transform="rotate(8 620 760)"/>
+      <rect x="1240" y="740" width="20" height="95" fill="#18110a" transform="rotate(-6 1240 740)"/>
+    </svg>
+
+    <!-- 垃圾运输飞行器（精细手绘SVG + 曲线飞行 + 烟雾尾迹） -->
+    <div class="garbage-ship" id="garbage-ship">
+      <svg viewBox="0 0 200 130" width="100%" height="100%">
+        <!-- 排气管冒出的黑烟（3颗扩散粒子） -->
+        <circle class="exhaust-puff puff-1" cx="45" cy="40" r="7"/>
+        <circle class="exhaust-puff puff-2" cx="45" cy="40" r="6"/>
+        <circle class="exhaust-puff puff-3" cx="45" cy="40" r="5"/>
+
+        <!-- 顶部主螺旋桨支架与高速双旋翼 -->
+        <rect x="103" y="16" width="5" height="12" fill="#1f1812"/>
+        <ellipse class="ship-main-rotor" cx="105" cy="18" rx="64" ry="4" fill="#140e09"/>
+        <ellipse class="ship-main-rotor" cx="105" cy="18" rx="58" ry="3.5" fill="#2e2216"/>
+
+        <!-- 尾部螺旋桨与支架 -->
+        <rect x="22" y="60" width="4" height="12" fill="#1f1812"/>
+        <ellipse class="ship-tail-rotor" cx="24" cy="66" rx="3.5" ry="24" fill="#140e09"/>
+
+        <!-- 飞船庞大铁锈机身与机械铆钉装甲 -->
+        <path d="M40,54 Q80,34 135,36 Q178,38 184,70 Q188,102 140,105 Q85,108 42,94 Q26,88 28,72 Q30,56 40,54 Z" 
+              fill="#523e2b" stroke="#1d150e" stroke-width="3"/>
+        <path d="M65,70 Q105,74 150,68" stroke="#2a1e14" stroke-width="2.5" fill="none"/>
+        <path d="M70,86 Q110,88 145,82" stroke="#2a1e14" stroke-width="2.5" fill="none"/>
+        <line x1="88" y1="54" x2="88" y2="104" stroke="#241910" stroke-width="2"/>
+        <line x1="126" y1="50" x2="126" y2="102" stroke="#241910" stroke-width="2"/>
+
+        <!-- 驾驶舱玻璃圆窗与微弱暖光 -->
+        <circle cx="152" cy="56" r="10" fill="#f5d68b" stroke="#2a1d12" stroke-width="2.5"/>
+        <circle cx="152" cy="56" r="7" fill="#ffeaa5" opacity="0.8"/>
+        <!-- 排气管 -->
+        <rect x="42" y="44" width="16" height="8" rx="3" fill="#241a12" transform="rotate(-25 42 44)"/>
+      </svg>
+    </div>
+
+    <!-- 游戏玩法画布容器与操作栏 -->
+    <div class="game-layout" id="game-layout">
+      <div id="game-container">
+          <canvas id="gameCanvas" width="1024" height="576"></canvas>
+      </div>
+      <div id="global-ui">
+          <button class="ui-btn" id="btn-menu" onclick="restartToHome()">🏠 0. 首页菜单 (起步动画)</button>
+          <button class="ui-btn active" id="btn-junkyard" onclick="changeEngineMode('junkyard')">🔧 1. 垃圾场 (组装/踢桶/绳荡)</button>
+          <button class="ui-btn" id="btn-pole" onclick="changeEngineMode('pole')">⚡ 2. 电线杆 (铜线拼图/电击坠猫)</button>
+          <button class="ui-btn" id="btn-bird" onclick="changeEngineMode('bird')">🦅 3. 鸟与方块 (贪吃鸟俯冲/卡扣下落)</button>
+          <button class="ui-btn" id="btn-fishing" onclick="changeEngineMode('fishing')">🎣 4. 水池抛竿 (物理钓鱼/鱼线阻尼)</button>
+          <button class="ui-btn" id="btn-fan_quiz" onclick="changeEngineMode('fan_quiz')">💨 5. 温室风扇 (大风扇3关图形解谜)</button>
+          <button class="ui-btn" id="btn-band" onclick="changeEngineMode('band')">🎷 6. 流浪歌手 (多声轨独立同步乐器合奏)</button>
+          <button class="ui-btn" id="btn-gomoku" onclick="changeEngineMode('gomoku')">🏁 7. 酒馆五子棋 (与老烟枪对弈完全AI)</button>
+          <button class="ui-btn" id="btn-bubble" onclick="changeEngineMode('bubble')">💭 8. 思维气泡 (全场景自适应连环画)</button>
+          <button class="ui-btn" id="btn-plug" onclick="changeEngineMode('plug')">🧠 9. 博士病毒插销 (红绿矩阵逻辑对调)</button>
+          <button class="ui-btn" id="btn-shoot" onclick="changeEngineMode('shoot')">🎮 10. 街机打枪 (CRT扫描线/飞虫弹幕)</button>
+          <button class="ui-btn" id="btn-spider" onclick="triggerSpiderGame()">🕷️ 11. 蜘蛛射击 (通关秘籍专属小游戏)</button>
+          <button class="ui-btn" id="btn-movie_gf" onclick="triggerLoreMovie('girlfriend')">🎬 电影A: 女友悲伤回忆连环画</button>
+          <button class="ui-btn" id="btn-movie_doc" onclick="triggerLoreMovie('meet_doctor')">🎬 电影B: 顶层老博士放映机交代</button>
+          <a href="index.html" class="ui-btn" style="background:#3d2416; color:#ffcc80;">⬅️ 返回积木小院</a>
+      </div>
+    </div>
+
+    <!-- 场景状态提示（用于直观反馈“开始游戏”和“重新开始”重置效果） -->
+    <div id="stage-status" class="stage-status"></div>
+  </div>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
@@ -808,8 +1365,142 @@ function changeEngineMode(m) {
     document.querySelectorAll('.ui-btn').forEach(b => b.classList.remove('active'));
     const curBtn = document.getElementById(`btn-${m}`);
     if (curBtn) curBtn.classList.add('active');
+
+    const homeScreen = document.getElementById('home-screen');
+    const gameScreen = document.getElementById('game-screen');
+
+    if (m === 'menu') {
+        if (gameScreen) gameScreen.classList.remove('active');
+        if (homeScreen) homeScreen.classList.add('active');
+    } else {
+        if (homeScreen) homeScreen.classList.remove('active');
+        if (gameScreen) gameScreen.classList.add('active');
+        try { localStorage.setItem('m9_saved_chapter', m); } catch(e) {}
+    }
+
     initAudioContext();
     playProceduralSound('page');
+}
+
+function startNewGame() {
+    initAudioContext();
+    startSignatureMelody();
+    playProceduralSound('page');
+
+    const homeScreen = document.getElementById('home-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const ship = document.getElementById('garbage-ship');
+
+    if (homeScreen) homeScreen.classList.remove('active');
+    if (gameScreen) gameScreen.classList.add('active');
+
+    // 触发垃圾运输飞船自远景灯塔呼啸而来的开场动画
+    if (ship) {
+        ship.classList.remove('hovering');
+        ship.classList.remove('fly-in');
+        void ship.offsetWidth;
+        ship.classList.add('fly-in');
+        setTimeout(() => {
+            ship.classList.remove('fly-in');
+            ship.classList.add('hovering');
+        }, 6800);
+    }
+
+    state.mode = 'junkyard';
+    document.querySelectorAll('.ui-btn').forEach(b => b.classList.remove('active'));
+    const junkyardBtn = document.getElementById('btn-junkyard');
+    if (junkyardBtn) junkyardBtn.classList.add('active');
+    try { localStorage.setItem('m9_saved_chapter', 'junkyard'); } catch(e) {}
+}
+
+function resumeGame() {
+    initAudioContext();
+    startSignatureMelody();
+    playProceduralSound('page');
+    let saved = 'junkyard';
+    try {
+        saved = localStorage.getItem('m9_saved_chapter') || 'junkyard';
+    } catch(e) {}
+    if (saved === 'menu') saved = 'junkyard';
+    changeEngineMode(saved);
+}
+
+function restartToHome() {
+    changeEngineMode('menu');
+}
+
+const homeScreen = document.getElementById('home-screen');
+const gameScreen = document.getElementById('game-screen');
+const btnStart = document.getElementById('btn-start');
+const btnResume = document.getElementById('btn-resume');
+const btnRestart = document.getElementById('btn-restart');
+const stageStatus = document.getElementById('stage-status');
+
+// 初始化/重置游戏状态的函数（对标原版仪式感黑屏与状态通知）
+function initGame(reasonText) {
+    if (!gameScreen) return;
+    gameScreen.style.opacity = '0';
+    setTimeout(() => {
+        if (stageStatus) {
+            stageStatus.textContent = reasonText;
+            stageStatus.style.opacity = '1';
+            setTimeout(() => {
+                if (stageStatus) stageStatus.style.opacity = '0.35';
+            }, 3500);
+        }
+        gameScreen.style.opacity = '1';
+    }, 300);
+}
+
+// 重置当前关卡状态与主角位置
+function resetCurrentLevel() {
+    if (state.mode === 'junkyard') {
+        state.inventory = [];
+        state.josef.x = 200;
+        state.josef.y = 445;
+        state.josef.targetX = 200;
+        state.josef.height = 80;
+        state.josef.baseHeight = 80;
+        state.josef.mode = 'normal';
+        state.josef.isAssembled = false;
+        state.josef.isSwinging = false;
+        state.josef.isDone = false;
+        state.junkyard.bathtub = { x: 130, y: 400, w: 100, h: 50, searched: false };
+        state.junkyard.torso = { x: 160, y: 425, w: 30, h: 25, collected: false };
+        state.junkyard.wire = { x: 550, y: 440, w: 35, h: 30, collected: false };
+        state.junkyard.magnet = { x: 800, y: 440, w: 25, h: 25, collected: false, visible: false };
+        state.junkyard.pole = { x: 60, y: 250, w: 20, h: 200, bent: false };
+        state.junkyard.drum = { x: 720, y: 445, w: 36, h: 50, vx: 0, rot: 0, wobble: 0 };
+    }
+    playProceduralSound('page');
+}
+
+// 绑定首页【开始游戏 / Play New Game】按钮
+if (btnStart) {
+    btnStart.addEventListener('click', () => {
+        if (homeScreen) homeScreen.classList.remove('active');
+        if (gameScreen) gameScreen.classList.add('active');
+        initGame('游戏已开始 — 废土初始场景（已就绪）');
+        startNewGame();
+    });
+}
+
+// 绑定首页【继续游戏 / Resume Game】按钮
+if (btnResume) {
+    btnResume.addEventListener('click', () => {
+        if (homeScreen) homeScreen.classList.remove('active');
+        if (gameScreen) gameScreen.classList.add('active');
+        initGame('恢复进度 — 已加载上一次关卡存档');
+        resumeGame();
+    });
+}
+
+// 绑定游戏内【重新开始】按钮
+if (btnRestart) {
+    btnRestart.addEventListener('click', () => {
+        initGame('关卡已重新开始 — 所有机关与状态已重置');
+        resetCurrentLevel();
+    });
 }
 
 function switchScene(m) { changeEngineMode(m); }
@@ -818,6 +1509,10 @@ function triggerLoreMovie(type) {
     state.ui.book.subState = 'closed';
     state.mode = type === 'girlfriend' ? 'movie_gf' : 'movie_doc';
     state.movie.chap = 0;
+    const homeScreen = document.getElementById('home-screen');
+    const gameScreen = document.getElementById('game-screen');
+    if (homeScreen) homeScreen.classList.remove('active');
+    if (gameScreen) gameScreen.classList.add('active');
     document.querySelectorAll('.ui-btn').forEach(b => b.classList.remove('active'));
     const curBtn = document.getElementById(type === 'girlfriend' ? 'btn-movie_gf' : 'btn-movie_doc');
     if (curBtn) curBtn.classList.add('active');
@@ -826,6 +1521,10 @@ function triggerLoreMovie(type) {
 }
 
 function triggerSpiderGame() {
+    const homeScreen = document.getElementById('home-screen');
+    const gameScreen = document.getElementById('game-screen');
+    if (homeScreen) homeScreen.classList.remove('active');
+    if (gameScreen) gameScreen.classList.add('active');
     state.ui.book.subState = 'gaming';
     state.spiderGame.level = 1;
     state.spiderGame.spiders = [];
@@ -842,10 +1541,15 @@ function triggerSpiderGame() {
 // 暴露全局 state 供外界调试与测试检查
 window.state = state;
 window.core = state;
+window.startNewGame = startNewGame;
+window.resumeGame = resumeGame;
+window.restartToHome = restartToHome;
 window.changeEngineMode = changeEngineMode;
 window.switchScene = switchScene;
 window.triggerLoreMovie = triggerLoreMovie;
 window.triggerSpiderGame = triggerSpiderGame;
+window.initGame = initGame;
+window.resetCurrentLevel = resetCurrentLevel;
 
 canvas.style.cursor = 'none';
 buildGraphicsPatterns();
