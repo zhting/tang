@@ -17,8 +17,8 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #050b14;
-            font-family: 'Microsoft YaHei', -apple-system, sans-serif;
+            background-color: #030710;
+            font-family: 'Segoe UI', 'Microsoft YaHei', -apple-system, sans-serif;
             color: #d9e9ff;
         }
 
@@ -29,16 +29,122 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background: #02070f;
+            background: radial-gradient(circle at 50% 50%, #0a1628 0%, #02050c 100%);
+            overflow: hidden;
+            padding: 10px;
+        }
+
+        /* 外部高科技实验室独立机架边框 (Titanium Cyber Bezel) */
+        .lab-terminal-bezel {
+            position: relative;
+            width: 100%;
+            max-width: 1320px;
+            height: 100%;
+            max-height: 760px;
+            display: flex;
+            flex-direction: column;
+            background: #091322;
+            border: 3px solid #00e5ff;
+            border-radius: 14px;
+            box-shadow: 0 0 60px rgba(0, 229, 255, 0.4), inset 0 0 35px rgba(0, 114, 206, 0.35);
+            overflow: hidden;
+        }
+
+        .lab-terminal-bezel::after {
+            content: '';
+            position: absolute;
+            inset: 4px;
+            border: 1px solid rgba(0, 229, 255, 0.25);
+            border-radius: 10px;
+            pointer-events: none;
+            z-index: 35;
+        }
+
+        /* 顶端科幻仪器状态条 */
+        .lab-bezel-header {
+            height: 38px;
+            background: linear-gradient(180deg, #18283d 0%, #0b1524 100%);
+            border-bottom: 2px solid #00b0ff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #80d8ff;
+            letter-spacing: 1px;
+            flex-shrink: 0;
+            z-index: 30;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-status-badge {
+            background: rgba(0, 230, 118, 0.15);
+            border: 1px solid #00e676;
+            color: #69f0ae;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            animation: pulseStatus 2s infinite;
+        }
+
+        @keyframes pulseStatus {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-btn {
+            background: #102642;
+            color: #b3e5fc;
+            border: 1.5px solid #0288d1;
+            padding: 4px 14px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .header-btn:hover {
+            background: #0288d1;
+            color: #fff;
+            box-shadow: 0 0 12px rgba(2, 136, 209, 0.6);
+        }
+
+        /* 画布主视口 */
+        .canvas-viewport {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #030811;
             overflow: hidden;
         }
 
         canvas {
             display: block;
-            box-shadow: 0 0 60px rgba(0, 50, 120, 0.6);
-            background: #081220;
-            max-width: 100%;
-            max-height: 100%;
+            background: #c8d8e6;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
 
         /* HUD 图层 */
@@ -52,157 +158,233 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 16px 24px;
+            padding: 12px 18px;
             z-index: 20;
         }
 
-        .hud-top-bar {
+        /* 顶部高科技整合状态条 (对齐设计原图) */
+        .hud-top-console {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-            gap: 16px;
+            align-items: center;
+            gap: 14px;
             pointer-events: auto;
-        }
-
-        .hud-card {
-            background: rgba(10, 25, 45, 0.85);
-            border: 2px solid #1e88e5;
+            background: linear-gradient(180deg, rgba(16, 30, 48, 0.94) 0%, rgba(8, 16, 28, 0.94) 100%);
+            border: 1.5px solid #00b0ff;
             border-radius: 8px;
-            padding: 10px 16px;
-            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(30, 136, 229, 0.2);
-            backdrop-filter: blur(4px);
+            padding: 8px 16px;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(0, 176, 255, 0.25);
+            backdrop-filter: blur(6px);
         }
 
-        .hp-card {
-            min-width: 220px;
-        }
-
-        .hp-title {
-            font-size: 13px;
-            font-weight: bold;
-            color: #90caf9;
-            margin-bottom: 6px;
+        /* 1. 生命值红心模块 (20 HEARTS) */
+        .hud-card-hearts {
             display: flex;
-            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
         }
 
-        .hp-bar-bg {
-            width: 100%;
-            height: 14px;
-            background: #0d1b2a;
-            border-radius: 7px;
-            overflow: hidden;
-            border: 1px solid #1565c0;
+        .hearts-title-box {
+            display: flex;
+            flex-direction: column;
         }
 
-        .hp-bar-fill {
-            height: 100%;
-            width: 100%;
-            background: linear-gradient(90deg, #d32f2f 0%, #ff5252 50%, #42a5f5 100%);
-            border-radius: 6px;
-            transition: width 0.2s ease;
-        }
-
-        .belly-card {
-            min-width: 260px;
-            text-align: center;
-        }
-
-        .belly-title {
-            font-size: 13px;
-            font-weight: bold;
+        .hearts-label {
+            font-size: 11px;
+            font-weight: 900;
             color: #80d8ff;
-            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .hearts-value {
+            font-size: 15px;
+            font-weight: 900;
+            color: #ff5252;
+            text-shadow: 0 0 10px rgba(255, 82, 82, 0.6);
+        }
+
+        .hearts-grid {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .heart-icon {
+            width: 18px;
+            height: 18px;
+            display: inline-block;
+            filter: drop-shadow(0 0 4px rgba(255, 23, 68, 0.6));
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .heart-icon.lost {
+            filter: grayscale(1) opacity(0.25);
+            transform: scale(0.85);
+        }
+
+        /* 2. 腹中容量电池槽位 (0/10 BELLY) */
+        .hud-card-belly {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .belly-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 900;
+            color: #80d8ff;
         }
 
         .belly-slots {
             display: flex;
-            justify-content: center;
-            gap: 4px;
+            gap: 5px;
         }
 
-        .belly-slot {
-            width: 18px;
-            height: 18px;
-            border: 1.5px solid #1976d2;
+        .belly-capsule {
+            width: 15px;
+            height: 24px;
+            border: 1.5px solid #00b0ff;
             border-radius: 4px;
-            background: rgba(13, 71, 161, 0.25);
-            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            background: rgba(0, 77, 138, 0.35);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
-        .belly-slot.filled {
-            background: #00e5ff;
+        .belly-capsule.filled {
+            background: linear-gradient(180deg, #00e5ff 0%, #0091ea 100%);
             border-color: #e0f7fa;
-            box-shadow: 0 0 8px #00e5ff;
+            box-shadow: 0 0 10px #00e5ff;
             transform: scale(1.1);
         }
 
-        .belly-digest-info {
-            font-size: 11px;
-            color: #b0bec5;
-            margin-top: 4px;
+        .belly-capsule.filled::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            right: 2px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 2px;
         }
 
+        .belly-info-text {
+            font-size: 11px;
+            color: #90caf9;
+        }
+
+        /* 3. 终点逃生距离进度 (LEVEL EXIT) */
+        .hud-card-exit {
+            display: flex;
+            flex-direction: column;
+            min-width: 180px;
+            gap: 4px;
+        }
+
+        .exit-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: 900;
+            color: #69f0ae;
+            letter-spacing: 0.5px;
+        }
+
+        .exit-track-bar {
+            width: 100%;
+            height: 12px;
+            background: #091728;
+            border: 1px solid #00e676;
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .exit-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00b0ff 0%, #00e676 100%);
+            border-radius: 5px;
+            transition: width 0.15s linear;
+        }
+
+        .exit-dragon-head {
+            position: absolute;
+            top: -3px;
+            right: -6px;
+            font-size: 13px;
+            pointer-events: none;
+        }
+
+        /* 操作按钮组 */
         .hud-actions {
             display: flex;
-            gap: 10px;
+            gap: 8px;
         }
 
-        .btn-hud {
-            background: rgba(13, 71, 161, 0.85);
+        .btn-hud-tech {
+            background: linear-gradient(180deg, #1565c0 0%, #0d47a1 100%);
             color: #ffffff;
             border: 1.5px solid #42a5f5;
-            padding: 8px 16px;
-            font-size: 14px;
+            padding: 6px 14px;
+            font-size: 13px;
             font-weight: bold;
             border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s ease;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
         }
 
-        .btn-hud:hover {
-            background: #1976d2;
+        .btn-hud-tech:hover {
+            background: linear-gradient(180deg, #1976d2 0%, #1565c0 100%);
             border-color: #82b1ff;
             transform: translateY(-2px);
-            box-shadow: 0 4px 14px rgba(33, 150, 243, 0.5);
+            box-shadow: 0 0 14px rgba(66, 165, 245, 0.6);
         }
 
-        .btn-hud:active {
+        .btn-hud-tech:active {
             transform: translateY(1px);
         }
 
-        /* 底部状态提示条 */
+        /* 底部动态指示提示 */
         .hud-bottom-bar {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 8px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
 
         .hint-banner {
-            background: rgba(5, 15, 30, 0.88);
-            border: 1.5px solid #29b6f6;
-            color: #e1f5fe;
+            background: rgba(4, 15, 30, 0.92);
+            border: 1.5px solid #00b0ff;
+            color: #e0f7fa;
             padding: 8px 24px;
             border-radius: 20px;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: bold;
-            letter-spacing: 1px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 10px rgba(41, 182, 246, 0.3);
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.75), 0 0 12px rgba(0, 176, 255, 0.35);
             text-align: center;
             max-width: 90%;
             transition: all 0.3s ease;
         }
 
-        /* 移动端操作按钮组 */
+        /* 触控按键 (移动端适配) */
         .touch-controls {
             display: none;
             position: absolute;
-            bottom: 20px;
-            width: calc(100% - 40px);
-            left: 20px;
+            bottom: 16px;
+            width: calc(100% - 32px);
+            left: 16px;
             justify-content: space-between;
             pointer-events: auto;
             z-index: 25;
@@ -214,18 +396,18 @@
         }
 
         .touch-btn {
-            width: 64px;
-            height: 64px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
-            background: rgba(13, 71, 161, 0.75);
+            background: rgba(13, 71, 161, 0.8);
             border: 2px solid #42a5f5;
             color: #fff;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             display: flex;
             justify-content: center;
             align-items: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
         }
 
         .touch-btn:active {
@@ -234,11 +416,11 @@
         }
 
         .touch-btn.swallow {
-            width: 76px;
-            height: 76px;
+            width: 72px;
+            height: 72px;
             background: linear-gradient(135deg, #00b0ff 0%, #0091ea 100%);
             border-color: #e0f7fa;
-            font-size: 16px;
+            font-size: 15px;
         }
 
         /* 剧情过场黑屏与字幕容器 */
@@ -250,177 +432,203 @@
             flex-direction: column;
             justify-content: flex-end;
             align-items: center;
-            padding-bottom: 70px;
+            padding-bottom: 90px;
             z-index: 50;
-            pointer-events: none;
-            opacity: 1;
-            transition: opacity 0.8s ease;
+            transition: opacity 0.5s ease;
         }
 
         .cutscene-subtitle {
             color: #ffffff;
-            font-size: 2.2rem;
+            font-size: 24px;
             font-weight: bold;
-            letter-spacing: 3px;
-            text-shadow: 0 0 12px rgba(255, 255, 255, 0.8), 0 4px 8px rgba(0, 0, 0, 0.9);
+            letter-spacing: 2px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+            min-height: 40px;
             text-align: center;
-            min-height: 48px;
-            transition: opacity 0.4s ease;
         }
 
         #white-flash {
             position: absolute;
             inset: 0;
             background: #ffffff;
-            z-index: 60;
-            pointer-events: none;
             opacity: 0;
-            transition: opacity 0.35s ease;
+            pointer-events: none;
+            z-index: 60;
+            transition: opacity 0.3s ease;
         }
 
-        /* 通关结算与失败弹窗 */
+        /* 结算弹窗 */
         .modal-screen {
+            display: none;
             position: absolute;
             inset: 0;
-            background: rgba(2, 6, 15, 0.92);
-            display: flex;
-            flex-direction: column;
+            background: rgba(2, 6, 14, 0.88);
+            backdrop-filter: blur(8px);
             justify-content: center;
             align-items: center;
             z-index: 70;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.5s ease;
         }
 
         .modal-screen.active {
-            opacity: 1;
-            pointer-events: auto;
+            display: flex;
         }
 
         .modal-box {
-            background: linear-gradient(135deg, #0b1f3a 0%, #153b6c 100%);
-            border: 3px solid #29b6f6;
-            border-radius: 14px;
-            padding: 30px 48px;
+            background: linear-gradient(135deg, #0b1a2e 0%, #050d18 100%);
+            border: 2px solid #00e676;
+            border-radius: 12px;
+            padding: 32px 48px;
             text-align: center;
-            box-shadow: 0 0 40px rgba(41, 182, 246, 0.5);
             max-width: 480px;
+            box-shadow: 0 10px 40px rgba(0, 230, 118, 0.35);
         }
 
         .modal-title {
-            font-size: 2.4rem;
-            color: #80d8ff;
-            margin-bottom: 12px;
-            text-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
+            font-size: 26px;
+            font-weight: bold;
+            color: #00e676;
+            margin-bottom: 14px;
         }
 
         .modal-desc {
-            font-size: 1.15rem;
-            color: #e0f2fe;
-            margin-bottom: 24px;
+            font-size: 15px;
+            color: #b0bec5;
             line-height: 1.6;
+            margin-bottom: 24px;
         }
 
         .btn-modal {
-            background: #0288d1;
-            color: #ffffff;
-            border: 2px solid #81d4fa;
-            border-radius: 8px;
+            background: #00c853;
+            color: #fff;
+            border: none;
             padding: 10px 28px;
-            font-size: 1.25rem;
+            font-size: 16px;
             font-weight: bold;
+            border-radius: 6px;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(2, 136, 209, 0.5);
-            transition: all 0.2s ease;
+            transition: transform 0.2s ease, background 0.2s ease;
         }
 
         .btn-modal:hover {
-            background: #039be5;
+            background: #00e676;
             transform: scale(1.05);
         }
 
         @media (max-width: 768px) {
             .touch-controls { display: flex; }
-            .hud-overlay { padding: 8px 12px; }
-            .cutscene-subtitle { font-size: 1.6rem; }
+            .hud-card-exit { display: none; }
+            .hearts-grid { gap: 2px; }
+            .heart-icon { width: 15px; height: 15px; }
+            .belly-capsule { width: 12px; height: 20px; }
+            .btn-hud-tech { padding: 4px 10px; font-size: 11px; }
         }
     </style>
 </head>
 <body>
 
 <div id="game-wrapper">
-    <canvas id="gameCanvas" width="1280" height="720"></canvas>
-
-    <!-- 闪光层与全屏黑屏字幕过场 -->
-    <div id="white-flash"></div>
-    <div id="cutscene-overlay">
-        <div class="cutscene-subtitle" id="cutsceneSubtitle"></div>
-    </div>
-
-    <!-- HUD 战斗界面 -->
-    <div class="hud-overlay" id="hudOverlay" style="display: none;">
-        <div class="hud-top-bar">
-            <!-- 龙血量 (20.0点) -->
-            <div class="hud-card hp-card">
-                <div class="hp-title">
-                    <span>🐉 巨龙生命值</span>
-                    <span id="hpText">20.0 / 20.0</span>
-                </div>
-                <div class="hp-bar-bg">
-                    <div class="hp-bar-fill" id="hpBarFill"></div>
-                </div>
+    <!-- 外置高科技独立实验室机箱边框 -->
+    <div class="lab-terminal-bezel">
+        <div class="lab-bezel-header">
+            <div class="header-title">
+                <span>🐉 绝密地下基地：实验室突围终端</span>
+                <span class="header-status-badge">● 活体标本收容监控中</span>
             </div>
-
-            <!-- 腹中人数 (上限10人) -->
-            <div class="hud-card belly-card">
-                <div class="belly-title" id="bellyTitle">腹中人数：0 / 10</div>
-                <div class="belly-slots" id="bellySlots">
-                    <!-- 10个槽位动态生成 -->
-                </div>
-                <div class="belly-digest-info" id="bellyDigestInfo">自然消化冷却中</div>
-            </div>
-
-            <!-- 控制按钮 -->
-            <div class="hud-actions">
-                <button class="btn-hud" onclick="restartLevel()">重新开始</button>
-                <a href="index.html" class="btn-hud" style="text-decoration:none; display:inline-block;">返回小院</a>
+            <div class="header-controls">
+                <button class="header-btn" onclick="restartLevel()">重新开始</button>
+                <a href="index.html" class="header-btn">返回小院</a>
             </div>
         </div>
 
-        <!-- 底部提示栏 -->
-        <div class="hud-bottom-bar">
-            <div class="hint-banner" id="hintBanner">加载中...</div>
-        </div>
-    </div>
+        <div class="canvas-viewport">
+            <canvas id="gameCanvas" width="1280" height="720"></canvas>
 
-    <!-- 移动端触控按键 -->
-    <div class="touch-controls" id="touchControls">
-        <div class="touch-dpad">
-            <button class="touch-btn" id="btnTouchLeft">◀</button>
-            <button class="touch-btn" id="btnTouchRight">▶</button>
-        </div>
-        <div class="touch-dpad">
-            <button class="touch-btn" id="btnTouchJump">跳跃</button>
-            <button class="touch-btn swallow" id="btnTouchSwallow">吞噬</button>
-        </div>
-    </div>
+            <!-- 闪光层与全屏黑屏字幕过场 -->
+            <div id="white-flash"></div>
+            <div id="cutscene-overlay">
+                <div class="cutscene-subtitle" id="cutsceneSubtitle"></div>
+            </div>
 
-    <!-- 通关结算弹窗 -->
-    <div class="modal-screen" id="clearModal">
-        <div class="modal-box">
-            <h2 class="modal-title">🎉 第一关通关！</h2>
-            <p class="modal-desc" id="clearDesc">巨龙成功撞破实验室最后防爆大门，冲出绝密设施！</p>
-            <button class="btn-modal" onclick="restartLevel()">再次挑战</button>
-        </div>
-    </div>
+            <!-- HUD 战斗界面 -->
+            <div class="hud-overlay" id="hudOverlay" style="display: none;">
+                <div class="hud-top-console">
+                    <!-- 1. 龙血量 (20 HEARTS) -->
+                    <div class="hud-card-hearts">
+                        <div class="hearts-title-box">
+                            <span class="hearts-label">20 HEARTS 巨龙生命</span>
+                            <span class="hearts-value" id="hpText">20.0 / 20.0</span>
+                        </div>
+                        <div class="hearts-grid" id="heartsGrid">
+                            <!-- 10颗红心由JS生成 -->
+                        </div>
+                    </div>
 
-    <!-- 失败结算弹窗 -->
-    <div class="modal-screen" id="gameOverModal">
-        <div class="modal-box" style="border-color: #f44336; box-shadow: 0 0 40px rgba(244, 67, 54, 0.5);">
-            <h2 class="modal-title" style="color: #ff5252;">💀 巨龙倒下了！</h2>
-            <p class="modal-desc">血量耗尽（0 / 20.0）。按 R 键或点击下方按钮重新挑战第一关。</p>
-            <button class="btn-modal" style="background: #d32f2f; border-color: #ff8a80;" onclick="restartLevel()">重新开始</button>
+                    <!-- 2. 腹中人数 (0/10 BELLY) -->
+                    <div class="hud-card-belly">
+                        <div class="belly-header">
+                            <span>腹中收容</span>
+                            <span id="bellyTitle">0 / 10</span>
+                        </div>
+                        <div class="belly-slots" id="bellySlots">
+                            <!-- 10个胶囊槽位动态生成 -->
+                        </div>
+                        <div class="belly-info-text" id="bellyDigestInfo">肚子空空，请捕食士兵</div>
+                    </div>
+
+                    <!-- 3. 终点逃生距离 (LEVEL EXIT) -->
+                    <div class="hud-card-exit">
+                        <div class="exit-header">
+                            <span>撤离防爆门</span>
+                            <span id="exitDistText">剩余 5200m</span>
+                        </div>
+                        <div class="exit-track-bar">
+                            <div class="exit-progress-fill" id="exitProgressFill"></div>
+                            <span class="exit-dragon-head" id="exitDragonPin">🐉</span>
+                        </div>
+                    </div>
+
+                    <!-- 控制按钮 -->
+                    <div class="hud-actions">
+                        <button class="btn-hud-tech" onclick="restartLevel()">重新开始</button>
+                        <a href="index.html" class="btn-hud-tech">返回小院</a>
+                    </div>
+                </div>
+
+                <!-- 底部提示栏 -->
+                <div class="hud-bottom-bar">
+                    <div class="hint-banner" id="hintBanner">加载中...</div>
+                </div>
+            </div>
+
+            <!-- 移动端触控按键 -->
+            <div class="touch-controls" id="touchControls">
+                <div class="touch-dpad">
+                    <button class="touch-btn" id="btnTouchLeft">◀</button>
+                    <button class="touch-btn" id="btnTouchRight">▶</button>
+                </div>
+                <div class="touch-dpad">
+                    <button class="touch-btn" id="btnTouchJump">跳跃</button>
+                    <button class="touch-btn swallow" id="btnTouchSwallow">吞噬</button>
+                </div>
+            </div>
+
+            <!-- 通关结算弹窗 -->
+            <div class="modal-screen" id="clearModal">
+                <div class="modal-box">
+                    <h2 class="modal-title">🎉 第一关通关！</h2>
+                    <p class="modal-desc" id="clearDesc">巨龙成功撞破实验室最后防爆大门，冲出绝密设施！</p>
+                    <button class="btn-modal" onclick="restartLevel()">再次挑战</button>
+                </div>
+            </div>
+
+            <!-- 失败结算弹窗 -->
+            <div class="modal-screen" id="gameOverModal">
+                <div class="modal-box" style="border-color: #f44336; box-shadow: 0 0 40px rgba(244, 67, 54, 0.5);">
+                    <h2 class="modal-title" style="color: #ff5252;">💀 巨龙倒下了！</h2>
+                    <p class="modal-desc">血量耗尽（0 / 20.0）。按 R 键或点击下方按钮重新挑战第一关。</p>
+                    <button class="btn-modal" style="background: #d32f2f; border-color: #ff8a80;" onclick="restartLevel()">重新开始</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -430,105 +638,103 @@
 // 🔊 WEB AUDIO API 工业级声音合成器
 // ==========================================
 let audioCtx = null;
-function getAudioCtx() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+function getAudioContext() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
     return audioCtx;
 }
 
 function playSound(type) {
     try {
-        const ctx = getAudioCtx();
+        const ctx = getAudioContext();
         const now = ctx.currentTime;
+
         if (type === 'laser') {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(800, now);
-            osc.frequency.exponentialRampToValueAtTime(120, now + 0.35);
-            gain.gain.setValueAtTime(0.3, now);
+            osc.frequency.setValueAtTime(880, now);
+            osc.frequency.exponentialRampToValueAtTime(110, now + 0.35);
+            gain.gain.setValueAtTime(0.4, now);
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
             osc.connect(gain); gain.connect(ctx.destination);
             osc.start(); osc.stop(now + 0.35);
-        } else if (type === 'roar') {
-            // 龙啸声
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(90, now);
-            osc.frequency.linearRampToValueAtTime(140, now + 0.15);
-            osc.frequency.exponentialRampToValueAtTime(45, now + 0.85);
-            gain.gain.setValueAtTime(0.4, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.85);
-            osc.connect(gain); gain.connect(ctx.destination);
-            osc.start(); osc.stop(now + 0.85);
         } else if (type === 'cage_break') {
-            // 铁笼断裂金属撞击
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(260, now);
-            osc.frequency.exponentialRampToValueAtTime(60, now + 0.45);
-            gain.gain.setValueAtTime(0.35, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
-            osc.connect(gain); gain.connect(ctx.destination);
-            osc.start(); osc.stop(now + 0.45);
-        } else if (type === 'swallow') {
-            // 吞咽声
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(320, now);
-            osc.frequency.exponentialRampToValueAtTime(140, now + 0.28);
-            gain.gain.setValueAtTime(0.35, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
-            osc.connect(gain); gain.connect(ctx.destination);
-            osc.start(); osc.stop(now + 0.28);
-        } else if (type === 'belly_bomb') {
-            // 肚子内手雷闷爆重低音
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'triangle';
-            osc.frequency.setValueAtTime(160, now);
-            osc.frequency.exponentialRampToValueAtTime(30, now + 0.6);
-            gain.gain.setValueAtTime(0.55, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
-            osc.connect(gain); gain.connect(ctx.destination);
-            osc.start(); osc.stop(now + 0.6);
-        } else if (type === 'explosion') {
-            // 地面爆炸
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(220, now);
-            osc.frequency.exponentialRampToValueAtTime(25, now + 0.5);
-            gain.gain.setValueAtTime(0.45, now);
+            osc.frequency.setValueAtTime(140, now);
+            osc.frequency.exponentialRampToValueAtTime(35, now + 0.5);
+            gain.gain.setValueAtTime(0.6, now);
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
             osc.connect(gain); gain.connect(ctx.destination);
             osc.start(); osc.stop(now + 0.5);
-        } else if (type === 'shock') {
-            // 电击
+        } else if (type === 'swallow') {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
-            osc.type = 'sawtooth';
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(120, now);
+            osc.frequency.exponentialRampToValueAtTime(260, now + 0.18);
+            gain.gain.setValueAtTime(0.5, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(now + 0.22);
+        } else if (type === 'belly_bomb') {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(80, now);
+            osc.frequency.exponentialRampToValueAtTime(28, now + 0.65);
+            gain.gain.setValueAtTime(0.8, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.65);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(now + 0.65);
+        } else if (type === 'shock') {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'square';
             osc.frequency.setValueAtTime(440, now);
             osc.frequency.setValueAtTime(880, now + 0.05);
             osc.frequency.setValueAtTime(220, now + 0.1);
             gain.gain.setValueAtTime(0.25, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
             osc.connect(gain); gain.connect(ctx.destination);
-            osc.start(); osc.stop(now + 0.2);
+            osc.start(); osc.stop(now + 0.18);
         } else if (type === 'fire') {
-            // 火焰喷射
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'triangle';
-            osc.frequency.setValueAtTime(360, now);
-            osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
-            gain.gain.setValueAtTime(0.25, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.frequency.setValueAtTime(320, now);
+            osc.frequency.exponentialRampToValueAtTime(60, now + 0.28);
+            gain.gain.setValueAtTime(0.35, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
             osc.connect(gain); gain.connect(ctx.destination);
-            osc.start(); osc.stop(now + 0.3);
+            osc.start(); osc.stop(now + 0.28);
+        } else if (type === 'explosion') {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(100, now);
+            osc.frequency.exponentialRampToValueAtTime(25, now + 0.45);
+            gain.gain.setValueAtTime(0.7, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(now + 0.45);
+        } else if (type === 'roar') {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(110, now);
+            osc.frequency.linearRampToValueAtTime(180, now + 0.15);
+            osc.frequency.exponentialRampToValueAtTime(45, now + 0.5);
+            gain.gain.setValueAtTime(0.5, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(now + 0.5);
         }
     } catch(e) {}
 }
@@ -583,7 +789,9 @@ let dragon = {
     bellyBulgeAnim: 0.0, // 手雷闷爆肚子突鼓
     swallowAnimTimer: 0.0, // 吞噬咬合动作计时
     swallowTarget: null, // 当前被挑起抛空的士兵
-    stepCount: 0
+    stepCount: 0,
+    feedingGrenadeTimer: 0.0, // 低头吃手雷动作计时
+    tossedSoldier: null // 吞噬抛空动效士兵对象
 };
 
 // 牢笼对象
@@ -613,23 +821,40 @@ const cutsceneSubtitle = document.getElementById('cutsceneSubtitle');
 const whiteFlash = document.getElementById('white-flash');
 const hudOverlay = document.getElementById('hudOverlay');
 const hpText = document.getElementById('hpText');
-const hpBarFill = document.getElementById('hpBarFill');
+const heartsGrid = document.getElementById('heartsGrid');
 const bellyTitle = document.getElementById('bellyTitle');
 const bellySlots = document.getElementById('bellySlots');
 const bellyDigestInfo = document.getElementById('bellyDigestInfo');
+const exitDistText = document.getElementById('exitDistText');
+const exitProgressFill = document.getElementById('exitProgressFill');
+const exitDragonPin = document.getElementById('exitDragonPin');
 const hintBanner = document.getElementById('hintBanner');
 const clearModal = document.getElementById('clearModal');
 const gameOverModal = document.getElementById('gameOverModal');
 
-// 初始化 10 个腹中槽位
-for (let i = 0; i < 10; i++) {
-    const s = document.createElement('div');
-    s.className = 'belly-slot';
-    s.id = `belly-slot-${i}`;
-    bellySlots.appendChild(s);
-}
+// 初始化心形插槽与腹中胶囊槽
+function initHudSlots() {
+    heartsGrid.innerHTML = '';
+    for (let i = 0; i < 10; i++) {
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("class", "heart-icon");
+        svg.id = `heart-icon-${i}`;
+        svg.innerHTML = '<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#ff1744"/>';
+        heartsGrid.appendChild(svg);
+    }
 
-// 按键输入监听
+    bellySlots.innerHTML = '';
+    for (let i = 0; i < 10; i++) {
+        const s = document.createElement('div');
+        s.className = 'belly-capsule';
+        s.id = `belly-slot-${i}`;
+        bellySlots.appendChild(s);
+    }
+}
+initHudSlots();
+
+// 键盘控制
 const keys = {
     left: false,
     right: false,
@@ -639,33 +864,33 @@ const keys = {
 };
 
 window.addEventListener('keydown', e => {
-    if (e.repeat) return;
-    const k = e.key.toLowerCase();
-    if (k === 'd' || k === 'arrowright') keys.right = true;
-    if (k === 'a' || k === 'arrowleft') keys.left = true;
-    if (k === 'w' || k === 'arrowup' || k === ' ') { keys.jump = true; e.preventDefault(); }
-    if (k === 'j' || k === 'f' || k === 'z') { keys.swallow = true; }
-    if (k === 'shift') keys.autoRun = true;
-    if (k === 'r') restartLevel();
-
-    // 牢笼中按任意动作键破笼
-    if (currentState === GameState.TRAPPED_IN_CAGE) {
-        if (keys.swallow || keys.right || keys.jump) {
+    if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keys.left = true;
+    if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keys.right = true;
+    if (e.key === 'w' || e.key === 'W' || e.key === ' ' || e.key === 'ArrowUp') {
+        if (currentState === GameState.TRAPPED_IN_CAGE) {
             breakOutOfCage();
+        } else {
+            keys.jump = true;
         }
+    }
+    if (e.key === 'j' || e.key === 'J') {
+        if (currentState === GameState.TRAPPED_IN_CAGE) {
+            breakOutOfCage();
+        } else {
+            keys.swallow = true;
+        }
+    }
+    if (e.key === 'r' || e.key === 'R') {
+        restartLevel();
     }
 });
 
 window.addEventListener('keyup', e => {
-    const k = e.key.toLowerCase();
-    if (k === 'd' || k === 'arrowright') keys.right = false;
-    if (k === 'a' || k === 'arrowleft') keys.left = false;
-    if (k === 'w' || k === 'arrowup' || k === ' ') keys.jump = false;
-    if (k === 'j' || k === 'f' || k === 'z') keys.swallow = false;
-    if (k === 'shift') keys.autoRun = false;
+    if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keys.left = false;
+    if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keys.right = false;
 });
 
-// 鼠标左键触发吞噬
+// 鼠标左键触发吞噬/破笼
 canvas.addEventListener('mousedown', e => {
     if (e.button === 0) {
         if (currentState === GameState.TRAPPED_IN_CAGE) {
@@ -676,20 +901,26 @@ canvas.addEventListener('mousedown', e => {
     }
 });
 
-// 触控支持
-const bindTouch = (id, onStart, onEnd) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('touchstart', e => { e.preventDefault(); onStart(); });
-    el.addEventListener('touchend', e => { e.preventDefault(); onEnd(); });
-};
-bindTouch('btnTouchLeft', () => keys.left = true, () => keys.left = false);
-bindTouch('btnTouchRight', () => { keys.right = true; if(currentState===GameState.TRAPPED_IN_CAGE) breakOutOfCage(); }, () => keys.right = false);
-bindTouch('btnTouchJump', () => { keys.jump = true; if(currentState===GameState.TRAPPED_IN_CAGE) breakOutOfCage(); }, () => keys.jump = false);
-bindTouch('btnTouchSwallow', () => {
+// 移动端虚拟按键
+const btnTouchLeft = document.getElementById('btnTouchLeft');
+const btnTouchRight = document.getElementById('btnTouchRight');
+const btnTouchJump = document.getElementById('btnTouchJump');
+const btnTouchSwallow = document.getElementById('btnTouchSwallow');
+
+btnTouchLeft.addEventListener('touchstart', e => { e.preventDefault(); keys.left = true; }, { passive: false });
+btnTouchLeft.addEventListener('touchend', e => { e.preventDefault(); keys.left = false; });
+btnTouchRight.addEventListener('touchstart', e => { e.preventDefault(); keys.right = true; }, { passive: false });
+btnTouchRight.addEventListener('touchend', e => { e.preventDefault(); keys.right = false; });
+btnTouchJump.addEventListener('touchstart', e => {
+    e.preventDefault();
     if (currentState === GameState.TRAPPED_IN_CAGE) breakOutOfCage();
-    else if (currentState === GameState.LEVEL_1_ACTIVE) performDragonSwallow();
-}, () => {});
+    else keys.jump = true;
+}, { passive: false });
+btnTouchSwallow.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (currentState === GameState.TRAPPED_IN_CAGE) breakOutOfCage();
+    else performDragonSwallow();
+}, { passive: false });
 
 // ==========================================
 // 1. 开场剧情过场流程 (CUTSCENE)
@@ -703,6 +934,17 @@ function addCutsceneTimeout(fn, ms) {
 function clearAllCutsceneTimeouts() {
     cutsceneTimeouts.forEach(id => clearTimeout(id));
     cutsceneTimeouts = [];
+}
+
+function showSubtitleSequence(lines, index, onComplete) {
+    if (index >= lines.length) {
+        if (onComplete) onComplete();
+        return;
+    }
+    cutsceneSubtitle.textContent = lines[index];
+    addCutsceneTimeout(() => {
+        showSubtitleSequence(lines, index + 1, onComplete);
+    }, 1800);
 }
 
 function playOpeningCutscene() {
@@ -747,39 +989,24 @@ function playOpeningCutscene() {
     }, 1200);
 }
 
-function showSubtitleSequence(lines, index, onComplete) {
-    if (index >= lines.length) {
-        cutsceneSubtitle.textContent = '';
-        if (onComplete) onComplete();
-        return;
-    }
-    cutsceneSubtitle.textContent = lines[index];
-    cutsceneSubtitle.style.opacity = '1';
-    addCutsceneTimeout(() => {
-        cutsceneSubtitle.style.opacity = '0';
-        addCutsceneTimeout(() => {
-            showSubtitleSequence(lines, index + 1, onComplete);
-        }, 300);
-    }, 1300);
-}
-
-// 撞破牢笼
+// 破开笼子进入战斗
 function breakOutOfCage() {
-    if (cage.broken) return;
+    if (currentState !== GameState.TRAPPED_IN_CAGE) return;
+
     cage.broken = true;
     playSound('cage_break');
     playSound('roar');
 
     // 碎裂飞溅粒子
-    for (let i = 0; i < 24; i++) {
+    for (let i = 0; i < 28; i++) {
         activeParticles.push({
             x: cage.x + (Math.random() - 0.5) * cage.w,
             y: cage.y - Math.random() * cage.h,
-            vx: (Math.random() - 0.5) * 500,
-            vy: -Math.random() * 400 - 100,
+            vx: (Math.random() - 0.5) * 600,
+            vy: -Math.random() * 450 - 80,
             size: Math.random() * 8 + 4,
-            color: '#78909c',
-            life: 1.2
+            color: '#90a4ae',
+            life: 1.4
         });
     }
 
@@ -788,7 +1015,7 @@ function breakOutOfCage() {
 }
 
 // ==========================================
-// 2. 第一关实体与敌人数据生成 (与 GDScript 一致)
+// 2. 第一关实体与敌人数据生成
 // ==========================================
 function setupLevel1Entities() {
     dragon.x = 350.0;
@@ -801,6 +1028,8 @@ function setupLevel1Entities() {
     electricTicksLeft = 0;
     electricTickTimer = 0.0;
     cage.broken = false;
+    dragon.tossedSoldier = null;
+    dragon.feedingGrenadeTimer = 0.0;
     activeEnemies = [];
     activeFireballs = [];
     activeGrenades = [];
@@ -809,7 +1038,7 @@ function setupLevel1Entities() {
     window.activeGrenades = activeGrenades;
     window.activeFireballs = activeFireballs;
 
-    // 关卡沿途刷怪配置表（10倍龙尺寸下横向分布）
+    // 关卡沿途刷怪配置表 (10倍龙尺寸下横向分布)
     const spawnPlan = [
         { type: EnemyType.GRAY_HAT,      x: 950.0 },
         { type: EnemyType.BLUE_HAT,      x: 1400.0 },
@@ -830,7 +1059,12 @@ function setupLevel1Entities() {
             y: 540.0,
             width: 36.0,
             height: 72.0,
-            timer: sp.type === EnemyType.BLACK_SPECOPS ? 7.0 : 0.0 // 特种兵初次7秒抛雷
+            timer: sp.type === EnemyType.BLACK_SPECOPS ? 7.0 : 0.0, // 特种兵初次7秒抛雷
+            walkCycle: Math.random() * 10,
+            facing: -1,
+            isFiring: false,
+            flameTimer: 0.0,
+            dustTimer: 0.0
         });
     });
 }
@@ -841,15 +1075,16 @@ function setupLevel1Entities() {
 function performDragonSwallow() {
     if (currentState !== GameState.LEVEL_1_ACTIVE) return;
 
-    dragon.swallowAnimTimer = 0.35; // 触发张嘴咬合动作
-    const mouthX = dragon.x + (dragon.width * 0.45 * dragon.facing);
-    const mouthY = dragon.y - dragon.height * 0.45;
+    dragon.swallowAnimTimer = 0.45; // 触发张嘴咬合动作
+    const mouthX = dragon.x + (dragon.width * 0.42 * dragon.facing);
+    const mouthY = dragon.y - dragon.height * 0.35;
 
-    // 1. 优先低头吃前方地面的手雷
+    // 1. 优先低头吃前方地面的手雷 (GRENADE FEEDING 动作)
     for (let i = activeGrenades.length - 1; i >= 0; i--) {
         const g = activeGrenades[i];
-        if (!g.swallowed && Math.hypot(g.x - mouthX, g.y - mouthY) <= 220.0) {
+        if (!g.swallowed && Math.hypot(g.x - mouthX, g.y - mouthY) <= 240.0) {
             g.swallowed = true;
+            dragon.feedingGrenadeTimer = 0.45; // 触发低头贴地咬合动作
             playSound('swallow');
             hintBanner.textContent = "蓝龙低头一口吃掉了手雷！等待肚内引爆消化！";
             return;
@@ -864,8 +1099,19 @@ function performDragonSwallow() {
 
     for (let i = activeEnemies.length - 1; i >= 0; i--) {
         const e = activeEnemies[i];
-        if (Math.hypot(e.x - mouthX, e.y - mouthY) <= 240.0) {
-            // 执行挑起吃人抛空动效
+        if (Math.hypot(e.x - mouthX, e.y - mouthY) <= 260.0) {
+            // 触发吻部挑起士兵抛空入嘴动效 (1) TOSSING AGENT WITH SNOUT
+            dragon.tossedSoldier = {
+                x: e.x,
+                y: e.y - 20,
+                vx: (mouthX - e.x) * 2.5,
+                vy: -440,
+                rot: 0,
+                rotSpeed: (Math.random() > 0.5 ? 1 : -1) * 7.5,
+                type: e.type,
+                timer: 0.45
+            };
+
             playSound('swallow');
             swallowedHumans++;
             activeEnemies.splice(i, 1);
@@ -884,30 +1130,31 @@ function triggerBellyGrenadeExplosion() {
     naturalDigestTimer = 0.0;
     dragon.bellyBulgeAnim = 1.0; // 肚子瞬间鼓胀震颤
 
-    // 腹部周围震出烟雾微粒
-    for (let i = 0; i < 16; i++) {
+    // 腹部周围震出烟雾与火星微粒
+    for (let i = 0; i < 22; i++) {
         activeParticles.push({
-            x: dragon.x + (Math.random() - 0.5) * 80,
-            y: dragon.y - 40 + (Math.random() - 0.5) * 40,
-            vx: (Math.random() - 0.5) * 160,
-            vy: -Math.random() * 120,
-            size: Math.random() * 10 + 6,
-            color: 'rgba(255, 140, 0, 0.7)',
-            life: 0.6
+            x: dragon.x - 20 + (Math.random() - 0.5) * 100,
+            y: dragon.y - 45 + (Math.random() - 0.5) * 45,
+            vx: (Math.random() - 0.5) * 200,
+            vy: -Math.random() * 150 - 30,
+            size: Math.random() * 12 + 6,
+            color: 'rgba(255, 140, 0, 0.75)',
+            life: 0.7
         });
     }
 
     updateHud();
-    hintBanner.textContent = `轰！手雷在肚子里闷爆，肚子猛鼓一下，腹中 ${count} 人瞬间全部消化！`;
+    hintBanner.textContent = `手雷在腹中闷爆！炸碎并消化了腹中全部 ${count} 名士兵！腹部清空！`;
 }
 
 // 受到伤害
 function applyDamageToDragon(amount, reason) {
-    dragonHp = Math.max(0.0, dragonHp - amount);
-    hintBanner.textContent = reason;
-    updateHud();
+    if (currentState !== GameState.LEVEL_1_ACTIVE) return;
 
-    // 受伤屏幕震颤与红色辉光
+    dragonHp = Math.max(0.0, dragonHp - amount);
+    updateHud();
+    hintBanner.textContent = reason;
+
     if (dragonHp <= 0.0) {
         currentState = GameState.GAME_OVER;
         gameOverModal.classList.add('active');
@@ -921,8 +1168,9 @@ function restartLevel() {
     gameOverModal.classList.remove('active');
     setupLevel1Entities();
     updateHud();
-    currentState = GameState.TRAPPED_IN_CAGE;
-    hintBanner.textContent = "已重置第一关！被困在笼中，按 [J 键] 或 [D 键] 破笼前冲！";
+    currentState = GameState.LEVEL_1_ACTIVE;
+    cage.broken = true;
+    hintBanner.textContent = "关卡已重新开始！一路突围并吞噬敌人！";
 }
 
 // ==========================================
@@ -938,10 +1186,10 @@ function updateGame(dt) {
 
         if (dir !== 0) {
             dragon.facing = dir > 0 ? 1 : -1;
-            dragon.stepCount += dt * 8;
+            dragon.stepCount += dt * 9.5;
         }
 
-        // 吞人越多速度越沉重
+        // 吞人越多速度越沉重 (与 GDScript 一致)
         const speedFactor = 1.0 - (swallowedHumans * 0.025);
         dragon.vx = dir * dragon.moveSpeed * speedFactor;
 
@@ -971,7 +1219,21 @@ function updateGame(dt) {
 
         // 动作动画衰减
         if (dragon.swallowAnimTimer > 0) dragon.swallowAnimTimer -= dt;
+        if (dragon.feedingGrenadeTimer > 0) dragon.feedingGrenadeTimer -= dt;
         if (dragon.bellyBulgeAnim > 0) dragon.bellyBulgeAnim = Math.max(0, dragon.bellyBulgeAnim - dt * 2.8);
+
+        // 挑起吞食士兵物理轨迹
+        if (dragon.tossedSoldier) {
+            const ts = dragon.tossedSoldier;
+            ts.x += ts.vx * dt;
+            ts.y += ts.vy * dt;
+            ts.vy += gravity * 0.9 * dt;
+            ts.rot += ts.rotSpeed * dt;
+            ts.timer -= dt;
+            if (ts.timer <= 0) {
+                dragon.tossedSoldier = null;
+            }
+        }
 
         // --- B. 感电状态与自然消化 ---
         if (electricTicksLeft > 0) {
@@ -996,14 +1258,17 @@ function updateGame(dt) {
             naturalDigestTimer = 0.0;
         }
 
-        // --- C. 沿途士兵 AI ---
+        // --- C. 沿途士兵 AI 与跑动步频 ---
         activeEnemies.forEach(e => {
             const dist = Math.hypot(dragon.x - e.x, dragon.y - e.y);
             const dirX = Math.sign(dragon.x - e.x);
+            e.facing = dirX !== 0 ? dirX : -1;
 
             if (e.type === EnemyType.BLUE_HAT) {
-                // 蓝帽：电击枪 (距离 < 420 蓄力射击)
+                // 蓝帽：巡逻走动并用电击枪射击
+                e.walkCycle += dt * 5.0;
                 if (dist < 420.0) {
+                    e.isFiring = true;
                     e.timer += dt;
                     if (e.timer >= 3.0) {
                         e.timer = 0.0;
@@ -1012,35 +1277,58 @@ function updateGame(dt) {
                         electricTickTimer = 0.0;
                         playSound('shock');
                     }
+                } else {
+                    e.isFiring = false;
                 }
             } else if (e.type === EnemyType.GRAY_HAT) {
-                // 灰帽：冲锋 (距离 < 600 加速冲向龙)
+                // 灰帽：冲锋奔跑 (距离 < 600 加速冲向龙)
                 if (dist < 600.0) {
                     e.x += dirX * 350.0 * dt;
+                    e.walkCycle += dt * 14.0; // 快速跑动腿频
+                    // 产生跑动扬尘微粒
+                    e.dustTimer = (e.dustTimer || 0) + dt;
+                    if (e.dustTimer >= 0.08) {
+                        e.dustTimer = 0;
+                        activeParticles.push({
+                            x: e.x - e.facing * 14,
+                            y: e.y - 2,
+                            vx: -e.facing * (Math.random() * 80 + 30),
+                            vy: -Math.random() * 35,
+                            size: Math.random() * 5 + 3,
+                            color: 'rgba(180, 205, 230, 0.55)',
+                            life: 0.35
+                        });
+                    }
+                } else {
+                    e.walkCycle += dt * 4.0;
                 }
             } else if (e.type === EnemyType.RED_ORANGE) {
-                // 红/橘帽：喷火枪 (发射火焰弹，每3秒一发，伤害1)
+                // 红/橘帽：战术走动与喷火枪
+                e.walkCycle += dt * 5.5;
+                if (e.flameTimer > 0) e.flameTimer -= dt;
                 if (dist < 550.0) {
                     e.timer += dt;
                     if (e.timer >= 3.0) {
                         e.timer = 0.0;
+                        e.flameTimer = 0.35;
                         playSound('fire');
                         activeFireballs.push({
-                            x: e.x,
-                            y: e.y - 45,
+                            x: e.x + e.facing * 20,
+                            y: e.y - 42,
                             vx: dirX * 380.0
                         });
                     }
                 }
             } else if (e.type === EnemyType.BLACK_SPECOPS) {
-                // 黑色特种兵：10秒抛出手雷
+                // 黑色特种兵：10秒蓄力抛掷高爆手雷
+                e.walkCycle += dt * 4.5;
                 if (dist < 650.0) {
                     e.timer += dt;
                     if (e.timer >= 10.0) {
                         e.timer = 0.0;
                         activeGrenades.push({
-                            x: e.x,
-                            y: e.y - 50,
+                            x: e.x + e.facing * 22,
+                            y: e.y - 45,
                             vx: dirX * 280.0,
                             vy: -320.0,
                             fuse: 5.0,
@@ -1070,8 +1358,8 @@ function updateGame(dt) {
 
             if (g.swallowed) {
                 // 跟随龙移动在龙腹内
-                g.x = dragon.x;
-                g.y = dragon.y - 40;
+                g.x = dragon.x - 20;
+                g.y = dragon.y - 45;
             } else {
                 // 空中抛物线落地
                 if (g.y < 530.0) {
@@ -1107,352 +1395,1312 @@ function updateGame(dt) {
 
         // 摄像机平滑跟随
         cameraX += (dragon.x - 380 - cameraX) * 0.12;
+
+        // 更新终点距离
+        const distLeft = Math.max(0, Math.round(FINISH_LINE_X - dragon.x));
+        exitDistText.textContent = `剩余 ${distLeft}m`;
+        const prog = Math.min(100, Math.max(0, (dragon.x - 350) / (FINISH_LINE_X - 350) * 100));
+        exitProgressFill.style.width = `${prog}%`;
     }
 
     // 粒子更新
     for (let i = activeParticles.length - 1; i >= 0; i--) {
         const p = activeParticles[i];
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
+        p.x += (p.vx || 0) * dt;
+        p.y += (p.vy || 0) * dt;
         p.life -= dt;
         if (p.life <= 0) activeParticles.splice(i, 1);
     }
 }
 
 // ==========================================
-// 5. 渲染循环 (2D 画布绘制实验室、巨龙、敌兵)
+// 5. 渲染循环 (2D 画布高保真复刻设计图)
 // ==========================================
 function renderGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 1. 实验室背景长廊
+    // 1. 实验室科幻背景长廊与工作站
     drawLabBackground();
 
     ctx.save();
     ctx.translate(-cameraX, 0);
 
-    // 2. 牢笼 (破笼前显示完整，破笼后展示残骸)
-    if (!cage.broken) {
-        drawCage();
-    }
+    // 2. 牢笼 (破笼前完整高压牢笼，破笼后展示扭曲破裂残骸)
+    drawCage();
 
-    // 3. 终点防爆门 (Finish Line)
+    // 3. 终点防爆门 (Finish Line Bulkhead)
     drawFinishLine();
 
-    // 4. 敌人绘制
-    drawEnemies();
-
-    // 5. 投掷物 (火焰弹、手雷)
+    // 4. 投掷物 (火焰弹、手雷)
     drawProjectiles();
 
-    // 6. 巨龙绘制 (人类10倍大、腹部动态鼓胀)
+    // 5. 敌人走动与攻击绘制
+    drawEnemies();
+
+    // 6. 巨龙绘制 (10倍大、四足奔跑、翅膀、角瞳、腹部动态鼓胀)
     drawBlueDragon();
 
-    // 7. 粒子绘制
+    // 7. 挑起吞食士兵动画
+    drawTossedSoldier();
+
+    // 8. 粒子微粒绘制
     drawParticles();
 
     ctx.restore();
 }
 
+// 绘制明亮高科技实验室背景 (对齐原图第3部分：白银冷钢墙面与计算机监视站)
 function drawLabBackground() {
-    // 实验室天花板与暗蓝防爆砖
-    ctx.fillStyle = '#060e1a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // 实验室上部明亮冷钢银蓝渐变墙面
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, 540);
+    bgGrad.addColorStop(0, '#e3edf7');
+    bgGrad.addColorStop(0.3, '#d2e2f0');
+    bgGrad.addColorStop(0.85, '#bcd0e4');
+    bgGrad.addColorStop(1, '#a6bed4');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, canvas.width, 540);
 
-    // 墙壁金属网格背景
-    ctx.strokeStyle = '#0e243d';
-    ctx.lineWidth = 1;
-    const startCol = Math.floor(cameraX / 100) * 100;
-    for (let x = startCol - cameraX; x < canvas.width + 100; x += 100) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, 540);
-        ctx.stroke();
+    // 顶部结构天花板与灯管管道
+    ctx.fillStyle = '#8ea4ba';
+    ctx.fillRect(0, 0, canvas.width, 55);
+    ctx.fillStyle = '#00b0ff';
+    ctx.fillRect(0, 53, canvas.width, 2);
+
+    // 悬挂荧光冷白灯管
+    const startLight = Math.floor(cameraX / 280) * 280;
+    for (let lx = startLight - cameraX; lx < canvas.width + 280; lx += 280) {
+        ctx.fillStyle = '#5c738a';
+        ctx.fillRect(lx + 40, 16, 120, 8);
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = '#80d8ff';
+        ctx.shadowBlur = 10;
+        ctx.fillRect(lx + 45, 24, 110, 6);
+        ctx.shadowBlur = 0;
     }
 
-    // 顶部警报灯与发光电缆
-    ctx.strokeStyle = '#0288d1';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(0, 45);
-    ctx.lineTo(canvas.width, 45);
-    ctx.stroke();
-
-    // 金属地板
-    ctx.fillStyle = '#101d2d';
-    ctx.fillRect(0, 540, canvas.width, 180);
-    ctx.fillStyle = '#1e3857';
-    ctx.fillRect(0, 536, canvas.width, 4);
-
-    // 黄黑相间警戒条纹
-    const stripeOffset = -cameraX % 40;
-    ctx.fillStyle = '#fbc02d';
-    for (let x = stripeOffset - 40; x < canvas.width + 40; x += 40) {
+    // 模块化白钢隔板接缝与金属压条
+    const startCol = Math.floor(cameraX / 180) * 180;
+    ctx.strokeStyle = '#8da4ba';
+    ctx.lineWidth = 2;
+    for (let x = startCol - cameraX; x < canvas.width + 180; x += 180) {
         ctx.beginPath();
-        ctx.moveTo(x, 540);
-        ctx.lineTo(x + 18, 540);
-        ctx.lineTo(x + 9, 555);
-        ctx.lineTo(x - 9, 555);
+        ctx.moveTo(x, 55);
+        ctx.lineTo(x, 540);
+        ctx.stroke();
+
+        // 工业六角螺栓
+        ctx.fillStyle = '#6b8299';
+        for (let y = 85; y < 530; y += 85) {
+            ctx.beginPath();
+            ctx.arc(x + 8, y, 2.5, 0, Math.PI * 2);
+            ctx.arc(x - 8, y, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // 墙壁中段水平线缆槽压条
+    ctx.fillStyle = '#7a92a8';
+    ctx.fillRect(0, 160, canvas.width, 5);
+    ctx.fillRect(0, 440, canvas.width, 5);
+
+    // 墙面仪器与工作站监视屏 (动态示波器波形与状态指示)
+    const nowMs = performance.now();
+    const startStation = Math.floor(cameraX / 560) * 560;
+    for (let sx = startStation - cameraX; sx < canvas.width + 560; sx += 560) {
+        // 双显示器机架
+        ctx.fillStyle = '#37474f';
+        ctx.strokeStyle = '#0288d1';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(sx + 50, 195, 145, 95);
+        ctx.fillRect(sx + 50, 195, 145, 95);
+
+        // 监视器内部示波器深邃视窗
+        ctx.fillStyle = '#02101e';
+        ctx.fillRect(sx + 56, 201, 133, 83);
+
+        ctx.strokeStyle = '#00e5ff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let px = 0; px < 133; px += 4) {
+            const py = Math.sin((sx + px) * 0.08 + nowMs * 0.006) * 16 + 242;
+            if (px === 0) ctx.moveTo(sx + 56 + px, py);
+            else ctx.lineTo(sx + 56 + px, py);
+        }
+        ctx.stroke();
+
+        // 附属机箱与闪烁指示灯
+        ctx.fillStyle = '#455a64';
+        ctx.fillRect(sx + 208, 215, 48, 75);
+        ctx.fillStyle = (Math.sin(nowMs * 0.005 + sx) > 0) ? '#00e676' : '#263238';
+        ctx.beginPath(); ctx.arc(sx + 222, 230, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = (Math.cos(nowMs * 0.007 + sx) > 0) ? '#ff9100' : '#263238';
+        ctx.beginPath(); ctx.arc(sx + 238, 230, 4, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // 高架钢桁架地面 (Y: 540 ~ 720)
+    // 1. 行走钢板台面
+    ctx.fillStyle = '#546e7a';
+    ctx.fillRect(0, 540, canvas.width, 180);
+    ctx.fillStyle = '#78909c';
+    ctx.fillRect(0, 540, canvas.width, 6);
+
+    // 2. 黄黑相间安全警戒条纹
+    const stripeOffset = -cameraX % 36;
+    ctx.fillStyle = '#ffb300';
+    for (let x = stripeOffset - 36; x < canvas.width + 36; x += 36) {
+        ctx.beginPath();
+        ctx.moveTo(x, 546);
+        ctx.lineTo(x + 18, 546);
+        ctx.lineTo(x + 6, 560);
+        ctx.lineTo(x - 12, 560);
+        ctx.closePath();
+        ctx.fill();
+    }
+    ctx.fillStyle = '#212121';
+    for (let x = stripeOffset - 36; x < canvas.width + 36; x += 36) {
+        ctx.beginPath();
+        ctx.moveTo(x + 18, 546);
+        ctx.lineTo(x + 36, 546);
+        ctx.lineTo(x + 24, 560);
+        ctx.lineTo(x + 6, 560);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // 3. 底部 X 型钢桁架支撑梁 (X-Bracing Trusses)
+    ctx.strokeStyle = '#37474f';
+    ctx.lineWidth = 4;
+    for (let x = startCol - cameraX; x < canvas.width + 180; x += 180) {
+        // 立柱
+        ctx.fillStyle = '#263238';
+        ctx.fillRect(x - 8, 560, 16, 160);
+
+        // X型斜撑交叉
+        ctx.beginPath();
+        ctx.moveTo(x + 8, 565);
+        ctx.lineTo(x + 172, 715);
+        ctx.moveTo(x + 172, 565);
+        ctx.lineTo(x + 8, 715);
+        ctx.stroke();
+
+        // 节点连接圆板
+        ctx.fillStyle = '#455a64';
+        ctx.beginPath();
+        ctx.arc(x + 90, 640, 9, 0, Math.PI * 2);
         ctx.fill();
     }
 }
 
+// 绘制牢笼与破笼残骸
 function drawCage() {
-    ctx.strokeStyle = '#90a4ae';
-    ctx.lineWidth = 6;
-    ctx.strokeRect(cage.x - cage.w / 2, cage.y - cage.h, cage.w, cage.h);
+    ctx.save();
+    if (!cage.broken) {
+        // 破笼前：完整高压电磁锁牢笼
+        ctx.strokeStyle = '#37474f';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(cage.x - cage.w / 2, cage.y - cage.h, cage.w, cage.h);
 
-    // 竖向栏杆
-    ctx.lineWidth = 4;
-    for (let x = cage.x - cage.w / 2 + 30; x < cage.x + cage.w / 2; x += 35) {
+        // 竖向栏杆
+        ctx.lineWidth = 4.5;
+        for (let x = cage.x - cage.w / 2 + 25; x < cage.x + cage.w / 2; x += 28) {
+            ctx.beginPath();
+            ctx.moveTo(x, cage.y - cage.h);
+            ctx.lineTo(x, cage.y);
+            ctx.stroke();
+        }
+
+        // 顶部高压警戒锁球
+        ctx.fillStyle = '#d50000';
         ctx.beginPath();
-        ctx.moveTo(x, cage.y - cage.h);
-        ctx.lineTo(x, cage.y);
+        ctx.arc(cage.x, cage.y - cage.h, 14, 0, Math.PI * 2);
+        ctx.fill();
+    } else {
+        // 破笼后：断裂扭曲的金属栏杆残骸
+        ctx.strokeStyle = '#37474f';
+        ctx.lineWidth = 5;
+
+        // 左侧残余门柱
+        ctx.beginPath();
+        ctx.moveTo(cage.x - cage.w / 2, cage.y);
+        ctx.lineTo(cage.x - cage.w / 2, cage.y - cage.h);
+        ctx.lineTo(cage.x - cage.w / 2 + 80, cage.y - cage.h);
+        ctx.stroke();
+
+        // 被巨龙冲撞弯曲爆裂的栏杆
+        const brokenBars = [
+            { sx: cage.x - 120, ex: cage.x - 150, ey: cage.y - 110 },
+            { sx: cage.x - 90, ex: cage.x - 125, ey: cage.y - 85 },
+            { sx: cage.x - 60, ex: cage.x - 98, ey: cage.y - 60 },
+            { sx: cage.x + 40, ex: cage.x + 90, ey: cage.y - 75 },
+            { sx: cage.x + 80, ex: cage.x + 135, ey: cage.y - 95 },
+            { sx: cage.x + 120, ex: cage.x + 165, ey: cage.y - 130 }
+        ];
+
+        brokenBars.forEach(b => {
+            ctx.beginPath();
+            ctx.moveTo(b.sx, cage.y);
+            ctx.lineTo(b.ex, b.ey);
+            ctx.stroke();
+        });
+    }
+    ctx.restore();
+}
+
+// 绘制终点厚重防爆大门
+function drawFinishLine() {
+    ctx.save();
+    // 门体框
+    ctx.fillStyle = '#263238';
+    ctx.fillRect(FINISH_LINE_X - 20, 80, 80, 460);
+    ctx.strokeStyle = '#00e676';
+    ctx.lineWidth = 3.5;
+    ctx.strokeRect(FINISH_LINE_X - 20, 80, 80, 460);
+
+    // 机械锁轮
+    ctx.fillStyle = '#455a64';
+    ctx.beginPath();
+    ctx.arc(FINISH_LINE_X + 20, 310, 26, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#b0bec5';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // 门顶逃生 EXIT 警示牌
+    ctx.fillStyle = '#00c853';
+    ctx.font = 'bold 22px monospace';
+    ctx.fillText("LEVEL EXIT", FINISH_LINE_X - 25, 65);
+    ctx.restore();
+}
+
+// ==========================================
+// 绘制巨龙 (高保真复刻：四足奔跑、巨大双翅、威猛角眼、饱满巨肚)
+// ==========================================
+function drawBlueDragon() {
+    ctx.save();
+    ctx.translate(dragon.x, dragon.y);
+    ctx.scale(dragon.facing, 1);
+
+    const step = dragon.stepCount;
+    const isMoving = Math.abs(dragon.vx) > 10;
+    const bellyBonus = 1.0 + (dragon.bellyBulgeAnim * 0.45);
+
+    // 身体上下微幅起伏 (行走时更富生机)
+    const bobY = isMoving ? Math.sin(step * 2) * 3.5 : Math.sin(performance.now() * 0.003) * 1.5;
+
+    // 步频对角四足步态 (FL/RR 对角，FR/RL 对角)
+    const legPhaseA = isMoving ? Math.sin(step) : 0;
+    const legPhaseB = isMoving ? Math.sin(step + Math.PI) : 0;
+
+    // ==========================================
+    // 0. 远侧巨翅 (Far Bat Wing - 高耸于背部后方，营造景深与威严感)
+    // ==========================================
+    ctx.save();
+    const farWingFlap = isMoving ? Math.sin(step + 0.6) * 12 : Math.sin(performance.now() * 0.003 + 0.6) * 5;
+    ctx.translate(-15, -112 + bobY);
+    ctx.rotate(((farWingFlap - 10) * Math.PI) / 180);
+
+    // 远侧翼膜 (幽深暗夜靛蓝 #081630)
+    ctx.fillStyle = '#081630';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-42, -135); // 主支架高耸翼尖
+    ctx.quadraticCurveTo(-115, -125, -165, -80);
+    ctx.quadraticCurveTo(-135, -55, -118, -10);
+    ctx.quadraticCurveTo(-85, +10, -55, +28);
+    ctx.quadraticCurveTo(-25, +10, 0, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // 远侧翼指骨架与主翼骨
+    ctx.strokeStyle = '#0e3477';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(-42, -135);
+    ctx.stroke();
+
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-42, -135); ctx.lineTo(-165, -80);
+    ctx.moveTo(-42, -135); ctx.lineTo(-118, -10);
+    ctx.moveTo(-42, -135); ctx.lineTo(-55, +28);
+    ctx.stroke();
+
+    // 远侧翼尖白爪
+    ctx.fillStyle = '#b0bec5';
+    ctx.beginPath();
+    ctx.arc(-42, -135, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // ==========================================
+    // 1. 远侧后肢 (Far Hind Leg - 肌肉阴影深蓝，生动关节弯折与爪着地)
+    // ==========================================
+    ctx.save();
+    ctx.translate(-85, -68 + bobY);
+    ctx.rotate(legPhaseA * 0.35);
+
+    // 股骨/大腿肌群
+    ctx.fillStyle = '#0c2e6b';
+    ctx.beginPath();
+    ctx.moveTo(-22, -8);
+    ctx.quadraticCurveTo(24, 10, 14, 42);
+    ctx.quadraticCurveTo(-8, 44, -18, 40);
+    ctx.closePath();
+    ctx.fill();
+
+    // 飞节/胫骨向前弯折
+    ctx.translate(0, 38);
+    ctx.rotate(-Math.abs(legPhaseA) * 0.4);
+    ctx.fillStyle = '#08204d';
+    ctx.beginPath();
+    ctx.moveTo(-12, 0);
+    ctx.lineTo(16, 0);
+    ctx.lineTo(18, 30);
+    ctx.lineTo(-14, 30);
+    ctx.closePath();
+    ctx.fill();
+
+    // 远侧龙爪与趾甲
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(18, 30); ctx.lineTo(26, 30); ctx.lineTo(18, 24); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(8, 30); ctx.lineTo(15, 30); ctx.lineTo(8, 24); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-4, 30); ctx.lineTo(2, 30); ctx.lineTo(-4, 24); ctx.fill();
+    ctx.restore();
+
+    // ==========================================
+    // 2. 远侧前肢 (Far Foreleg - 强健肩胛与前爪)
+    // ==========================================
+    ctx.save();
+    ctx.translate(60, -72 + bobY);
+    ctx.rotate(legPhaseB * 0.35);
+
+    // 臂部肌群
+    ctx.fillStyle = '#0e3885';
+    ctx.beginPath();
+    ctx.moveTo(-16, -6);
+    ctx.quadraticCurveTo(20, 10, 12, 40);
+    ctx.quadraticCurveTo(-8, 42, -14, 38);
+    ctx.closePath();
+    ctx.fill();
+
+    // 前臂与手腕
+    ctx.translate(0, 36);
+    ctx.rotate(-Math.abs(legPhaseB) * 0.35);
+    ctx.fillStyle = '#0a2c69';
+    ctx.beginPath();
+    ctx.moveTo(-10, 0);
+    ctx.lineTo(16, 0);
+    ctx.lineTo(18, 36);
+    ctx.lineTo(-12, 36);
+    ctx.closePath();
+    ctx.fill();
+
+    // 前足白色尖爪
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(18, 36); ctx.lineTo(26, 36); ctx.lineTo(18, 29); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(8, 36); ctx.lineTo(15, 36); ctx.lineTo(8, 29); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-2, 36); ctx.lineTo(4, 36); ctx.lineTo(-2, 29); ctx.fill();
+    ctx.restore();
+
+    // ==========================================
+    // 3. 巨龙尾部 (柔美S型波动蛇尾、背鳍骨刺与尾尖箭形鳍)
+    // ==========================================
+    ctx.save();
+    const tw1 = Math.sin(step * 0.8) * 10;
+    const tw2 = Math.sin(step * 0.8 + 1.2) * 20;
+    const tw3 = Math.sin(step * 0.8 + 2.4) * 30;
+
+    // 粗壮渐细尾部实体
+    ctx.fillStyle = '#1451be';
+    ctx.beginPath();
+    ctx.moveTo(-100, -82 + bobY);
+    ctx.bezierCurveTo(-160, -85 + tw1, -220, -60 + tw2, -270, -78 + tw3);
+    ctx.lineTo(-270, -68 + tw3);
+    ctx.bezierCurveTo(-220, -48 + tw2, -160, -62 + tw1, -100, -56 + bobY);
+    ctx.closePath();
+    ctx.fill();
+
+    // 尾部高光与骨节棱线
+    ctx.strokeStyle = '#2b7fff';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-100, -78 + bobY);
+    ctx.bezierCurveTo(-160, -80 + tw1, -220, -56 + tw2, -270, -73 + tw3);
+    ctx.stroke();
+
+    // 尾部背脊倒刺突起
+    ctx.fillStyle = '#38bdf8';
+    for (let ti = 0; ti < 5; ti++) {
+        const u = ti / 5;
+        const tx = -105 - u * 155;
+        const ty = -80 + (1 - u) * bobY + u * tw2 - 6;
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(tx - 6, ty - 12);
+        ctx.lineTo(tx + 6, ty);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // 尾端威武箭形骨鳍 (Arrowhead Tail Fin)
+    ctx.fillStyle = '#38bdf8';
+    ctx.strokeStyle = '#0284c7';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-270, -73 + tw3);
+    ctx.lineTo(-302, -54 + tw3);
+    ctx.lineTo(-288, -73 + tw3);
+    ctx.lineTo(-302, -92 + tw3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    // ==========================================
+    // 4. 巨龙主躯干 (健硕肌肉起伏与背部亮丽骨板)
+    // ==========================================
+    ctx.save();
+    // 躯干主渐变色 (上明下暗，营造饱满立体肌理)
+    const torsoGrad = ctx.createLinearGradient(0, -125, 0, -45);
+    torsoGrad.addColorStop(0, '#256bf5');
+    torsoGrad.addColorStop(0.5, '#1955c4');
+    torsoGrad.addColorStop(1, '#0e3a8a');
+    ctx.fillStyle = torsoGrad;
+
+    ctx.beginPath();
+    ctx.moveTo(-108, -68 + bobY);
+    ctx.quadraticCurveTo(-75, -128 + bobY, 30, -112 + bobY);
+    ctx.quadraticCurveTo(88, -98 + bobY, 92, -62 + bobY);
+    ctx.quadraticCurveTo(0, -42 + bobY, -108, -68 + bobY);
+    ctx.closePath();
+    ctx.fill();
+
+    // 脊背高光棱线
+    ctx.strokeStyle = '#60a5fa';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(-95, -76 + bobY);
+    ctx.quadraticCurveTo(-65, -124 + bobY, 35, -108 + bobY);
+    ctx.quadraticCurveTo(82, -94 + bobY, 90, -62 + bobY);
+    ctx.stroke();
+
+    // 背脊骨刺齿突 (从颈背一直延伸到臀部)
+    ctx.fillStyle = '#38bdf8';
+    for (let sp = -90; sp < 65; sp += 22) {
+        ctx.beginPath();
+        ctx.moveTo(sp, -106 + bobY);
+        ctx.lineTo(sp + 8, -128 + bobY);
+        ctx.lineTo(sp + 17, -104 + bobY);
+        ctx.closePath();
+        ctx.fill();
+    }
+    ctx.restore();
+
+    // ==========================================
+    // 5. 动态大肚子 (根据吞人数 0~10 实时平滑暴涨鼓胀！)
+    // 对齐设计原图：0人时收腹健美，10人时圆滚下垂，且严格保持四足着地不拖地面
+    // ==========================================
+    const bellyDropY = (18 + (swallowedHumans * 3.0)) * bellyBonus;
+    const bellySpanX = (72 + (swallowedHumans * 3.4)) * bellyBonus;
+    const bellyCenterY = -58 + bobY;
+
+    ctx.save();
+    // 腹部球体立体渐变 (上浅天蓝、中段饱满深蓝、下部阴影)
+    const bellyGrad = ctx.createRadialGradient(0, bellyCenterY + bellyDropY * 0.4, 10, 0, bellyCenterY + bellyDropY * 0.6, bellySpanX);
+    bellyGrad.addColorStop(0, '#93c5fd');
+    bellyGrad.addColorStop(0.35, '#60a5fa');
+    bellyGrad.addColorStop(0.75, '#2563eb');
+    bellyGrad.addColorStop(1, '#1e40af');
+    ctx.fillStyle = bellyGrad;
+
+    ctx.beginPath();
+    ctx.moveTo(82, bellyCenterY);
+    // 丰满下垂圆润弧线
+    ctx.bezierCurveTo(bellySpanX, bellyCenterY + bellyDropY * 1.5, -bellySpanX, bellyCenterY + bellyDropY * 1.5, -102, bellyCenterY);
+    ctx.closePath();
+    ctx.fill();
+
+    // 腹部深蓝肌肉外轮廓线
+    ctx.strokeStyle = '#1248a3';
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+
+    // 肚皮横向浅蓝分节鳞片横纹 (随鼓胀度自然展开)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.lineWidth = 2.5;
+    const ribStep = Math.max(16, (bellySpanX * 2) / 7);
+    for (let bx = -bellySpanX + 22; bx < bellySpanX - 22; bx += ribStep) {
+        ctx.beginPath();
+        ctx.moveTo(bx - 12, bellyCenterY);
+        ctx.quadraticCurveTo(bx, bellyCenterY + bellyDropY * 1.35, bx + 12, bellyCenterY);
         ctx.stroke();
     }
 
-    // 顶部高压警戒锁
-    ctx.fillStyle = '#ff1744';
+    // 手雷在肚内时的剧烈心跳红橙发光 (内部闷爆前兆)
+    for (let gi = 0; gi < activeGrenades.length; gi++) {
+        if (activeGrenades[gi].swallowed) {
+            const glowRate = Math.sin(performance.now() * 0.025);
+            ctx.fillStyle = (glowRate > 0) ? 'rgba(255, 61, 0, 0.85)' : 'rgba(255, 171, 0, 0.55)';
+            ctx.shadowColor = '#ff3d00';
+            ctx.shadowBlur = 24;
+            ctx.beginPath();
+            ctx.arc(-8, bellyCenterY + bellyDropY * 0.7, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+    }
+    ctx.restore();
+
+    // ==========================================
+    // 6. 近侧巨大蝙蝠翅膀 (LARGE BAT WINGS - 高耸耸立上扬，深海蓝翼膜与白利爪)
+    // ==========================================
+    ctx.save();
+    const wingFlap = isMoving ? Math.sin(step) * 14 : Math.sin(performance.now() * 0.003) * 6;
+    ctx.translate(15, -108 + bobY);
+    ctx.rotate((wingFlap * Math.PI) / 180);
+
+    // 翼膜 (深邃靛蓝与多段指膜)
+    const wingGrad = ctx.createLinearGradient(0, 0, -55, -135);
+    wingGrad.addColorStop(0, '#0d285c');
+    wingGrad.addColorStop(1, '#071530');
+    ctx.fillStyle = wingGrad;
+
     ctx.beginPath();
-    ctx.arc(cage.x, cage.y - cage.h, 12, 0, Math.PI * 2);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-42, -135); // 主支架高耸翼尖 (可高耸至背上方超高空)
+    ctx.quadraticCurveTo(-115, -125, -165, -80);
+    ctx.quadraticCurveTo(-135, -55, -118, -10);
+    ctx.quadraticCurveTo(-85, +10, -55, +28);
+    ctx.quadraticCurveTo(-25, +10, 0, 0);
+    ctx.closePath();
     ctx.fill();
+
+    // 翼指骨架与主翼臂 (高饱和度亮蓝骨骼)
+    ctx.strokeStyle = '#256bf5';
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-42, -135);
+    ctx.stroke();
+
+    // 细分支指骨
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(-42, -135); ctx.lineTo(-165, -80);
+    ctx.moveTo(-42, -135); ctx.lineTo(-118, -10);
+    ctx.moveTo(-42, -135); ctx.lineTo(-55, +28);
+    ctx.stroke();
+
+    // 翼尖白利爪与骨节
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(-42, -135, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-42, -135); ctx.lineTo(-46, -148); ctx.lineTo(-38, -135);
+    ctx.fill();
+    ctx.restore();
+
+    // ==========================================
+    // 7. 近侧后肢 (Near Hind Leg - 健硕龙腿与锐爪)
+    // ==========================================
+    ctx.save();
+    ctx.translate(-75, -68 + bobY);
+    ctx.rotate(legPhaseB * 0.35);
+
+    // 大腿肌肉曲线
+    ctx.fillStyle = '#1658cb';
+    ctx.beginPath();
+    ctx.moveTo(-24, -8);
+    ctx.quadraticCurveTo(26, 12, 16, 44);
+    ctx.quadraticCurveTo(-10, 46, -20, 42);
+    ctx.closePath();
+    ctx.fill();
+
+    // 胫骨与踝节
+    ctx.translate(0, 40);
+    ctx.rotate(-Math.abs(legPhaseB) * 0.35);
+    ctx.fillStyle = '#1046a6';
+    ctx.beginPath();
+    ctx.moveTo(-14, 0);
+    ctx.lineTo(18, 0);
+    ctx.lineTo(20, 28);
+    ctx.lineTo(-14, 28);
+    ctx.closePath();
+    ctx.fill();
+
+    // 近侧后足锐利白龙爪 (三趾着地)
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(20, 28); ctx.lineTo(29, 28); ctx.lineTo(20, 21); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(9, 28); ctx.lineTo(17, 28); ctx.lineTo(9, 21); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-3, 28); ctx.lineTo(5, 28); ctx.lineTo(-3, 21); ctx.fill();
+    ctx.restore();
+
+    // ==========================================
+    // 8. 近侧前肢 (Near Foreleg - 健壮前足与爪)
+    // ==========================================
+    ctx.save();
+    ctx.translate(70, -70 + bobY);
+    ctx.rotate(legPhaseA * 0.35);
+
+    // 肩胛与上臂
+    ctx.fillStyle = '#1f6cf5';
+    ctx.beginPath();
+    ctx.moveTo(-18, -6);
+    ctx.quadraticCurveTo(24, 12, 14, 42);
+    ctx.quadraticCurveTo(-8, 44, -16, 40);
+    ctx.closePath();
+    ctx.fill();
+
+    // 前臂
+    ctx.translate(0, 38);
+    ctx.rotate(-Math.abs(legPhaseA) * 0.3);
+    ctx.fillStyle = '#1658cb';
+    ctx.beginPath();
+    ctx.moveTo(-12, 0);
+    ctx.lineTo(18, 0);
+    ctx.lineTo(20, 32);
+    ctx.lineTo(-12, 32);
+    ctx.closePath();
+    ctx.fill();
+
+    // 近侧前足白龙爪
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(20, 32); ctx.lineTo(29, 32); ctx.lineTo(20, 24); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(9, 32); ctx.lineTo(17, 32); ctx.lineTo(9, 24); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-2, 32); ctx.lineTo(5, 32); ctx.lineTo(-2, 24); ctx.fill();
+    ctx.restore();
+
+    // ==========================================
+    // 9. 龙颈、头部与巨口 (支持低头吃雷与仰天吞咽姿态)
+    // ==========================================
+    ctx.save();
+    let neckOffsetY = 0;
+    let headAngle = 0;
+    if (dragon.feedingGrenadeTimer > 0) {
+        neckOffsetY = 42; // 低头吃地雷 (GRENADE FEEDING: 吻部贴近地面)
+        headAngle = 0.38;
+    } else if (dragon.swallowAnimTimer > 0) {
+        neckOffsetY = -24; // 昂首吞咽 (TILTED HEAD/NECKY SWALLOW)
+        headAngle = -0.32;
+    }
+
+    ctx.translate(76, -86 + bobY + neckOffsetY);
+    ctx.rotate(headAngle);
+
+    // 粗壮S型龙颈
+    ctx.fillStyle = '#1d60d2';
+    ctx.beginPath();
+    ctx.moveTo(0, 20);
+    ctx.lineTo(50, -42);
+    ctx.lineTo(26, -72);
+    ctx.lineTo(-24, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // 颈部浅蓝腹侧皮板 (Throat Scutes)
+    ctx.fillStyle = '#7dd3fc';
+    ctx.beginPath();
+    ctx.moveTo(0, 20);
+    ctx.lineTo(50, -42);
+    ctx.lineTo(40, -46);
+    ctx.lineTo(-10, 10);
+    ctx.closePath();
+    ctx.fill();
+
+    // 吞咽时的喉部动态食物鼓包 (Gulped Lump Traveling)
+    if (dragon.swallowAnimTimer > 0) {
+        const lumpT = 1.0 - (dragon.swallowAnimTimer / 0.45);
+        const lx = 45 - lumpT * 35;
+        const ly = -38 + lumpT * 45;
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(lx, ly, 10, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // 龙首威猛颅骨
+    ctx.translate(42, -52);
+    ctx.fillStyle = '#1551b8';
+    ctx.beginPath();
+    ctx.moveTo(-20, -28);
+    ctx.lineTo(60, -18); // 吻部前突
+    ctx.lineTo(66, -6);
+    ctx.lineTo(20, 14);
+    ctx.lineTo(-24, 8);
+    ctx.closePath();
+    ctx.fill();
+
+    // 吻端鼻孔
+    ctx.fillStyle = '#0a1d40';
+    ctx.beginPath();
+    ctx.ellipse(54, -14, 2.5, 4, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 向后延伸优雅弯曲双龙角 (Cyan Sweeping Horns)
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.moveTo(-10, -26);
+    ctx.bezierCurveTo(-38, -55, -65, -58, -86, -45);
+    ctx.quadraticCurveTo(-65, -38, -18, -18);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#0284c7';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // 颊部副角 (Cheek Horn)
+    ctx.fillStyle = '#29b6f6';
+    ctx.beginPath();
+    ctx.moveTo(-14, 0);
+    ctx.lineTo(-42, -10);
+    ctx.lineTo(-12, 6);
+    ctx.closePath();
+    ctx.fill();
+
+    // 龙眼 (明亮凶狠黄金爬虫瞳孔与白色高光)
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.arc(18, -14, 7.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#090d16';
+    ctx.beginPath();
+    ctx.ellipse(18, -14, 2.2, 6.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(16, -16, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 巨龙大口与尖利白牙 (吞噬与吃雷时张开)
+    const mouthOpen = (dragon.swallowAnimTimer > 0 || dragon.feedingGrenadeTimer > 0) ? 34 : 6;
+    ctx.fillStyle = '#881337'; // 口腔暗红
+    ctx.beginPath();
+    ctx.moveTo(18, 0);
+    ctx.lineTo(60, -7);
+    ctx.lineTo(38, mouthOpen);
+    ctx.closePath();
+    ctx.fill();
+
+    // 上颌尖锐白牙
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(52, -7); ctx.lineTo(49, 4); ctx.lineTo(46, -7);
+    ctx.moveTo(39, -7); ctx.lineTo(36, 5); ctx.lineTo(33, -7);
+    ctx.moveTo(27, -7); ctx.lineTo(24, 5); ctx.lineTo(21, -7);
+    ctx.fill();
+
+    // 下颌骨与下牙
+    ctx.fillStyle = '#0e3a8a';
+    ctx.beginPath();
+    ctx.moveTo(14, 6);
+    ctx.lineTo(44, mouthOpen);
+    ctx.lineTo(54, mouthOpen + 8);
+    ctx.lineTo(0, 16);
+    ctx.closePath();
+    ctx.fill();
+
+    if (mouthOpen > 15) {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(48, mouthOpen + 4); ctx.lineTo(45, mouthOpen - 5); ctx.lineTo(42, mouthOpen + 4);
+        ctx.moveTo(36, mouthOpen + 4); ctx.lineTo(33, mouthOpen - 5); ctx.lineTo(30, mouthOpen + 4);
+        ctx.fill();
+    }
+
+    ctx.restore();
+    ctx.restore();
 }
 
-function drawFinishLine() {
-    // 终点厚重防爆隔离门
-    ctx.fillStyle = '#263238';
-    ctx.fillRect(FINISH_LINE_X, 100, 40, 440);
-    ctx.fillStyle = '#00e676';
-    ctx.fillRect(FINISH_LINE_X - 6, 260, 12, 80);
+// 绘制抛空被吞食士兵动效 (对齐原图 (1) TOSSING AGENT WITH SNOUT)
+function drawTossedSoldier() {
+    if (!dragon.tossedSoldier) return;
+    const ts = dragon.tossedSoldier;
+    ctx.save();
+    ctx.translate(ts.x, ts.y);
+    ctx.rotate(ts.rot);
 
-    ctx.fillStyle = '#00e676';
-    ctx.font = 'bold 22px monospace';
-    ctx.fillText("EXIT", FINISH_LINE_X - 10, 240);
+    // 根据兵种制服着色
+    let uniformColor = '#1d4ed8'; // 蓝帽
+    let capColor = '#1e40af';
+    if (ts.type === EnemyType.GRAY_HAT) {
+        uniformColor = '#94a3b8';
+        capColor = '#64748b';
+    } else if (ts.type === EnemyType.RED_ORANGE) {
+        uniformColor = '#ea580c';
+        capColor = '#ea580c';
+    } else if (ts.type === EnemyType.BLACK_SPECOPS) {
+        uniformColor = '#1e293b';
+        capColor = '#0f172a';
+    }
+
+    // 躯干
+    ctx.fillStyle = uniformColor;
+    ctx.fillRect(-10, -18, 20, 26);
+
+    // 头部与帽子
+    ctx.fillStyle = '#fed7aa';
+    ctx.beginPath();
+    ctx.arc(0, -26, 9, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = capColor;
+    ctx.fillRect(-10, -35, 20, 9);
+    ctx.fillRect(-2, -30, 14, 4);
+
+    // 惊慌挣扎四肢 (抛向空中乱舞)
+    ctx.fillStyle = '#334155';
+    // 乱踢双腿
+    ctx.save();
+    ctx.translate(-6, 8);
+    ctx.rotate(-0.6);
+    ctx.fillRect(-4, 0, 8, 20);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(6, 8);
+    ctx.rotate(0.7);
+    ctx.fillRect(-4, 0, 8, 20);
+    ctx.restore();
+
+    // 乱挥双臂
+    ctx.fillStyle = uniformColor;
+    ctx.save();
+    ctx.translate(-10, -10);
+    ctx.rotate(-1.2);
+    ctx.fillRect(-4, 0, 8, 18);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(10, -10);
+    ctx.rotate(1.2);
+    ctx.fillRect(-4, 0, 8, 18);
+    ctx.restore();
+
+    ctx.restore();
+}
+
+// ==========================================
+// 绘制敌兵独立兵种 (蓝帽电击枪、灰帽冲锋、红帽喷火、黑色特种兵)
+// ==========================================
+function drawBlueCapSoldier(e, ctx) {
+    const wc = e.walkCycle || 0;
+    const legA = Math.sin(wc) * 0.45;
+    const legB = Math.sin(wc + Math.PI) * 0.45;
+    const bodyBob = Math.abs(Math.sin(wc * 2)) * 2;
+
+    // 1. 裤子与双腿走动 (Tactical Stride)
+    ctx.fillStyle = '#334155';
+    // 后腿
+    ctx.save();
+    ctx.translate(-5, -24 + bodyBob);
+    ctx.rotate(legA);
+    ctx.fillRect(-5, 0, 10, 24);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-5, 20, 14, 6);
+    ctx.restore();
+
+    // 前腿
+    ctx.save();
+    ctx.translate(5, -24 + bodyBob);
+    ctx.rotate(legB);
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(-5, 0, 10, 24);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-5, 20, 14, 6);
+    ctx.restore();
+
+    // 2. 躯干与蓝夹克
+    ctx.save();
+    ctx.translate(0, bodyBob);
+    ctx.fillStyle = '#1d4ed8'; // 皇家蓝制服
+    ctx.fillRect(-12, -58, 24, 34);
+
+    // 腰带与金属搭扣
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-12, -26, 24, 4);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(-2, -26, 4, 4);
+
+    // 3. 头部肤色与五官
+    ctx.fillStyle = '#fed7aa';
+    ctx.beginPath();
+    ctx.arc(0, -66, 11, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 眼睛与眉毛
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(4, -68, 2.5, 3.5);
+
+    // 4. 蓝帽与帽檐
+    ctx.fillStyle = '#1e40af';
+    ctx.fillRect(-12, -77, 24, 11);
+    ctx.fillRect(0, -72, 19, 5); // 挺拔前突帽檐
+
+    // 5. 手持两手电击枪 (STUN GUN)
+    ctx.fillStyle = '#334155'; // 枪身
+    ctx.fillRect(6, -46, 26, 8);
+    ctx.fillStyle = '#06b6d4'; // 能量电极核心
+    ctx.fillRect(16, -45, 8, 6);
+    ctx.fillStyle = '#94a3b8'; // 双放电极针
+    ctx.fillRect(32, -47, 9, 3);
+    ctx.fillRect(32, -42, 9, 3);
+
+    // 双手持枪肤色
+    ctx.fillStyle = '#fed7aa';
+    ctx.fillRect(10, -42, 6, 6);
+    ctx.fillRect(24, -42, 6, 6);
+
+    // 6. 发射高压电弧 (0.5 DMG + SHOCK)
+    if (e.isFiring) {
+        ctx.strokeStyle = '#00e5ff';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#00e5ff';
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        let zx = 41, zy = -44;
+        ctx.moveTo(zx, zy);
+        for (let seg = 0; seg < 8; seg++) {
+            zx += 24;
+            zy += (Math.random() - 0.5) * 22;
+            ctx.lineTo(zx, zy);
+        }
+        ctx.stroke();
+
+        // 闪电中心纯白高光核
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+    }
+    ctx.restore();
+}
+
+function drawGrayCapRunner(e, ctx) {
+    const wc = (e.walkCycle || 0) * 2.2;
+    // 狂奔腿部高抬腿
+    const legA = Math.sin(wc) * 0.75;
+    const legB = Math.sin(wc + Math.PI) * 0.75;
+    const bodyBob = Math.abs(Math.sin(wc)) * 4;
+
+    ctx.save();
+    // 狂奔身体前倾 24 度 (DASH POSE)
+    ctx.rotate(0.42);
+    ctx.translate(0, bodyBob);
+
+    // 1. 灰色运动长裤与奔跑双腿
+    ctx.fillStyle = '#475569';
+    // 后腿高蹬
+    ctx.save();
+    ctx.translate(-6, -24);
+    ctx.rotate(legA);
+    ctx.fillRect(-5, 0, 10, 24);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-5, 20, 14, 6);
+    ctx.restore();
+
+    // 前腿高抬膝
+    ctx.save();
+    ctx.translate(6, -24);
+    ctx.rotate(legB);
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(-5, 0, 10, 24);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-5, 20, 14, 6);
+    ctx.restore();
+
+    // 2. 灰夹克上身
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(-12, -58, 24, 34);
+
+    // 3. 奔跑剧烈前后摆臂 (PUMPING ARMS)
+    const armSwing = Math.sin(wc) * 18;
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(4 + armSwing, -50, 16, 7);
+    ctx.fillRect(-10 - armSwing, -46, 16, 7);
+    // 握拳肤色
+    ctx.fillStyle = '#fed7aa';
+    ctx.fillRect(18 + armSwing, -50, 7, 7);
+    ctx.fillRect(-14 - armSwing, -46, 7, 7);
+
+    // 4. 头部与灰帽
+    ctx.fillStyle = '#fed7aa';
+    ctx.beginPath();
+    ctx.arc(2, -66, 11, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(6, -68, 2.5, 3.5);
+
+    ctx.fillStyle = '#64748b'; // 灰帽
+    ctx.fillRect(-10, -77, 24, 11);
+    ctx.fillRect(2, -72, 19, 5); // 狂奔前倾帽檐
+
+    ctx.restore();
+}
+
+function drawRedOrangeCapFlamer(e, ctx) {
+    const wc = e.walkCycle || 0;
+    const legA = Math.sin(wc) * 0.45;
+    const legB = Math.sin(wc + Math.PI) * 0.45;
+    const bodyBob = Math.abs(Math.sin(wc * 2)) * 2;
+
+    ctx.save();
+    ctx.translate(0, bodyBob);
+
+    // 1. 双腿与防火长裤
+    ctx.fillStyle = '#1e293b';
+    ctx.save();
+    ctx.translate(-5, -24);
+    ctx.rotate(legA);
+    ctx.fillRect(-5, 0, 10, 24);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-5, 20, 14, 6);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(5, -24);
+    ctx.rotate(legB);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(-5, 0, 10, 24);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-5, 20, 14, 6);
+    ctx.restore();
+
+    // 2. 鲜明橘红重型防火夹克
+    ctx.fillStyle = '#ea580c';
+    ctx.fillRect(-13, -58, 26, 34);
+
+    // 防火肩甲与腰带
+    ctx.fillStyle = '#9a3412';
+    ctx.fillRect(-14, -60, 28, 6);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-13, -26, 26, 4);
+
+    // 3. 头部与橘红遮阳帽
+    ctx.fillStyle = '#fed7aa';
+    ctx.beginPath();
+    ctx.arc(0, -66, 11, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(4, -68, 2.5, 3.5);
+
+    ctx.fillStyle = '#ea580c'; // 橘红帽子
+    ctx.fillRect(-12, -77, 24, 11);
+    ctx.fillRect(0, -72, 19, 5);
+
+    // 4. 双手持重型喷火枪 (FLAMETHROWER)
+    ctx.fillStyle = '#334155'; // 枪管
+    ctx.fillRect(6, -46, 28, 8);
+    ctx.fillStyle = '#f97316'; // 喷火嘴耐热圆环
+    ctx.beginPath();
+    ctx.arc(34, -42, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 双手持枪
+    ctx.fillStyle = '#fed7aa';
+    ctx.fillRect(10, -42, 6, 6);
+    ctx.fillRect(24, -42, 6, 6);
+
+    // 5. 喷吐烈火火舌
+    if (e.flameTimer > 0) {
+        ctx.fillStyle = '#ff3d00';
+        ctx.shadowColor = '#ff6d00';
+        ctx.shadowBlur = 18;
+        ctx.beginPath();
+        ctx.moveTo(38, -48);
+        ctx.lineTo(72, -42);
+        ctx.lineTo(38, -36);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#ffea00';
+        ctx.beginPath();
+        ctx.moveTo(38, -45);
+        ctx.lineTo(58, -42);
+        ctx.lineTo(38, -39);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+
+    ctx.restore();
+}
+
+function drawBlackSpecopsGrenadier(e, ctx) {
+    const wc = e.walkCycle || 0;
+    const legA = Math.sin(wc) * 0.45;
+    const legB = Math.sin(wc + Math.PI) * 0.45;
+    const bodyBob = Math.abs(Math.sin(wc * 2)) * 2;
+
+    ctx.save();
+    ctx.translate(0, bodyBob);
+
+    // 1. 全黑战术裤与特种战靴
+    ctx.fillStyle = '#0f172a';
+    ctx.save();
+    ctx.translate(-5, -24);
+    ctx.rotate(legA);
+    ctx.fillRect(-5, 0, 10, 24);
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(-5, 20, 14, 6);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(5, -24);
+    ctx.rotate(legB);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-5, 0, 10, 24);
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(-5, 20, 14, 6);
+    ctx.restore();
+
+    // 2. 全黑特种防弹战术背心
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(-13, -58, 26, 34);
+
+    // 弹药与手雷战术挂袋
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-11, -48, 6, 8);
+    ctx.fillRect(-3, -48, 6, 8);
+    ctx.fillRect(5, -48, 6, 8);
+
+    // 3. 全黑战术防弹头盔与面罩
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-13, -78, 26, 18);
+
+    // 战术夜视镜翠绿发光条 (Glowing Visor)
+    ctx.fillStyle = '#22c55e';
+    ctx.shadowColor = '#22c55e';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(3, -69, 12, 4.5);
+    ctx.shadowBlur = 0;
+
+    // 4. 扔手雷投掷手臂动作 (THROW GRENADE)
+    if (e.timer >= 8.5) {
+        // 蓄力拔引信高高举起右手
+        ctx.fillStyle = '#0f172a';
+        ctx.save();
+        ctx.translate(-4, -55);
+        ctx.rotate(-0.9); // 手臂后扬
+        ctx.fillRect(-4, -18, 8, 22);
+
+        // 手持深绿菠萝手雷
+        ctx.fillStyle = '#365314';
+        ctx.beginPath();
+        ctx.ellipse(0, -22, 6.5, 9, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 闪烁急促红色引信
+        ctx.fillStyle = (Math.sin(performance.now() * 0.03) > 0) ? '#ef4444' : '#ffffff';
+        ctx.fillRect(-2, -30, 4, 6);
+        ctx.restore();
+
+        // 左手前伸瞄准
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(6, -48, 16, 7);
+    } else {
+        // 战术巡逻备战持姿
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(4, -48, 18, 7);
+        ctx.fillStyle = '#365314';
+        ctx.beginPath();
+        ctx.ellipse(22, -48, 5, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.restore();
 }
 
 function drawEnemies() {
     activeEnemies.forEach(e => {
         ctx.save();
         ctx.translate(e.x, e.y);
-
-        // 士兵身躯 (36x72)
-        ctx.fillStyle = '#cfd8dc';
-        ctx.fillRect(-12, -56, 24, 38);
-
-        // 裤子双腿
-        ctx.fillStyle = '#37474f';
-        ctx.fillRect(-10, -18, 8, 18);
-        ctx.fillRect(2, -18, 8, 18);
-
-        // 头与帽子（根据兵种区分）
-        ctx.fillStyle = '#ffcc80'; // 肤色
-        ctx.beginPath();
-        ctx.arc(0, -62, 10, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.scale(e.facing, 1);
 
         if (e.type === EnemyType.BLUE_HAT) {
-            ctx.fillStyle = '#1e88e5'; // 蓝帽
-            ctx.fillRect(-12, -74, 24, 12);
-            // 电击枪
-            ctx.fillStyle = '#00e5ff';
-            ctx.fillRect(8, -42, 22, 6);
+            drawBlueCapSoldier(e, ctx);
         } else if (e.type === EnemyType.GRAY_HAT) {
-            ctx.fillStyle = '#78909c'; // 灰帽
-            ctx.fillRect(-12, -74, 24, 12);
-            // 警棍
-            ctx.fillStyle = '#263238';
-            ctx.fillRect(10, -44, 20, 8);
+            drawGrayCapRunner(e, ctx);
         } else if (e.type === EnemyType.RED_ORANGE) {
-            ctx.fillStyle = '#ff5722'; // 红/橘帽
-            ctx.fillRect(-12, -74, 24, 12);
-            // 喷火器喷嘴
-            ctx.fillStyle = '#ff9800';
-            ctx.fillRect(8, -42, 26, 8);
+            drawRedOrangeCapFlamer(e, ctx);
         } else if (e.type === EnemyType.BLACK_SPECOPS) {
-            ctx.fillStyle = '#111820'; // 黑色特种战术头盔
-            ctx.fillRect(-13, -75, 26, 14);
-            // 手雷弹带
-            ctx.fillStyle = '#7cb342';
-            ctx.fillRect(-8, -36, 16, 6);
+            drawBlackSpecopsGrenadier(e, ctx);
         }
 
         ctx.restore();
     });
 }
 
+// 绘制投掷物 (火焰弹、绿手雷)
 function drawProjectiles() {
-    // 1. 火焰弹
+    // 1. 火焰弹 (高能燃烧尾焰)
     activeFireballs.forEach(fb => {
         ctx.save();
         ctx.translate(fb.x, fb.y);
         ctx.fillStyle = '#ff3d00';
+        ctx.shadowColor = '#ff6d00';
+        ctx.shadowBlur = 14;
         ctx.beginPath();
-        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+        ctx.arc(0, 0, 11, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#ffea00';
+
+        ctx.fillStyle = '#ffeb3b';
         ctx.beginPath();
         ctx.arc(0, 0, 6, 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = 0;
         ctx.restore();
     });
 
-    // 2. 手雷 (5秒倒计时)
+    // 2. 手雷 (绿色菠萝手雷与引信倒计时)
     activeGrenades.forEach(g => {
         if (g.swallowed) return; // 吞进肚子后隐藏
         ctx.save();
         ctx.translate(g.x, g.y);
-        ctx.fillStyle = '#558b2f';
-        ctx.beginPath();
-        ctx.arc(0, 0, 9, 0, Math.PI * 2);
-        ctx.fill();
 
-        // 引信红光闪烁
-        ctx.fillStyle = (Math.sin(performance.now() * 0.02) > 0) ? '#ff1744' : '#fff';
-        ctx.fillRect(-2, -14, 4, 5);
+        // 橄榄绿手雷弹体
+        ctx.fillStyle = '#33691e';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 9, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#1b5e20';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // 弹片网格刻线
+        ctx.fillStyle = '#558b2f';
+        ctx.fillRect(-6, -6, 12, 3);
+        ctx.fillRect(-6, 0, 12, 3);
+
+        // 金属保险栓与引信红光急促闪烁
+        ctx.fillStyle = (Math.sin(performance.now() * 0.03) > 0) ? '#ff1744' : '#ffffff';
+        ctx.fillRect(-2, -16, 4, 6);
 
         // 倒计时提示
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 12px sans-serif';
-        ctx.fillText(g.fuse.toFixed(1) + "s", -12, -18);
+        ctx.fillStyle = '#d50000';
+        ctx.font = 'bold 12px monospace';
+        ctx.fillText(g.fuse.toFixed(1) + "s", -12, -20);
         ctx.restore();
     });
 }
 
-function drawBlueDragon() {
-    ctx.save();
-    ctx.translate(dragon.x, dragon.y);
-    ctx.scale(dragon.facing, 1);
-
-    // 肚内手雷闷爆突鼓动画比例
-    const bellyScaleBonus = 1.0 + (dragon.bellyBulgeAnim * 0.32);
-
-    // 1. 龙尾 (根据步频摆动)
-    const tailSwing = Math.sin(dragon.stepCount * 0.8) * 14;
-    ctx.strokeStyle = '#0d47a1';
-    ctx.lineWidth = 26;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(-110, -70);
-    ctx.quadraticCurveTo(-180, -90 + tailSwing, -240, -60 + tailSwing * 1.5);
-    ctx.stroke();
-
-    // 龙尾背棘
-    ctx.strokeStyle = '#42a5f5';
-    ctx.lineWidth = 5;
-    ctx.stroke();
-
-    // 2. 后爪
-    const legSwing = Math.sin(dragon.stepCount) * 18;
-    ctx.fillStyle = '#0a3875';
-    ctx.fillRect(-90 + legSwing, -45, 24, 48);
-    ctx.fillRect(-70 - legSwing, -45, 24, 48);
-
-    // 3. 巨龙主躯干
-    ctx.fillStyle = '#1565c0';
-    ctx.beginPath();
-    ctx.ellipse(-20, -75, 110, 52, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 4. 动态大肚子 (根据吞人数 0~10 实时暴涨鼓起！)
-    const bellyRadiusY = (35 + (swallowedHumans * 4.8)) * bellyScaleBonus;
-    const bellyRadiusX = (65 + (swallowedHumans * 3.2)) * bellyScaleBonus;
-    ctx.fillStyle = '#29b6f6'; // 柔软透光肚皮浅蓝
-    ctx.beginPath();
-    ctx.ellipse(-15, -55, bellyRadiusX, bellyRadiusY, 0, 0, Math.PI);
-    ctx.fill();
-    ctx.strokeStyle = '#0288d1';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    // 肚皮横纹鳞片
-    ctx.strokeStyle = 'rgba(13, 71, 161, 0.4)';
-    ctx.lineWidth = 2;
-    for (let bx = -bellyRadiusX + 15; bx < bellyRadiusX - 15; bx += 22) {
-        ctx.beginPath();
-        ctx.moveTo(bx - 15, -55);
-        ctx.lineTo(bx - 15, -55 + bellyRadiusY * 0.85);
-        ctx.stroke();
-    }
-
-    // 5. 前爪
-    ctx.fillStyle = '#1565c0';
-    ctx.fillRect(40 - legSwing, -45, 24, 48);
-    ctx.fillRect(65 + legSwing, -45, 24, 48);
-
-    // 6. 龙颈与龙首 (吞噬张嘴动效)
-    ctx.fillStyle = '#1976d2';
-    ctx.beginPath();
-    ctx.moveTo(60, -95);
-    ctx.lineTo(110, -135);
-    ctx.lineTo(150, -115);
-    ctx.lineTo(85, -65);
-    ctx.closePath();
-    ctx.fill();
-
-    // 龙角
-    ctx.strokeStyle = '#90caf9';
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.moveTo(110, -135);
-    ctx.lineTo(80, -170);
-    ctx.stroke();
-
-    // 龙头头部与巨口
-    const mouthOpen = dragon.swallowAnimTimer > 0 ? 25 : 0;
-    ctx.fillStyle = '#0d47a1';
-    // 上颌
-    ctx.beginPath();
-    ctx.moveTo(105, -135);
-    ctx.lineTo(185, -125);
-    ctx.lineTo(155, -95 - mouthOpen);
-    ctx.lineTo(95, -100);
-    ctx.closePath();
-    ctx.fill();
-
-    // 下颌 (咬合动画)
-    ctx.beginPath();
-    ctx.moveTo(95, -100);
-    ctx.lineTo(155, -95 + mouthOpen);
-    ctx.lineTo(170, -75 + mouthOpen);
-    ctx.lineTo(80, -75);
-    ctx.closePath();
-    ctx.fill();
-
-    // 龙眼 (发光金瞳)
-    ctx.fillStyle = '#ffd600';
-    ctx.beginPath();
-    ctx.arc(135, -125, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(136, -125, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 尖锐利齿
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.moveTo(140, -110 - mouthOpen);
-    ctx.lineTo(145, -100 - mouthOpen);
-    ctx.lineTo(150, -110 - mouthOpen);
-    ctx.fill();
-
-    // 若受到蓝帽电击，周身环绕蓝色感电电弧闪烁
-    if (electricTicksLeft > 0) {
-        ctx.strokeStyle = '#00e5ff';
-        ctx.lineWidth = 2.5;
-        for (let i = 0; i < 4; i++) {
-            ctx.beginPath();
-            const sx = (Math.random() - 0.5) * 200;
-            const sy = -Math.random() * 140;
-            ctx.moveTo(sx, sy);
-            ctx.lineTo(sx + (Math.random() - 0.5) * 40, sy + (Math.random() - 0.5) * 35);
-            ctx.stroke();
-        }
-    }
-
-    ctx.restore();
-}
-
+// 绘制粒子
 function drawParticles() {
     activeParticles.forEach(p => {
         ctx.fillStyle = p.color;
@@ -1463,13 +2711,29 @@ function drawParticles() {
 }
 
 // ==========================================
-// 6. HUD 更新逻辑
+// 6. HUD 更新逻辑 (20 HEARTS + 10 BELLY 槽位)
 // ==========================================
 function updateHud() {
     hpText.textContent = `${dragonHp.toFixed(1)} / ${DRAGON_MAX_HP.toFixed(1)}`;
-    hpBarFill.style.width = `${(dragonHp / DRAGON_MAX_HP) * 100}%`;
 
-    bellyTitle.textContent = `腹中人数：${swallowedHumans} / ${MAX_BELLY_CAPACITY}`;
+    // 20 Hearts (每颗心代表 2.0 生命值)
+    for (let i = 0; i < 10; i++) {
+        const heart = document.getElementById(`heart-icon-${i}`);
+        if (heart) {
+            const heartThreshold = (i + 1) * 2.0;
+            if (dragonHp >= heartThreshold) {
+                heart.classList.remove('lost');
+            } else if (dragonHp >= heartThreshold - 1.0) {
+                heart.classList.remove('lost');
+                heart.style.filter = 'opacity(0.65)';
+            } else {
+                heart.classList.add('lost');
+                heart.style.filter = '';
+            }
+        }
+    }
+
+    bellyTitle.textContent = `${swallowedHumans} / ${MAX_BELLY_CAPACITY}`;
     for (let i = 0; i < 10; i++) {
         const slot = document.getElementById(`belly-slot-${i}`);
         if (slot) {
@@ -1510,6 +2774,7 @@ function skipCutscene() {
 
 // 暴露全局变量供调试与自动化测试
 window.GameState = GameState;
+window.EnemyType = EnemyType;
 window.getGameState = () => currentState;
 window.dragon = dragon;
 window.cage = cage;
@@ -1520,6 +2785,7 @@ window.getActiveGrenades = () => activeGrenades;
 window.getActiveFireballs = () => activeFireballs;
 window.getDragonHp = () => dragonHp;
 window.getSwallowedHumans = () => swallowedHumans;
+window.setSwallowedHumans = n => { swallowedHumans = Math.max(0, Math.min(MAX_BELLY_CAPACITY, n)); updateHud(); };
 window.performDragonSwallow = performDragonSwallow;
 window.breakOutOfCage = breakOutOfCage;
 window.skipCutscene = skipCutscene;
