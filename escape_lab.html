@@ -579,7 +579,7 @@
                     <div class="hud-card-exit">
                         <div class="exit-header">
                             <span>撤离防爆门</span>
-                            <span id="exitDistText">剩余 5200m</span>
+                            <span id="exitDistText">剩余 4200m</span>
                         </div>
                         <div class="exit-track-bar">
                             <div class="exit-progress-fill" id="exitProgressFill"></div>
@@ -791,7 +791,7 @@ const EnemyType = {
 const DRAGON_MAX_HP = 20.0;
 const MAX_BELLY_CAPACITY = 10;
 const NATURAL_DIGEST_INTERVAL = 10.0; // 10秒消化1人
-const FINISH_LINE_X = 5200.0;
+const FINISH_LINE_X = 4200.0;
 
 let currentState = GameState.CUTSCENE;
 let dragonHp = 20.0;
@@ -804,7 +804,7 @@ let electricTickTimer = 0.0;
 
 // 巨龙物理属性 (人约为 36x72, 巨龙约其10倍大)
 let dragon = {
-    x: 350.0,
+    x: 220.0,
     y: 540.0,
     vx: 0.0,
     vy: 0.0,
@@ -824,7 +824,7 @@ let dragon = {
 
 // 牢笼对象
 let cage = {
-    x: 350.0,
+    x: 220.0,
     y: 540.0,
     w: 380.0,
     h: 220.0,
@@ -1046,7 +1046,7 @@ function breakOutOfCage() {
 // 2. 第一关实体与敌人数据生成
 // ==========================================
 function setupLevel1Entities() {
-    dragon.x = 350.0;
+    dragon.x = 220.0;
     dragon.y = 540.0;
     dragon.vx = 0;
     dragon.vy = 0;
@@ -1066,18 +1066,18 @@ function setupLevel1Entities() {
     window.activeGrenades = activeGrenades;
     window.activeFireballs = activeFireballs;
 
-    // 关卡沿途刷怪配置表 (10倍龙尺寸下横向分布)
+    // 关卡沿途刷怪配置表 (严格对应 GDScript 设定：750 ~ 3950m)
     const spawnPlan = [
-        { type: EnemyType.GRAY_HAT,      x: 950.0 },
-        { type: EnemyType.BLUE_HAT,      x: 1400.0 },
-        { type: EnemyType.RED_ORANGE,    x: 1900.0 },
-        { type: EnemyType.BLACK_SPECOPS, x: 2350.0 }, // 黑色特种兵（抛手雷）
-        { type: EnemyType.GRAY_HAT,      x: 2650.0 },
-        { type: EnemyType.BLUE_HAT,      x: 3100.0 },
-        { type: EnemyType.BLACK_SPECOPS, x: 3550.0 },
-        { type: EnemyType.RED_ORANGE,    x: 4000.0 },
-        { type: EnemyType.GRAY_HAT,      x: 4400.0 },
-        { type: EnemyType.BLACK_SPECOPS, x: 4850.0 }
+        { type: EnemyType.GRAY_HAT,      x: 750.0 },
+        { type: EnemyType.BLUE_HAT,      x: 1150.0 },
+        { type: EnemyType.RED_ORANGE,    x: 1550.0 },
+        { type: EnemyType.BLACK_SPECOPS, x: 1950.0 }, // 黑色特种兵（扔手雷）
+        { type: EnemyType.GRAY_HAT,      x: 2250.0 },
+        { type: EnemyType.BLUE_HAT,      x: 2600.0 },
+        { type: EnemyType.BLACK_SPECOPS, x: 3000.0 },
+        { type: EnemyType.RED_ORANGE,    x: 3350.0 },
+        { type: EnemyType.GRAY_HAT,      x: 3650.0 },
+        { type: EnemyType.BLACK_SPECOPS, x: 3950.0 }
     ];
 
     spawnPlan.forEach(sp => {
@@ -1087,8 +1087,8 @@ function setupLevel1Entities() {
             y: 540.0,
             width: 36.0,
             height: 72.0,
-            timer: sp.type === EnemyType.BLACK_SPECOPS ? 7.0 : 0.0, // 特种兵初次7秒抛雷
-            walkCycle: Math.random() * 10,
+            timer: sp.type === EnemyType.BLACK_SPECOPS ? 7.0 : 1.5,
+            walkCycle: Math.random() * 6.0,
             facing: -1,
             isFiring: false,
             flameTimer: 0.0,
@@ -1427,7 +1427,7 @@ function updateGame(dt) {
         // 更新终点距离
         const distLeft = Math.max(0, Math.round(FINISH_LINE_X - dragon.x));
         exitDistText.textContent = `剩余 ${distLeft}m`;
-        const prog = Math.min(100, Math.max(0, (dragon.x - 350) / (FINISH_LINE_X - 350) * 100));
+        const prog = Math.min(100, Math.max(0, (dragon.x - 220) / (FINISH_LINE_X - 220) * 100));
         exitProgressFill.style.width = `${prog}%`;
     }
 

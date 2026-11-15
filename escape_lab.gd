@@ -1,415 +1,466 @@
 extends Node2D
 
-# ==========================================
-# 全局游戏状态机
-# ==========================================
-enum GameState {
-	CUTSCENE,       # 1. 开场小视频过场
-	TRAPPED_IN_CAGE,# 2. 变身巨龙被困在笼子里（按攻击/移动键破笼）
-	LEVEL_1_ACTIVE, # 3. 第一关实机前冲与吞噬战斗
-	LEVEL_CLEAR,    # 4. 第一关通关
-	GAME_OVER       # 5. 血量归零失败
-}
+# ==============================================================================
+# 第一部分：全局状态与核心数值（严格对应你的设定）
+# ==============================================================================
+enum State { CUTSCENE_BEAM, CUTSCENE_BLACK, CUTSCENE_FLASH, IN_CAGE, PLAYING, WIN, LOSE }
+var state: State = State.CUTSCENE_BEAM
 
-var current_state: GameState = GameState.CUTSCENE
+# 蓝龙核心数值
+const MAX_HP: float = 20.0          # 总血量 20 颗
+const MAX_BELLY: int = 10           # 最多吞 10 个人
+const DIGEST_TIME: float = 10.0     # 每 10 秒自然消化 1 个人
 
-# ==========================================
-# 主角蓝龙核心数值（人10倍大、20血、10人上限）
-# ==========================================
-const DRAGON_MAX_HP: float = 20.0
-const MAX_BELLY_CAPACITY: int = 10
-const NATURAL_DIGEST_INTERVAL: float = 10.0 # 每10秒自然消化1个人
-
-var dragon_hp: float = 20.0
-var swallowed_humans: int = 0
-var natural_digest_timer: float = 0.0
+var hp: float = 20.0
+var belly_count: int = 0
+var digest_timer: float = 0.0
 
 # 感电持续伤害（蓝帽电击枪：命中0.5 + 持续5秒每秒0.5）
-var electric_ticks_left: int = 0
-var electric_tick_timer: float = 0.0
+var shock_seconds_left: int = 0
+var shock_tick_timer: float = 0.0
 
-# 龙的移动与物理参数
-@export var dragon_move_speed: float = 320.0
-@export var dragon_jump_velocity: float = -460.0
-var gravity: float = ProjectSettings.get_setting("physics/2d/default_gravity")
+# 蓝龙位置、物理与动画状态
+var dragon_pos: Vector2 = Vector2(220, 480)
+var dragon_vel: Vector2 = Vector2.ZERO
+var dragon_facing: int = 1          # 1朝右，-1朝左
+var walk_cycle: float = 0.0         # 走路腿部摆动计时器
+var action_anim: String = "IDLE"    # IDLE, WALK, EAT_HUMAN, EAT_GRENADE, BELLY_EXPLODE
+var action_timer: float = 0.0
+var belly_bulge_extra: float = 0.0  # 手雷在肚子里爆炸时突然鼓一下的额外半径
 
-# ==========================================
-# 敌人与投掷物数据结构（无需额外挂载多脚本，统一调度）
-# ==========================================
-enum EnemyType {
-	BLUE_HAT,     # 蓝帽：电击枪（0.5伤害 + 5秒持续0.5/秒）
-	GRAY_HAT,     # 灰帽：向玩家冲锋
-	RED_ORANGE,   # 红/橘帽：喷火枪（火焰弹伤害 1）
-	BLACK_SPECOPS # 黑色特种兵：10秒蓄力扔手雷（手雷5秒爆炸，伤害 5）
-}
+# 关卡实体列表
+var enemies: Array[Dictionary] = []
+var fireballs: Array[Dictionary] = []
+var grenades: Array[Dictionary] = []
+var electric_beams: Array[Dictionary] = []
+var finish_x: float = 4200.0        # 第一关终点坐标
 
-# 存储活跃中的敌人、火焰弹、手雷字典对象
-var active_enemies: Array[Dictionary] = []
-var active_fireballs: Array[Dictionary] = []
-var active_grenades: Array[Dictionary] = []
+# 过场动画计时与字幕
+var cutscene_timer: float = 0.0
+var subtitle_index: int = 0
+var subtitles: Array[String] = ["啊，是龙！", "快跑！", "快把他抓起来！"]
 
-# ==========================================
-# 节点引用
-# ==========================================
-@onready var cutscene_layer: CanvasLayer = $CutsceneLayer
-@onready var lab_panel: Sprite2D = $CutsceneLayer/LabPanel
-@onready var black_rect: ColorRect = $CutsceneLayer/BlackRect
-@onready var subtitle_label: Label = $CutsceneLayer/SubtitleLabel
-@onready var white_flash_rect: ColorRect = $CutsceneLayer/WhiteFlashRect
-
-@onready var world_2d: Node2D = $World2D
-@onready var cage_node: Node2D = $World2D/CageNode
-@onready var dragon: CharacterBody2D = $World2D/BlueDragon
-@onready var dragon_sprite: Sprite2D = $World2D/BlueDragon/Sprite2D
-@onready var swallow_area: Area2D = $World2D/BlueDragon/SwallowArea
-@onready var enemies_container: Node2D = $World2D/EnemiesContainer
-@onready var projectiles_container: Node2D = $World2D/ProjectilesContainer
-@onready var finish_line: Area2D = $World2D/FinishLine
-
-@onready var hud_layer: CanvasLayer = $HUDLayer
-@onready var health_label: Label = $HUDLayer/HealthLabel
-@onready var belly_label: Label = $HUDLayer/BellyLabel
-@onready var hint_label: Label = $HUDLayer/HintLabel
+# 摄像机偏移（跟随巨龙前冲）
+var camera_x: float = 0.0
 
 func _ready() -> void:
-	# 初始化界面显示状态
-	world_2d.visible = false
-	hud_layer.visible = false
-	cutscene_layer.visible = true
-	
-	# 绑定第一关终点碰撞信号
-	finish_line.body_entered.connect(_on_finish_line_entered)
-	
-	# 启动开场小视频流程
-	play_opening_cutscene()
+	# 设置窗口大小与像素清晰度
+	DisplayServer.window_set_size(Vector2i(1152, 648))
+	reset_level_data()
 
-# ==========================================
-# 第一部分：开场小视频过场动画流程
-# ==========================================
-func play_opening_cutscene() -> void:
-	current_state = GameState.CUTSCENE
-	black_rect.color = Color(0, 0, 0, 0)
-	white_flash_rect.color = Color(1, 1, 1, 0)
-	subtitle_label.text = ""
+func reset_level_data() -> void:
+	hp = 20.0
+	belly_count = 0
+	digest_timer = 0.0
+	shock_seconds_left = 0
+	dragon_pos = Vector2(220, 480)
+	dragon_vel = Vector2.ZERO
+	action_anim = "IDLE"
+	belly_bulge_extra = 0.0
+	enemies.clear()
+	fireballs.clear()
+	grenades.clear()
+	electric_beams.clear()
 	
-	# 1. 画面极亮闪光（电光束射中被绑在架子上的人）
-	lab_panel.modulate = Color(2.5, 2.5, 3.0, 1.0) # 强高光过曝效果
-	var tween = create_tween()
-	tween.tween_property(lab_panel, "modulate", Color(1, 1, 1, 1), 1.2)
-	await tween.finished
-	await get_tree().create_timer(0.8).timeout
-	
-	# 2. 画面慢慢变黑
-	var fade_black = create_tween()
-	fade_black.tween_property(black_rect, "color:a", 1.0, 1.5)
-	await fade_black.finished
-	
-	# 3. 屏幕完全变黑后，底部白色字幕依次显示
-	var lines = [
-		"啊，是龙！",
-		"快跑！",
-		"快把他抓起来！"
+	# 生成第一关沿途所有兵种（蓝帽、灰帽、红帽、黑色特种兵）
+	var layout = [
+		{"type": "GRAY",  "x": 750.0},
+		{"type": "BLUE",  "x": 1150.0},
+		{"type": "RED",   "x": 1550.0},
+		{"type": "BLACK", "x": 1950.0}, # 黑色特种兵（扔手雷）
+		{"type": "GRAY",  "x": 2250.0},
+		{"type": "BLUE",  "x": 2600.0},
+		{"type": "BLACK", "x": 3000.0},
+		{"type": "RED",   "x": 3350.0},
+		{"type": "GRAY",  "x": 3650.0},
+		{"type": "BLACK", "x": 3950.0}
 	]
-	for line in lines:
-		subtitle_label.text = line
-		await get_tree().create_timer(1.4).timeout
-	
-	subtitle_label.text = ""
-	
-	# 4. 屏幕变白闪屏，切换为巨龙被困在笼子里的实机画面
-	var flash_white = create_tween()
-	flash_white.tween_property(white_flash_rect, "color:a", 1.0, 0.35)
-	await flash_white.finished
-	
-	# 切换底层场景：巨龙（人10倍大）出现在铁笼中
-	cutscene_layer.visible = true
-	black_rect.color.a = 0.0
-	lab_panel.visible = false
-	world_2d.visible = true
-	hud_layer.visible = true
-	setup_level_1_entities()
-	update_hud()
-	
-	# 白光慢慢消散，进入困在笼子里的状态
-	var fade_out_white = create_tween()
-	fade_out_white.tween_property(white_flash_rect, "color:a", 0.0, 1.0)
-	await fade_out_white.finished
-	
-	cutscene_layer.visible = false
-	current_state = GameState.TRAPPED_IN_CAGE
-	hint_label.text = "你已变成巨龙并被困在笼中！按 [吞噬/攻击键] 或 [前冲键] 撞破牢笼！"
+	for item in layout:
+		enemies.append({
+			"type": item["type"],
+			"pos": Vector2(item["x"], 480.0),
+			"cd": 7.0 if item["type"] == "BLACK" else 1.5,
+			"walk_t": randf() * 6.0
+		})
 
-# ==========================================
-# 第二部分：第一关地图与沿途士兵初始化
-# ==========================================
-func setup_level_1_entities() -> void:
-	active_enemies.clear()
-	active_fireballs.clear()
-	active_grenades.clear()
-	
-	var spawn_plan = [
-		{"type": EnemyType.GRAY_HAT,      "x": 900.0},
-		{"type": EnemyType.BLUE_HAT,      "x": 1350.0},
-		{"type": EnemyType.RED_ORANGE,    "x": 1800.0},
-		{"type": EnemyType.BLACK_SPECOPS, "x": 2250.0}, # 黑色特种兵（扔手雷）
-		{"type": EnemyType.GRAY_HAT,      "x": 2500.0},
-		{"type": EnemyType.BLUE_HAT,      "x": 2950.0},
-		{"type": EnemyType.BLACK_SPECOPS, "x": 3400.0},
-		{"type": EnemyType.RED_ORANGE,    "x": 3850.0},
-		{"type": EnemyType.GRAY_HAT,      "x": 4200.0},
-		{"type": EnemyType.BLACK_SPECOPS, "x": 4650.0}
-	]
-	
-	for item in spawn_plan:
-		spawn_soldier(item["type"], Vector2(item["x"], dragon.global_position.y))
-
-func spawn_soldier(type: EnemyType, pos: Vector2) -> void:
-	var node = ColorRect.new()
-	node.size = Vector2(36, 72)
-	node.position = pos - Vector2(18, 72)
-	
-	match type:
-		EnemyType.BLUE_HAT:
-			node.color = Color(0.2, 0.5, 1.0)
-		EnemyType.GRAY_HAT:
-			node.color = Color(0.5, 0.5, 0.5)
-		EnemyType.RED_ORANGE:
-			node.color = Color(1.0, 0.4, 0.1)
-		EnemyType.BLACK_SPECOPS:
-			node.color = Color(0.1, 0.1, 0.12)
-			
-	enemies_container.add_child(node)
-	
-	var initial_timer = 7.0 if type == EnemyType.BLACK_SPECOPS else 0.0
-	active_enemies.append({
-		"type": type,
-		"node": node,
-		"pos": pos,
-		"timer": initial_timer
-	})
-
-# ==========================================
-# 第三部分：主循环（状态控制、物理移动、AI、手雷与消化）
-# ==========================================
-func _physics_process(delta: float) -> void:
-	match current_state:
-		GameState.TRAPPED_IN_CAGE:
-			if Input.is_action_just_pressed("swallow") or Input.is_action_pressed("move_right"):
-				break_out_of_cage()
+# ==============================================================================
+# 第二部分：每帧逻辑更新（过场视频 -> 笼中巨龙 -> 第一关前冲与战斗）
+# ==============================================================================
+func _process(delta: float) -> void:
+	match state:
+		State.CUTSCENE_BEAM:
+			cutscene_timer += delta
+			if cutscene_timer >= 2.2:
+				cutscene_timer = 0.0
+				state = State.CUTSCENE_BLACK
 				
-		GameState.LEVEL_1_ACTIVE:
-			process_dragon_movement(delta)
-			process_dragon_status(delta)
-			process_enemies_ai(delta)
-			process_projectiles_and_grenades(delta)
-			update_hud()
+		State.CUTSCENE_BLACK:
+			cutscene_timer += delta
+			subtitle_index = int(cutscene_timer / 1.3)
+			if subtitle_index >= subtitles.size():
+				cutscene_timer = 0.0
+				state = State.CUTSCENE_FLASH
+				
+		State.CUTSCENE_FLASH:
+			cutscene_timer += delta
+			if cutscene_timer >= 0.9:
+				state = State.IN_CAGE
+				
+		State.IN_CAGE:
+			# 按 D / 右方向键 / J / 空格 撞破牢笼开始第一关
+			if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_J) or Input.is_key_pressed(KEY_SPACE):
+				state = State.PLAYING
+				
+		State.PLAYING:
+			update_dragon(delta)
+			update_status_timers(delta)
+			update_enemies(delta)
+			update_projectiles(delta)
+			# 摄像机平滑跟随蓝龙向右推进
+			camera_x = max(0.0, dragon_pos.x - 260.0)
+			if dragon_pos.x >= finish_x:
+				state = State.WIN
+				
+		State.WIN, State.LOSE:
+			if Input.is_key_pressed(KEY_R):
+				reset_level_data()
+				state = State.PLAYING
 
-func break_out_of_cage() -> void:
-	if is_instance_valid(cage_node):
-		cage_node.queue_free()
-	current_state = GameState.LEVEL_1_ACTIVE
-	hint_label.text = "破笼而出！一路往前冲！按 [吞噬键] 挑起吃人，有手雷时低头直接吃掉！"
+	queue_redraw() # 触发每一帧实时像素动画重绘
 
-func process_dragon_movement(delta: float) -> void:
-	if not dragon.is_on_floor():
-		dragon.velocity.y += gravity * delta
+# ==============================================================================
+# 第三部分：巨龙移动、走路动作、挑起吃人与低头吞手雷
+# ==============================================================================
+func update_dragon(delta: float) -> void:
+	# 1. 动作动画倒计时恢复
+	if action_timer > 0.0:
+		action_timer -= delta
+		if action_timer <= 0.0:
+			action_anim = "IDLE"
+	if belly_bulge_extra > 0.0:
+		belly_bulge_extra = max(0.0, belly_bulge_extra - 120.0 * delta)
 
-	var dir := Input.get_axis("move_left", "move_right")
-	if dir == 0 and Input.is_action_pressed("auto_run"):
-		dir = 1.0
+	# 2. 左右移动（按 D/右键 一路往前冲，A/左键 后退微调）
+	var move_dir := 0.0
+	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
+		move_dir += 1.0
+	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
+		move_dir -= 1.0
 
-	var speed_factor = 1.0 - (swallowed_humans * 0.025)
-	dragon.velocity.x = dir * dragon_move_speed * speed_factor
-	
-	if dir != 0:
-		dragon_sprite.flip_h = dir < 0
-		swallow_area.scale.x = -1 if dir < 0 else 1
-
-	if Input.is_action_just_pressed("jump") and dragon.is_on_floor():
-		dragon.velocity.y = dragon_jump_velocity
-
-	if Input.is_action_just_pressed("swallow"):
-		perform_dragon_swallow()
-
-	dragon.move_and_slide()
-
-func perform_dragon_swallow() -> void:
-	var mouth_pos = dragon.global_position + Vector2(120.0 * (-1 if dragon_sprite.flip_h else 1), 0)
-	
-	# 1. 优先低头吃手雷
-	for i in range(active_grenades.size() - 1, -1, -1):
-		var g = active_grenades[i]
-		if not g["swallowed"] and g["pos"].distance_to(mouth_pos) <= 180.0:
-			g["swallowed"] = true
-			g["node"].visible = false
-			hint_label.text = "蓝龙低头一口吃掉了手雷！等待肚内引爆消化！"
-			return
-
-	# 2. 没有手雷时，挑起吞人
-	if swallowed_humans >= MAX_BELLY_CAPACITY:
-		hint_label.text = "肚子已经装满 10 个人了！快吃颗手雷炸掉消化！"
-		return
-
-	for i in range(active_enemies.size() - 1, -1, -1):
-		var enemy = active_enemies[i]
-		if enemy["pos"].distance_to(mouth_pos) <= 200.0:
-			play_swallow_human_sequence(enemy)
-			active_enemies.remove_at(i)
-			return
-
-func play_swallow_human_sequence(enemy: Dictionary) -> void:
-	if is_instance_valid(enemy["node"]):
-		enemy["node"].queue_free()
-	swallowed_humans += 1
-	update_dragon_belly_visual()
-	hint_label.text = "挑起咬住并吞下了 1 名士兵！（腹中：" + str(swallowed_humans) + "/10）"
-
-func process_dragon_status(delta: float) -> void:
-	if electric_ticks_left > 0:
-		electric_tick_timer += delta
-		if electric_tick_timer >= 1.0:
-			electric_tick_timer -= 1.0
-			electric_ticks_left -= 1
-			apply_damage_to_dragon(0.5, "电击持续感电伤害 (-0.5)")
-
-	if swallowed_humans > 0:
-		natural_digest_timer += delta
-		if natural_digest_timer >= NATURAL_DIGEST_INTERVAL:
-			natural_digest_timer = 0.0
-			swallowed_humans -= 1
-			update_dragon_belly_visual()
-			hint_label.text = "自然消化了 1 个人！剩余腹中人数：" + str(swallowed_humans)
+	var speed = 320.0 * (1.0 - belly_count * 0.025) # 吃得越多略微变沉
+	dragon_vel.x = move_dir * speed
+	if move_dir != 0:
+		dragon_facing = int(sign(move_dir))
+		walk_cycle += delta * 10.0
+		if action_timer <= 0.0:
+			action_anim = "WALK"
 	else:
-		natural_digest_timer = 0.0
+		if action_timer <= 0.0:
+			action_anim = "IDLE"
 
-func process_enemies_ai(delta: float) -> void:
-	for enemy in active_enemies:
-		var dist = enemy["pos"].distance_to(dragon.global_position)
-		var dir = sign(dragon.global_position.x - enemy["pos"].x)
-		
-		match enemy["type"]:
-			EnemyType.BLUE_HAT:
-				if dist < 420.0:
-					enemy["timer"] += delta
-					if enemy["timer"] >= 3.0:
-						enemy["timer"] = 0.0
-						apply_damage_to_dragon(0.5, "被蓝帽电击枪击中！(-0.5，进入5秒感电)")
-						electric_ticks_left = 5
-						electric_tick_timer = 0.0
+	# 3. 跳跃（W / 上键 / 空格）
+	if (Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP) or Input.is_key_pressed(KEY_SPACE)) and dragon_pos.y >= 480.0:
+		dragon_vel.y = -480.0
 
-			EnemyType.GRAY_HAT:
-				if dist < 600.0:
-					enemy["pos"].x += dir * 350.0 * delta
-					enemy["node"].position.x = enemy["pos"].x - 18
+	dragon_vel.y += 1100.0 * delta
+	dragon_pos += dragon_vel * delta
+	if dragon_pos.y >= 480.0:
+		dragon_pos.y = 480.0
+		dragon_vel.y = 0.0
 
-			EnemyType.RED_ORANGE:
-				if dist < 550.0:
-					enemy["timer"] += delta
-					if enemy["timer"] >= 3.0:
-						enemy["timer"] = 0.0
-						spawn_fireball(enemy["pos"] + Vector2(0, -40), dir)
+	# 4. 按 J 键或鼠标左键触发吞噬
+	if Input.is_key_pressed(KEY_J) or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		if action_timer <= 0.0:
+			try_swallow()
 
-			EnemyType.BLACK_SPECOPS:
-				if dist < 650.0:
-					enemy["timer"] += delta
-					if enemy["timer"] >= 10.0:
-						enemy["timer"] = 0.0
-						throw_grenade(enemy["pos"] + Vector2(0, -50), dir)
+func try_swallow() -> void:
+	var mouth_x = dragon_pos.x + dragon_facing * 115.0
+	
+	# 【优先级 1】有手雷的话，直接低头吃掉（不抛起）
+	for g in grenades:
+		if not g["swallowed"] and abs(g["pos"].x - mouth_x) < 110.0:
+			g["swallowed"] = true
+			action_anim = "EAT_GRENADE"
+			action_timer = 0.45
+			return
 
-func spawn_fireball(start_pos: Vector2, dir: float) -> void:
-	var fb_node = ColorRect.new()
-	fb_node.size = Vector2(20, 20)
-	fb_node.color = Color(1.0, 0.3, 0.0)
-	fb_node.position = start_pos
-	projectiles_container.add_child(fb_node)
-	active_fireballs.append({
-		"node": fb_node,
-		"pos": start_pos,
-		"vel_x": dir * 380.0
-	})
+	# 【优先级 2】挑起吞吃士兵（上限 10 人）
+	if belly_count >= MAX_BELLY:
+		return
+	for i in range(enemies.size() - 1, -1, -1):
+		var e = enemies[i]
+		if abs(e["pos"].x - mouth_x) < 115.0:
+			enemies.remove_at(i)
+			belly_count += 1
+			action_anim = "EAT_HUMAN"
+			action_timer = 0.55
+			return
 
-func throw_grenade(start_pos: Vector2, dir: float) -> void:
-	var g_node = ColorRect.new()
-	g_node.size = Vector2(18, 18)
-	g_node.color = Color(0.2, 0.8, 0.2)
-	g_node.position = start_pos
-	projectiles_container.add_child(g_node)
-	active_grenades.append({
-		"node": g_node,
-		"pos": start_pos,
-		"vel": Vector2(dir * 280.0, -300.0),
-		"fuse": 5.0,
-		"swallowed": false
-	})
-	hint_label.text = "警告！黑色特种兵抛出了手雷，5秒内低头吃掉它！"
+func update_status_timers(delta: float) -> void:
+	# 1. 电击枪持续伤害：每秒 0.5，持续 5 秒
+	if shock_seconds_left > 0:
+		shock_tick_timer += delta
+		if shock_tick_timer >= 1.0:
+			shock_tick_timer -= 1.0
+			shock_seconds_left -= 1
+			damage_dragon(0.5)
 
-func process_projectiles_and_grenades(delta: float) -> void:
-	for i in range(active_fireballs.size() - 1, -1, -1):
-		var fb = active_fireballs[i]
-		fb["pos"].x += fb["vel_x"] * delta
-		fb["node"].position = fb["pos"]
-		if fb["pos"].distance_to(dragon.global_position) < 90.0:
-			apply_damage_to_dragon(1.0, "被火焰弹击中！(-1 血)")
-			fb["node"].queue_free()
-			active_fireballs.remove_at(i)
-		elif abs(fb["pos"].x - dragon.global_position.x) > 1200.0:
-			fb["node"].queue_free()
-			active_fireballs.remove_at(i)
+	# 2. 自然消化：存的人每 10 秒消化 1 个
+	if belly_count > 0:
+		digest_timer += delta
+		if digest_timer >= DIGEST_TIME:
+			digest_timer = 0.0
+			belly_count -= 1
+	else:
+		digest_timer = 0.0
 
-	var ground_y = dragon.global_position.y
-	for i in range(active_grenades.size() - 1, -1, -1):
-		var g = active_grenades[i]
+# ==============================================================================
+# 第四部分：士兵 AI 与投掷物（电击枪、火焰弹、10秒抛手雷、5秒肚内炸雷）
+# ==============================================================================
+func update_enemies(delta: float) -> void:
+	for e in enemies:
+		var dist = e["pos"].x - dragon_pos.x
+		var dir = -1.0 if dist > 0 else 1.0
+		if abs(dist) > 850.0:
+			continue
+
+		match e["type"]:
+			"BLUE": # 蓝帽：电击枪（0.5伤害 + 持续5秒每秒0.5）
+				e["cd"] -= delta
+				if e["cd"] <= 0.0 and abs(dist) < 420.0:
+					e["cd"] = 3.2
+					electric_beams.append({"x1": e["pos"].x, "x2": dragon_pos.x, "t": 0.25})
+					damage_dragon(0.5)
+					shock_seconds_left = 5
+					shock_tick_timer = 0.0
+
+			"GRAY": # 灰帽：发现主角后往龙身边冲
+				if abs(dist) < 550.0:
+					e["pos"].x += dir * 240.0 * delta
+					e["walk_t"] += delta * 14.0
+
+			"RED": # 红帽：喷火枪，每隔 3 秒发一个小火球（伤害 1）
+				e["cd"] -= delta
+				if e["cd"] <= 0.0 and abs(dist) < 520.0:
+					e["cd"] = 3.0
+					fireballs.append({"pos": Vector2(e["pos"].x + dir * 20, 445.0), "vx": dir * 340.0})
+
+			"BLACK": # 黑色特种兵：手雷要 10 秒才能抛出来
+				e["cd"] -= delta
+				if e["cd"] <= 0.0 and abs(dist) < 600.0:
+					e["cd"] = 10.0
+					grenades.append({
+						"pos": Vector2(e["pos"].x + dir * 20, 435.0),
+						"vel": Vector2(dir * 240.0, -280.0),
+						"fuse": 5.0,       # 抛出来后 5 秒会炸
+						"swallowed": false
+					})
+
+func update_projectiles(delta: float) -> void:
+	# 电击特效消散
+	for i in range(electric_beams.size() - 1, -1, -1):
+		electric_beams[i]["t"] -= delta
+		if electric_beams[i]["t"] <= 0.0:
+			electric_beams.remove_at(i)
+
+	# 火焰弹飞行（伤害 1）
+	for i in range(fireballs.size() - 1, -1, -1):
+		var fb = fireballs[i]
+		fb["pos"].x += fb["vx"] * delta
+		if abs(fb["pos"].x - dragon_pos.x) < 65.0 and abs(fb["pos"].y - (dragon_pos.y - 60)) < 75.0:
+			damage_dragon(1.0)
+			fireballs.remove_at(i)
+		elif abs(fb["pos"].x - dragon_pos.x) > 1000.0:
+			fireballs.remove_at(i)
+
+	# 手雷飞行与 5 秒引爆（地面炸扣5血；肚子里炸则肚子鼓一下并瞬间消化所有人）
+	for i in range(grenades.size() - 1, -1, -1):
+		var g = grenades[i]
 		g["fuse"] -= delta
 		if g["swallowed"]:
-			g["pos"] = dragon.global_position
+			g["pos"] = dragon_pos + Vector2(0, -45)
 		else:
-			if g["pos"].y < ground_y - 10.0:
-				g["vel"].y += gravity * delta
+			if g["pos"].y < 474.0:
+				g["vel"].y += 900.0 * delta
 				g["pos"] += g["vel"] * delta
-				g["node"].position = g["pos"]
+			else:
+				g["pos"].y = 474.0
 
 		if g["fuse"] <= 0.0:
 			if g["swallowed"]:
-				trigger_belly_grenade_explosion()
+				# 在龙肚子里爆炸：肚子突然鼓一下 + 之前存肚子里的人一块没了（直接消化）
+				belly_count = 0
+				digest_timer = 0.0
+				belly_bulge_extra = 48.0
+				action_anim = "BELLY_EXPLODE"
+				action_timer = 0.4
 			else:
-				if g["pos"].distance_to(dragon.global_position) <= 220.0:
-					apply_damage_to_dragon(5.0, "手雷在身边爆炸！受到 5 点巨额伤害！")
-			if is_instance_valid(g["node"]):
-				g["node"].queue_free()
-			active_grenades.remove_at(i)
+				# 在地面爆炸：伤害为 5
+				if abs(g["pos"].x - dragon_pos.x) < 180.0:
+					damage_dragon(5.0)
+			grenades.remove_at(i)
 
-func trigger_belly_grenade_explosion() -> void:
-	var digested_count = swallowed_humans
-	swallowed_humans = 0
-	natural_digest_timer = 0.0
-	update_dragon_belly_visual()
-	var bulge_tween = create_tween()
-	var orig_scale = dragon_sprite.scale
-	bulge_tween.tween_property(dragon_sprite, "scale", Vector2(orig_scale.x * 1.15, orig_scale.y * 1.28), 0.12)
-	bulge_tween.tween_property(dragon_sprite, "scale", orig_scale, 0.25)
-	hint_label.text = "轰！手雷在肚子里闷爆，肚子猛鼓一下，腹中 " + str(digested_count) + " 人瞬间全部消化！"
+func damage_dragon(amount: float) -> void:
+	hp = max(0.0, hp - amount)
+	if hp <= 0.0:
+		state = State.LOSE
 
-func update_dragon_belly_visual() -> void:
-	if dragon_sprite.hframes >= 11:
-		dragon_sprite.frame = swallowed_humans
+# ==============================================================================
+# 第五部分：实时像素级动画渲染（开场视频 + 四足蓝龙走路/吃人/吃雷/爆炸 + 帽子兵）
+# ==============================================================================
+func _draw() -> void:
+	match state:
+		State.CUTSCENE_BEAM:
+			draw_rect(Rect2(0, 0, 1152, 648), Color(0.08, 0.12, 0.18))
+			# 被绑在架子上的人与电光束
+			draw_rect(Rect2(260, 220, 40, 180), Color(0.4, 0.45, 0.5))
+			draw_circle(Vector2(280, 250), 16, Color(0.9, 0.75, 0.65))
+			draw_rect(Rect2(268, 268, 24, 70), Color(0.2, 0.5, 0.9))
+			var flash_alpha = clamp(1.0 - cutscene_timer * 0.4, 0.2, 1.0)
+			draw_line(Vector2(950, 120), Vector2(280, 290), Color(0.4, 0.9, 1.0, flash_alpha), 28.0)
+			draw_rect(Rect2(0, 0, 1152, 648), Color(1, 1, 1, flash_alpha * 0.65))
 
-func apply_damage_to_dragon(amount: float, reason: String) -> void:
-	dragon_hp = max(0.0, dragon_hp - amount)
-	hint_label.text = reason
-	update_hud()
-	if dragon_hp <= 0.0:
-		current_state = GameState.GAME_OVER
-		hint_label.text = "血量耗尽（0/20），蓝龙倒下了！按 R 键重新开始第一关。"
+		State.CUTSCENE_BLACK:
+			draw_rect(Rect2(0, 0, 1152, 648), Color.BLACK)
+			var idx = min(subtitle_index, subtitles.size() - 1)
+			draw_string(ThemeDB.fallback_font, Vector2(460, 520), subtitles[idx], HORIZONTAL_ALIGNMENT_CENTER, 240, 32, Color.WHITE)
 
-func _on_finish_line_entered(body: Node2D) -> void:
-	if body == dragon and current_state == GameState.LEVEL_1_ACTIVE:
-		current_state = GameState.LEVEL_CLEAR
-		hint_label.text = "恭喜通关第一关！巨龙成功冲出实验室封锁线！"
+		State.CUTSCENE_FLASH:
+			draw_rect(Rect2(0, 0, 1152, 648), Color(1, 1, 1, 1.0 - cutscene_timer))
 
-func update_hud() -> void:
-	health_label.text = "龙之血量：%.1f / 20.0 颗心" % dragon_hp
-	var digest_info = ""
-	if swallowed_humans > 0:
-		var left_sec = ceil(NATURAL_DIGEST_INTERVAL - natural_digest_timer)
-		digest_info = "（" + str(left_sec) + "秒后自然消化1人）"
-	belly_label.text = "腹中人数：%d / 10 %s" % [swallowed_humans, digest_info]
+		State.IN_CAGE, State.PLAYING, State.WIN, State.LOSE:
+			draw_game_world()
+			draw_hud_overlay()
+
+func draw_game_world() -> void:
+	# 实验室背景与地面
+	draw_rect(Rect2(0, 0, 1152, 480), Color(0.14, 0.18, 0.24))
+	draw_rect(Rect2(0, 480, 1152, 168), Color(0.25, 0.28, 0.32))
+	draw_line(Vector2(0, 480), Vector2(1152, 480), Color(0.5, 0.6, 0.7), 4.0)
+
+	# 终点线标识
+	var fx = finish_x - camera_x
+	if fx > -100 and fx < 1300:
+		draw_rect(Rect2(fx, 220, 24, 260), Color(0.2, 0.9, 0.4))
+		draw_string(ThemeDB.fallback_font, Vector2(fx - 30, 200), "第一关终点", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color.GREEN)
+
+	# 绘制巨型四足蓝龙（严格四脚着地、长翅膀、长尾巴、腹部在身下随1~10人膨胀）
+	draw_quadruped_blue_dragon(dragon_pos - Vector2(camera_x, 0))
+
+	# 如果还在笼子里，绘制铁栅栏牢笼
+	if state == State.IN_CAGE:
+		var cx = dragon_pos.x - camera_x - 140
+		draw_rect(Rect2(cx, 250, 280, 230), Color(0.6, 0.65, 0.7), false, 6.0)
+		for bar in range(7):
+			draw_line(Vector2(cx + bar * 46, 250), Vector2(cx + bar * 46, 480), Color(0.55, 0.6, 0.65), 5.0)
+
+	# 绘制所有遮眼帽子士兵与黑色特种兵
+	for e in enemies:
+		draw_hat_soldier(e, camera_x)
+
+	# 绘制电击枪光束、火焰弹、手雷
+	for b in electric_beams:
+		draw_line(Vector2(b["x1"] - camera_x, 442), Vector2(b["x2"] - camera_x, 420), Color(0.3, 0.85, 1.0), 6.0)
+	for fb in fireballs:
+		draw_circle(fb["pos"] - Vector2(camera_x, 0), 11.0, Color(1.0, 0.4, 0.05))
+	for g in grenades:
+		if not g["swallowed"]:
+			var gp = g["pos"] - Vector2(camera_x, 0)
+			draw_circle(gp, 9.0, Color(0.15, 0.55, 0.2))
+			draw_string(ThemeDB.fallback_font, gp + Vector2(-10, -14), "%.1fs" % g["fuse"], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.YELLOW)
+
+func draw_quadruped_blue_dragon(p: Vector2) -> void:
+	var f = float(dragon_facing)
+	var col_main = Color(0.12, 0.42, 0.88)
+	var col_dark = Color(0.07, 0.26, 0.62)
+	var col_belly = Color(0.32, 0.62, 0.98)
+
+	# 1. 长尾巴（随行走摆动）
+	var tail_wag = sin(walk_cycle) * 10.0
+	var tail_pts = PackedVector2Array([
+		p + Vector2(-f * 70, -68),
+		p + Vector2(-f * 155, -85 + tail_wag),
+		p + Vector2(-f * 210, -115 - tail_wag),
+		p + Vector2(-f * 145, -62 + tail_wag)
+	])
+	draw_colored_polygon(tail_pts, col_main)
+
+	# 2. 长翅膀（在背部展开并微扇）
+	var wing_flap = sin(walk_cycle * 0.8) * 14.0
+	var wing_pts = PackedVector2Array([
+		p + Vector2(-f * 15, -90),
+		p + Vector2(-f * 110, -195 + wing_flap),
+		p + Vector2(-f * 165, -140 + wing_flap),
+		p + Vector2(-f * 85, -110)
+	])
+	draw_colored_polygon(wing_pts, col_dark)
+
+	# 3. 躯干与身下膨胀的肚子（严格在前后腿之间、身下垂坠、不朝前挺、不贴地）
+	draw_rect(Rect2(p.x - 75, p.y - 95, 150, 44), col_main)
+	var belly_r = 22.0 + belly_count * 3.4 + belly_bulge_extra
+	var belly_center = p + Vector2(0, -52 + belly_count * 1.6)
+	draw_circle(belly_center, belly_r, col_belly)
+
+	# 如果肚子里有人，画出肚皮被顶起的轮廓小凸起
+	for k in range(belly_count):
+		var ang = k * 1.1 + walk_cycle * 0.3
+		var bump = belly_center + Vector2(cos(ang) * (belly_r * 0.55), sin(ang) * (belly_r * 0.45))
+		draw_circle(bump, 6.0, col_main)
+
+	# 4. 四条腿严格四脚着地（走路交替迈步动画）
+	var step1 = sin(walk_cycle) * 14.0 if action_anim == "WALK" else 0.0
+	var step2 = -step1
+	draw_rect(Rect2(p.x - 62 + step1, p.y - 52, 18, 52), col_dark) # 后左腿
+	draw_rect(Rect2(p.x - 36 + step2, p.y - 52, 18, 52), col_main) # 后右腿
+	draw_rect(Rect2(p.x + 28 + step2, p.y - 52, 18, 52), col_dark) # 前左腿
+	draw_rect(Rect2(p.x + 52 + step1, p.y - 52, 18, 52), col_main) # 前右腿
+
+	# 5. 颈部与龙头（根据吞人/低头吃手雷动作变化）
+	var head_offset = Vector2(f * 95, -125)
+	if action_anim == "EAT_GRENADE":
+		head_offset = Vector2(f * 115, -24) # 低头直接吃地上/刚抛出的手雷
+	elif action_anim == "EAT_HUMAN":
+		head_offset = Vector2(f * 85, -165) # 仰头吞咽士兵，下巴吞咽鼓起
+	draw_line(p + Vector2(f * 60, -82), p + head_offset, col_main, 24.0)
+	draw_rect(Rect2(p.x + head_offset.x - 22, p.y + head_offset.y - 18, 46, 30), col_main)
+	# 龙角与锐利眼睛
+	draw_line(p + head_offset + Vector2(-f * 10, -16), p + head_offset + Vector2(-f * 32, -36), col_belly, 5.0)
+	draw_circle(p + head_offset + Vector2(f * 8, -6), 4.0, Color.YELLOW)
+
+func draw_hat_soldier(e: Dictionary, cam_x: float) -> void:
+	var sx = e["pos"].x - cam_x
+	if sx < -60 or sx > 1220:
+		return
+	var sy = e["pos"].y
+	var leg = sin(e["walk_t"]) * 8.0
+	# 身体与双腿（人类高度约 68px，蓝龙约其数倍大）
+	var suit_col = Color(0.12, 0.12, 0.14) if e["type"] == "BLACK" else Color(0.24, 0.28, 0.34)
+	draw_rect(Rect2(sx - 12 + leg, sy - 24, 8, 24), suit_col)
+	draw_rect(Rect2(sx + 4 - leg, sy - 24, 8, 24), suit_col)
+	draw_rect(Rect2(sx - 14, sy - 54, 28, 32), suit_col)
+	# 头部与压低遮住眼睛的帽子
+	draw_circle(Vector2(sx, sy - 64), 11.0, Color(0.88, 0.74, 0.64))
+	var hat_col = Color.BLUE
+	if e["type"] == "GRAY": hat_col = Color.GRAY
+	elif e["type"] == "RED": hat_col = Color(1.0, 0.35, 0.05)
+	elif e["type"] == "BLACK": hat_col = Color(0.08, 0.08, 0.1)
+	# 帽子压低遮眼
+	draw_rect(Rect2(sx - 14, sy - 76, 28, 13), hat_col)
+	draw_rect(Rect2(sx - 18, sy - 65, 32, 4), hat_col)
+
+func draw_hud_overlay() -> void:
+	# 左上角状态栏（20颗心血量 + 10人肚子容量）
+	draw_rect(Rect2(16, 16, 480, 96), Color(0, 0, 0, 0.65))
+	draw_string(ThemeDB.fallback_font, Vector2(28, 44), "巨龙血量：%.1f / 20.0 颗心" % hp, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(1.0, 0.35, 0.35))
+	var digest_str = "（%d秒后消化1人）" % int(ceil(DIGEST_TIME - digest_timer)) if belly_count > 0 else ""
+	draw_string(ThemeDB.fallback_font, Vector2(28, 74), "腹中人数：%d / 10 %s" % [belly_count, digest_str], HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(0.4, 0.85, 1.0))
+	if state == State.IN_CAGE:
+		draw_string(ThemeDB.fallback_font, Vector2(260, 180), "你已被困在笼子里！按 [D / 右键 / J] 撞破牢笼前冲！", HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color.YELLOW)
+	elif state == State.PLAYING:
+		draw_string(ThemeDB.fallback_font, Vector2(28, 102), "操作：[D]一直往前冲  [W/空格]跳跃  [J/左键]挑起吞人 或 低头直接吃手雷", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.LIGHT_GRAY)
+	elif state == State.WIN:
+		draw_rect(Rect2(320, 240, 520, 120), Color(0, 0, 0, 0.85))
+		draw_string(ThemeDB.fallback_font, Vector2(360, 295), "第一关通关成功！按 [R] 键重新游玩", HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color.GREEN)
+	elif state == State.LOSE:
+		draw_rect(Rect2(320, 240, 520, 120), Color(0, 0, 0, 0.85))
+		draw_string(ThemeDB.fallback_font, Vector2(360, 295), "血量耗尽，挑战失败！按 [R] 键重开", HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color.RED)
