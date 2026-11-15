@@ -531,7 +531,7 @@
     <div class="lab-terminal-bezel">
         <div class="lab-bezel-header">
             <div class="header-title">
-                <span>🐉 绝密地下基地：实验室突围终端</span>
+                <span>🐉 模式十：逃离实验室 - 变身巨龙 · 吞噬突围</span>
                 <span class="header-status-badge">● 活体标本收容监控中</span>
             </div>
             <div class="header-controls">
@@ -555,7 +555,7 @@
                     <!-- 1. 龙血量 (20 HEARTS) -->
                     <div class="hud-card-hearts">
                         <div class="hearts-title-box">
-                            <span class="hearts-label">20 HEARTS 巨龙生命</span>
+                            <span class="hearts-label">巨龙生命值</span>
                             <span class="hearts-value" id="hpText">20.0 / 20.0</span>
                         </div>
                         <div class="hearts-grid" id="heartsGrid">
@@ -634,6 +634,34 @@
 </div>
 
 <script>
+// ==========================================
+// 🎨 原版动作序列帧贴图载入器 (Sprite Sheet Preloader)
+// ==========================================
+const labSprites = {};
+const labSpriteList = [
+    'dragon_walk_0', 'dragon_walk_1', 'dragon_walk_2', 'dragon_walk_3', 'dragon_walk_4', 'dragon_walk_5',
+    'dragon_heavy_0', 'dragon_heavy_1', 'dragon_heavy_2', 'dragon_heavy_3',
+    'dragon_feed_0', 'dragon_feed_1', 'dragon_explode',
+    'blue_cap_0', 'blue_cap_1', 'blue_cap_2', 'blue_cap_3',
+    'gray_cap_0', 'gray_cap_1', 'gray_cap_2', 'gray_cap_3',
+    'red_orange_cap_0', 'red_orange_cap_1',
+    'black_specops_0', 'black_specops_1', 'black_specops_2', 'black_specops_3',
+    'swallow_toss', 'swallow_lunge', 'swallow_neck'
+];
+let labSpritesLoaded = false;
+let labSpritesLoadedCount = 0;
+labSpriteList.forEach(name => {
+    const img = new Image();
+    img.src = 'assets/mode10/' + name + '.png';
+    img.onload = () => {
+        labSpritesLoadedCount++;
+        if (labSpritesLoadedCount >= labSpriteList.length) {
+            labSpritesLoaded = true;
+        }
+    };
+    labSprites[name] = img;
+});
+
 // ==========================================
 // 🔊 WEB AUDIO API 工业级声音合成器
 // ==========================================
@@ -1668,562 +1696,121 @@ function drawFinishLine() {
     // 门顶逃生 EXIT 警示牌
     ctx.fillStyle = '#00c853';
     ctx.font = 'bold 22px monospace';
-    ctx.fillText("LEVEL EXIT", FINISH_LINE_X - 25, 65);
+    ctx.fillText("逃离出口", FINISH_LINE_X - 25, 65);
     ctx.restore();
 }
 
 // ==========================================
-// 绘制巨龙 (高保真复刻：四足奔跑、巨大双翅、威猛角眼、饱满巨肚)
+// 绘制巨龙 (高保真原版动作序列贴图与帧循环)
 // ==========================================
 function drawBlueDragon() {
     ctx.save();
     ctx.translate(dragon.x, dragon.y);
     ctx.scale(dragon.facing, 1);
 
+    const isMoving = Math.abs(dragon.vx) > 10;
+    const idleBob = (!isMoving && dragon.isOnFloor) ? Math.sin(performance.now() * 0.003) * 2.5 : 0;
+
+    let spriteKey = null;
+    let sScale = 2.4;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    // 1. 肚内手雷闷爆 (BELLY EXPLOSION 闪烁震颤)
+    if (dragon.bellyBulgeAnim > 0.05) {
+        spriteKey = 'dragon_explode';
+        sScale = 2.15;
+        offsetX = (Math.random() - 0.5) * 5 * dragon.bellyBulgeAnim;
+        offsetY = (Math.random() - 0.5) * 5 * dragon.bellyBulgeAnim;
+    }
+    // 2. 贴地吃手雷 (GRENADE FEEDING 动作)
+    else if (dragon.feedingGrenadeTimer > 0) {
+        spriteKey = (dragon.feedingGrenadeTimer > 0.22) ? 'dragon_feed_0' : 'dragon_feed_1';
+        sScale = 1.65;
+    }
+    // 3. 挑起吞人吞咽动作 (SWALLOWING SEQUENCE)
+    else if (dragon.swallowAnimTimer > 0) {
+        if (dragon.swallowAnimTimer < 0.22 && labSprites['swallow_neck']) {
+            spriteKey = 'swallow_neck';
+            sScale = 1.85;
+            offsetX = -30;
+            offsetY = -25;
+        } else if (labSprites['swallow_lunge']) {
+            spriteKey = 'swallow_lunge';
+            sScale = 2.2;
+        } else {
+            spriteKey = (swallowedHumans >= 5) ? 'dragon_heavy_0' : 'dragon_walk_0';
+        }
+    }
+    // 4. 腹中吃满/饱腹 (FULL BELLY: 5~10 人, 沉甸下垂饱满巨肚, 严格四足基底不触地)
+    else if (swallowedHumans >= 5) {
+        const frameIdx = isMoving ? (Math.floor(dragon.stepCount * 0.8) % 4) : 0;
+        spriteKey = 'dragon_heavy_' + frameIdx;
+        sScale = 2.15;
+    }
+    // 5. 正常奔跑行进步态 (NORMAL WALK CYCLE: 6 帧真实手绘动作切换)
+    else {
+        const frameIdx = isMoving ? (Math.floor(dragon.stepCount * 1.1) % 6) : 0;
+        spriteKey = 'dragon_walk_' + frameIdx;
+        sScale = 2.4;
+    }
+
+    const spr = labSprites[spriteKey];
+    if (spr && spr.complete && spr.naturalWidth > 0) {
+        const sw = spr.naturalWidth * sScale;
+        const sh = spr.naturalHeight * sScale;
+
+        // 手雷闷爆时腹部高能电火花光晕
+        if (dragon.bellyBulgeAnim > 0.05) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(-20 + offsetX, -sh * 0.45 + offsetY, 55 * dragon.bellyBulgeAnim, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 170, 0, ${0.4 * dragon.bellyBulgeAnim})`;
+            ctx.shadowColor = '#ff9100';
+            ctx.shadowBlur = 25 * dragon.bellyBulgeAnim;
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // 绘制巨龙身体，底端精准贴合地面
+        ctx.drawImage(spr, -sw / 2 + offsetX, -sh + idleBob + offsetY, sw, sh);
+    } else {
+        // 降级绘制
+        drawBlueDragonVector();
+    }
+
+    ctx.restore();
+}
+
+function drawBlueDragonVector() {
     const step = dragon.stepCount;
     const isMoving = Math.abs(dragon.vx) > 10;
     const bellyBonus = 1.0 + (dragon.bellyBulgeAnim * 0.45);
-
-    // 身体上下微幅起伏 (行走时更富生机)
     const bobY = isMoving ? Math.sin(step * 2) * 3.5 : Math.sin(performance.now() * 0.003) * 1.5;
 
-    // 步频对角四足步态 (FL/RR 对角，FR/RL 对角)
-    const legPhaseA = isMoving ? Math.sin(step) : 0;
-    const legPhaseB = isMoving ? Math.sin(step + Math.PI) : 0;
-
-    // ==========================================
-    // 0. 远侧巨翅 (Far Bat Wing - 高耸于背部后方，营造景深与威严感)
-    // ==========================================
-    ctx.save();
-    const farWingFlap = isMoving ? Math.sin(step + 0.6) * 12 : Math.sin(performance.now() * 0.003 + 0.6) * 5;
-    ctx.translate(-15, -112 + bobY);
-    ctx.rotate(((farWingFlap - 10) * Math.PI) / 180);
-
-    // 远侧翼膜 (幽深暗夜靛蓝 #081630)
-    ctx.fillStyle = '#081630';
+    // 躯干主龙身
+    ctx.fillStyle = '#1565c0';
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-42, -135); // 主支架高耸翼尖
-    ctx.quadraticCurveTo(-115, -125, -165, -80);
-    ctx.quadraticCurveTo(-135, -55, -118, -10);
-    ctx.quadraticCurveTo(-85, +10, -55, +28);
-    ctx.quadraticCurveTo(-25, +10, 0, 0);
+    ctx.ellipse(0, -60 + bobY, 120, 52 * bellyBonus, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 头部
+    ctx.fillStyle = '#1976d2';
+    ctx.beginPath();
+    ctx.moveTo(70, -70 + bobY);
+    ctx.lineTo(130, -50 + bobY);
+    ctx.lineTo(70, -30 + bobY);
     ctx.closePath();
     ctx.fill();
 
-    // 远侧翼指骨架与主翼骨
-    ctx.strokeStyle = '#0e3477';
-    ctx.lineWidth = 6;
-    ctx.lineCap = 'round';
+    // 翅膀
+    ctx.fillStyle = '#1976d2';
     ctx.beginPath();
-    ctx.moveTo(0, 0); ctx.lineTo(-42, -135);
-    ctx.stroke();
-
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(-42, -135); ctx.lineTo(-165, -80);
-    ctx.moveTo(-42, -135); ctx.lineTo(-118, -10);
-    ctx.moveTo(-42, -135); ctx.lineTo(-55, +28);
-    ctx.stroke();
-
-    // 远侧翼尖白爪
-    ctx.fillStyle = '#b0bec5';
-    ctx.beginPath();
-    ctx.arc(-42, -135, 4.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // ==========================================
-    // 1. 远侧后肢 (Far Hind Leg - 肌肉阴影深蓝，生动关节弯折与爪着地)
-    // ==========================================
-    ctx.save();
-    ctx.translate(-85, -68 + bobY);
-    ctx.rotate(legPhaseA * 0.35);
-
-    // 股骨/大腿肌群
-    ctx.fillStyle = '#0c2e6b';
-    ctx.beginPath();
-    ctx.moveTo(-22, -8);
-    ctx.quadraticCurveTo(24, 10, 14, 42);
-    ctx.quadraticCurveTo(-8, 44, -18, 40);
+    ctx.moveTo(0, -70 + bobY);
+    ctx.lineTo(-60, -160 + bobY);
+    ctx.lineTo(-20, -50 + bobY);
     ctx.closePath();
     ctx.fill();
-
-    // 飞节/胫骨向前弯折
-    ctx.translate(0, 38);
-    ctx.rotate(-Math.abs(legPhaseA) * 0.4);
-    ctx.fillStyle = '#08204d';
-    ctx.beginPath();
-    ctx.moveTo(-12, 0);
-    ctx.lineTo(16, 0);
-    ctx.lineTo(18, 30);
-    ctx.lineTo(-14, 30);
-    ctx.closePath();
-    ctx.fill();
-
-    // 远侧龙爪与趾甲
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.moveTo(18, 30); ctx.lineTo(26, 30); ctx.lineTo(18, 24); ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(8, 30); ctx.lineTo(15, 30); ctx.lineTo(8, 24); ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(-4, 30); ctx.lineTo(2, 30); ctx.lineTo(-4, 24); ctx.fill();
-    ctx.restore();
-
-    // ==========================================
-    // 2. 远侧前肢 (Far Foreleg - 强健肩胛与前爪)
-    // ==========================================
-    ctx.save();
-    ctx.translate(60, -72 + bobY);
-    ctx.rotate(legPhaseB * 0.35);
-
-    // 臂部肌群
-    ctx.fillStyle = '#0e3885';
-    ctx.beginPath();
-    ctx.moveTo(-16, -6);
-    ctx.quadraticCurveTo(20, 10, 12, 40);
-    ctx.quadraticCurveTo(-8, 42, -14, 38);
-    ctx.closePath();
-    ctx.fill();
-
-    // 前臂与手腕
-    ctx.translate(0, 36);
-    ctx.rotate(-Math.abs(legPhaseB) * 0.35);
-    ctx.fillStyle = '#0a2c69';
-    ctx.beginPath();
-    ctx.moveTo(-10, 0);
-    ctx.lineTo(16, 0);
-    ctx.lineTo(18, 36);
-    ctx.lineTo(-12, 36);
-    ctx.closePath();
-    ctx.fill();
-
-    // 前足白色尖爪
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.moveTo(18, 36); ctx.lineTo(26, 36); ctx.lineTo(18, 29); ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(8, 36); ctx.lineTo(15, 36); ctx.lineTo(8, 29); ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(-2, 36); ctx.lineTo(4, 36); ctx.lineTo(-2, 29); ctx.fill();
-    ctx.restore();
-
-    // ==========================================
-    // 3. 巨龙尾部 (柔美S型波动蛇尾、背鳍骨刺与尾尖箭形鳍)
-    // ==========================================
-    ctx.save();
-    const tw1 = Math.sin(step * 0.8) * 10;
-    const tw2 = Math.sin(step * 0.8 + 1.2) * 20;
-    const tw3 = Math.sin(step * 0.8 + 2.4) * 30;
-
-    // 粗壮渐细尾部实体
-    ctx.fillStyle = '#1451be';
-    ctx.beginPath();
-    ctx.moveTo(-100, -82 + bobY);
-    ctx.bezierCurveTo(-160, -85 + tw1, -220, -60 + tw2, -270, -78 + tw3);
-    ctx.lineTo(-270, -68 + tw3);
-    ctx.bezierCurveTo(-220, -48 + tw2, -160, -62 + tw1, -100, -56 + bobY);
-    ctx.closePath();
-    ctx.fill();
-
-    // 尾部高光与骨节棱线
-    ctx.strokeStyle = '#2b7fff';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(-100, -78 + bobY);
-    ctx.bezierCurveTo(-160, -80 + tw1, -220, -56 + tw2, -270, -73 + tw3);
-    ctx.stroke();
-
-    // 尾部背脊倒刺突起
-    ctx.fillStyle = '#38bdf8';
-    for (let ti = 0; ti < 5; ti++) {
-        const u = ti / 5;
-        const tx = -105 - u * 155;
-        const ty = -80 + (1 - u) * bobY + u * tw2 - 6;
-        ctx.beginPath();
-        ctx.moveTo(tx, ty);
-        ctx.lineTo(tx - 6, ty - 12);
-        ctx.lineTo(tx + 6, ty);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    // 尾端威武箭形骨鳍 (Arrowhead Tail Fin)
-    ctx.fillStyle = '#38bdf8';
-    ctx.strokeStyle = '#0284c7';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-270, -73 + tw3);
-    ctx.lineTo(-302, -54 + tw3);
-    ctx.lineTo(-288, -73 + tw3);
-    ctx.lineTo(-302, -92 + tw3);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
-
-    // ==========================================
-    // 4. 巨龙主躯干 (健硕肌肉起伏与背部亮丽骨板)
-    // ==========================================
-    ctx.save();
-    // 躯干主渐变色 (上明下暗，营造饱满立体肌理)
-    const torsoGrad = ctx.createLinearGradient(0, -125, 0, -45);
-    torsoGrad.addColorStop(0, '#256bf5');
-    torsoGrad.addColorStop(0.5, '#1955c4');
-    torsoGrad.addColorStop(1, '#0e3a8a');
-    ctx.fillStyle = torsoGrad;
-
-    ctx.beginPath();
-    ctx.moveTo(-108, -68 + bobY);
-    ctx.quadraticCurveTo(-75, -128 + bobY, 30, -112 + bobY);
-    ctx.quadraticCurveTo(88, -98 + bobY, 92, -62 + bobY);
-    ctx.quadraticCurveTo(0, -42 + bobY, -108, -68 + bobY);
-    ctx.closePath();
-    ctx.fill();
-
-    // 脊背高光棱线
-    ctx.strokeStyle = '#60a5fa';
-    ctx.lineWidth = 3.5;
-    ctx.beginPath();
-    ctx.moveTo(-95, -76 + bobY);
-    ctx.quadraticCurveTo(-65, -124 + bobY, 35, -108 + bobY);
-    ctx.quadraticCurveTo(82, -94 + bobY, 90, -62 + bobY);
-    ctx.stroke();
-
-    // 背脊骨刺齿突 (从颈背一直延伸到臀部)
-    ctx.fillStyle = '#38bdf8';
-    for (let sp = -90; sp < 65; sp += 22) {
-        ctx.beginPath();
-        ctx.moveTo(sp, -106 + bobY);
-        ctx.lineTo(sp + 8, -128 + bobY);
-        ctx.lineTo(sp + 17, -104 + bobY);
-        ctx.closePath();
-        ctx.fill();
-    }
-    ctx.restore();
-
-    // ==========================================
-    // 5. 动态大肚子 (根据吞人数 0~10 实时平滑暴涨鼓胀！)
-    // 对齐设计原图：0人时收腹健美，10人时圆滚下垂，且严格保持四足着地不拖地面
-    // ==========================================
-    const bellyDropY = (18 + (swallowedHumans * 3.0)) * bellyBonus;
-    const bellySpanX = (72 + (swallowedHumans * 3.4)) * bellyBonus;
-    const bellyCenterY = -58 + bobY;
-
-    ctx.save();
-    // 腹部球体立体渐变 (上浅天蓝、中段饱满深蓝、下部阴影)
-    const bellyGrad = ctx.createRadialGradient(0, bellyCenterY + bellyDropY * 0.4, 10, 0, bellyCenterY + bellyDropY * 0.6, bellySpanX);
-    bellyGrad.addColorStop(0, '#93c5fd');
-    bellyGrad.addColorStop(0.35, '#60a5fa');
-    bellyGrad.addColorStop(0.75, '#2563eb');
-    bellyGrad.addColorStop(1, '#1e40af');
-    ctx.fillStyle = bellyGrad;
-
-    ctx.beginPath();
-    ctx.moveTo(82, bellyCenterY);
-    // 丰满下垂圆润弧线
-    ctx.bezierCurveTo(bellySpanX, bellyCenterY + bellyDropY * 1.5, -bellySpanX, bellyCenterY + bellyDropY * 1.5, -102, bellyCenterY);
-    ctx.closePath();
-    ctx.fill();
-
-    // 腹部深蓝肌肉外轮廓线
-    ctx.strokeStyle = '#1248a3';
-    ctx.lineWidth = 3.5;
-    ctx.stroke();
-
-    // 肚皮横向浅蓝分节鳞片横纹 (随鼓胀度自然展开)
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-    ctx.lineWidth = 2.5;
-    const ribStep = Math.max(16, (bellySpanX * 2) / 7);
-    for (let bx = -bellySpanX + 22; bx < bellySpanX - 22; bx += ribStep) {
-        ctx.beginPath();
-        ctx.moveTo(bx - 12, bellyCenterY);
-        ctx.quadraticCurveTo(bx, bellyCenterY + bellyDropY * 1.35, bx + 12, bellyCenterY);
-        ctx.stroke();
-    }
-
-    // 手雷在肚内时的剧烈心跳红橙发光 (内部闷爆前兆)
-    for (let gi = 0; gi < activeGrenades.length; gi++) {
-        if (activeGrenades[gi].swallowed) {
-            const glowRate = Math.sin(performance.now() * 0.025);
-            ctx.fillStyle = (glowRate > 0) ? 'rgba(255, 61, 0, 0.85)' : 'rgba(255, 171, 0, 0.55)';
-            ctx.shadowColor = '#ff3d00';
-            ctx.shadowBlur = 24;
-            ctx.beginPath();
-            ctx.arc(-8, bellyCenterY + bellyDropY * 0.7, 32, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-        }
-    }
-    ctx.restore();
-
-    // ==========================================
-    // 6. 近侧巨大蝙蝠翅膀 (LARGE BAT WINGS - 高耸耸立上扬，深海蓝翼膜与白利爪)
-    // ==========================================
-    ctx.save();
-    const wingFlap = isMoving ? Math.sin(step) * 14 : Math.sin(performance.now() * 0.003) * 6;
-    ctx.translate(15, -108 + bobY);
-    ctx.rotate((wingFlap * Math.PI) / 180);
-
-    // 翼膜 (深邃靛蓝与多段指膜)
-    const wingGrad = ctx.createLinearGradient(0, 0, -55, -135);
-    wingGrad.addColorStop(0, '#0d285c');
-    wingGrad.addColorStop(1, '#071530');
-    ctx.fillStyle = wingGrad;
-
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-42, -135); // 主支架高耸翼尖 (可高耸至背上方超高空)
-    ctx.quadraticCurveTo(-115, -125, -165, -80);
-    ctx.quadraticCurveTo(-135, -55, -118, -10);
-    ctx.quadraticCurveTo(-85, +10, -55, +28);
-    ctx.quadraticCurveTo(-25, +10, 0, 0);
-    ctx.closePath();
-    ctx.fill();
-
-    // 翼指骨架与主翼臂 (高饱和度亮蓝骨骼)
-    ctx.strokeStyle = '#256bf5';
-    ctx.lineWidth = 7;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-42, -135);
-    ctx.stroke();
-
-    // 细分支指骨
-    ctx.lineWidth = 3.5;
-    ctx.beginPath();
-    ctx.moveTo(-42, -135); ctx.lineTo(-165, -80);
-    ctx.moveTo(-42, -135); ctx.lineTo(-118, -10);
-    ctx.moveTo(-42, -135); ctx.lineTo(-55, +28);
-    ctx.stroke();
-
-    // 翼尖白利爪与骨节
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(-42, -135, 5.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(-42, -135); ctx.lineTo(-46, -148); ctx.lineTo(-38, -135);
-    ctx.fill();
-    ctx.restore();
-
-    // ==========================================
-    // 7. 近侧后肢 (Near Hind Leg - 健硕龙腿与锐爪)
-    // ==========================================
-    ctx.save();
-    ctx.translate(-75, -68 + bobY);
-    ctx.rotate(legPhaseB * 0.35);
-
-    // 大腿肌肉曲线
-    ctx.fillStyle = '#1658cb';
-    ctx.beginPath();
-    ctx.moveTo(-24, -8);
-    ctx.quadraticCurveTo(26, 12, 16, 44);
-    ctx.quadraticCurveTo(-10, 46, -20, 42);
-    ctx.closePath();
-    ctx.fill();
-
-    // 胫骨与踝节
-    ctx.translate(0, 40);
-    ctx.rotate(-Math.abs(legPhaseB) * 0.35);
-    ctx.fillStyle = '#1046a6';
-    ctx.beginPath();
-    ctx.moveTo(-14, 0);
-    ctx.lineTo(18, 0);
-    ctx.lineTo(20, 28);
-    ctx.lineTo(-14, 28);
-    ctx.closePath();
-    ctx.fill();
-
-    // 近侧后足锐利白龙爪 (三趾着地)
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.moveTo(20, 28); ctx.lineTo(29, 28); ctx.lineTo(20, 21); ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(9, 28); ctx.lineTo(17, 28); ctx.lineTo(9, 21); ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(-3, 28); ctx.lineTo(5, 28); ctx.lineTo(-3, 21); ctx.fill();
-    ctx.restore();
-
-    // ==========================================
-    // 8. 近侧前肢 (Near Foreleg - 健壮前足与爪)
-    // ==========================================
-    ctx.save();
-    ctx.translate(70, -70 + bobY);
-    ctx.rotate(legPhaseA * 0.35);
-
-    // 肩胛与上臂
-    ctx.fillStyle = '#1f6cf5';
-    ctx.beginPath();
-    ctx.moveTo(-18, -6);
-    ctx.quadraticCurveTo(24, 12, 14, 42);
-    ctx.quadraticCurveTo(-8, 44, -16, 40);
-    ctx.closePath();
-    ctx.fill();
-
-    // 前臂
-    ctx.translate(0, 38);
-    ctx.rotate(-Math.abs(legPhaseA) * 0.3);
-    ctx.fillStyle = '#1658cb';
-    ctx.beginPath();
-    ctx.moveTo(-12, 0);
-    ctx.lineTo(18, 0);
-    ctx.lineTo(20, 32);
-    ctx.lineTo(-12, 32);
-    ctx.closePath();
-    ctx.fill();
-
-    // 近侧前足白龙爪
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.moveTo(20, 32); ctx.lineTo(29, 32); ctx.lineTo(20, 24); ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(9, 32); ctx.lineTo(17, 32); ctx.lineTo(9, 24); ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(-2, 32); ctx.lineTo(5, 32); ctx.lineTo(-2, 24); ctx.fill();
-    ctx.restore();
-
-    // ==========================================
-    // 9. 龙颈、头部与巨口 (支持低头吃雷与仰天吞咽姿态)
-    // ==========================================
-    ctx.save();
-    let neckOffsetY = 0;
-    let headAngle = 0;
-    if (dragon.feedingGrenadeTimer > 0) {
-        neckOffsetY = 42; // 低头吃地雷 (GRENADE FEEDING: 吻部贴近地面)
-        headAngle = 0.38;
-    } else if (dragon.swallowAnimTimer > 0) {
-        neckOffsetY = -24; // 昂首吞咽 (TILTED HEAD/NECKY SWALLOW)
-        headAngle = -0.32;
-    }
-
-    ctx.translate(76, -86 + bobY + neckOffsetY);
-    ctx.rotate(headAngle);
-
-    // 粗壮S型龙颈
-    ctx.fillStyle = '#1d60d2';
-    ctx.beginPath();
-    ctx.moveTo(0, 20);
-    ctx.lineTo(50, -42);
-    ctx.lineTo(26, -72);
-    ctx.lineTo(-24, 0);
-    ctx.closePath();
-    ctx.fill();
-
-    // 颈部浅蓝腹侧皮板 (Throat Scutes)
-    ctx.fillStyle = '#7dd3fc';
-    ctx.beginPath();
-    ctx.moveTo(0, 20);
-    ctx.lineTo(50, -42);
-    ctx.lineTo(40, -46);
-    ctx.lineTo(-10, 10);
-    ctx.closePath();
-    ctx.fill();
-
-    // 吞咽时的喉部动态食物鼓包 (Gulped Lump Traveling)
-    if (dragon.swallowAnimTimer > 0) {
-        const lumpT = 1.0 - (dragon.swallowAnimTimer / 0.45);
-        const lx = 45 - lumpT * 35;
-        const ly = -38 + lumpT * 45;
-        ctx.fillStyle = '#38bdf8';
-        ctx.beginPath();
-        ctx.arc(lx, ly, 10, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    // 龙首威猛颅骨
-    ctx.translate(42, -52);
-    ctx.fillStyle = '#1551b8';
-    ctx.beginPath();
-    ctx.moveTo(-20, -28);
-    ctx.lineTo(60, -18); // 吻部前突
-    ctx.lineTo(66, -6);
-    ctx.lineTo(20, 14);
-    ctx.lineTo(-24, 8);
-    ctx.closePath();
-    ctx.fill();
-
-    // 吻端鼻孔
-    ctx.fillStyle = '#0a1d40';
-    ctx.beginPath();
-    ctx.ellipse(54, -14, 2.5, 4, 0.4, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 向后延伸优雅弯曲双龙角 (Cyan Sweeping Horns)
-    ctx.fillStyle = '#38bdf8';
-    ctx.beginPath();
-    ctx.moveTo(-10, -26);
-    ctx.bezierCurveTo(-38, -55, -65, -58, -86, -45);
-    ctx.quadraticCurveTo(-65, -38, -18, -18);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = '#0284c7';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // 颊部副角 (Cheek Horn)
-    ctx.fillStyle = '#29b6f6';
-    ctx.beginPath();
-    ctx.moveTo(-14, 0);
-    ctx.lineTo(-42, -10);
-    ctx.lineTo(-12, 6);
-    ctx.closePath();
-    ctx.fill();
-
-    // 龙眼 (明亮凶狠黄金爬虫瞳孔与白色高光)
-    ctx.fillStyle = '#facc15';
-    ctx.beginPath();
-    ctx.arc(18, -14, 7.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#090d16';
-    ctx.beginPath();
-    ctx.ellipse(18, -14, 2.2, 6.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(16, -16, 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 巨龙大口与尖利白牙 (吞噬与吃雷时张开)
-    const mouthOpen = (dragon.swallowAnimTimer > 0 || dragon.feedingGrenadeTimer > 0) ? 34 : 6;
-    ctx.fillStyle = '#881337'; // 口腔暗红
-    ctx.beginPath();
-    ctx.moveTo(18, 0);
-    ctx.lineTo(60, -7);
-    ctx.lineTo(38, mouthOpen);
-    ctx.closePath();
-    ctx.fill();
-
-    // 上颌尖锐白牙
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.moveTo(52, -7); ctx.lineTo(49, 4); ctx.lineTo(46, -7);
-    ctx.moveTo(39, -7); ctx.lineTo(36, 5); ctx.lineTo(33, -7);
-    ctx.moveTo(27, -7); ctx.lineTo(24, 5); ctx.lineTo(21, -7);
-    ctx.fill();
-
-    // 下颌骨与下牙
-    ctx.fillStyle = '#0e3a8a';
-    ctx.beginPath();
-    ctx.moveTo(14, 6);
-    ctx.lineTo(44, mouthOpen);
-    ctx.lineTo(54, mouthOpen + 8);
-    ctx.lineTo(0, 16);
-    ctx.closePath();
-    ctx.fill();
-
-    if (mouthOpen > 15) {
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.moveTo(48, mouthOpen + 4); ctx.lineTo(45, mouthOpen - 5); ctx.lineTo(42, mouthOpen + 4);
-        ctx.moveTo(36, mouthOpen + 4); ctx.lineTo(33, mouthOpen - 5); ctx.lineTo(30, mouthOpen + 4);
-        ctx.fill();
-    }
-
-    ctx.restore();
-    ctx.restore();
 }
 
 // 绘制抛空被吞食士兵动效 (对齐原图 (1) TOSSING AGENT WITH SNOUT)
@@ -2234,397 +1821,151 @@ function drawTossedSoldier() {
     ctx.translate(ts.x, ts.y);
     ctx.rotate(ts.rot);
 
-    // 根据兵种制服着色
-    let uniformColor = '#1d4ed8'; // 蓝帽
+    const spr = labSprites['swallow_toss'];
+    if (spr && spr.complete && spr.naturalWidth > 0) {
+        const sw = spr.naturalWidth * 1.05;
+        const sh = spr.naturalHeight * 1.05;
+        ctx.drawImage(spr, -sw / 2, -sh / 2, sw, sh);
+    } else {
+        drawTossedSoldierVector(ts);
+    }
+    ctx.restore();
+}
+
+function drawTossedSoldierVector(ts) {
+    let uniformColor = '#1d4ed8';
     let capColor = '#1e40af';
     if (ts.type === EnemyType.GRAY_HAT) {
-        uniformColor = '#94a3b8';
-        capColor = '#64748b';
+        uniformColor = '#94a3b8'; capColor = '#64748b';
     } else if (ts.type === EnemyType.RED_ORANGE) {
-        uniformColor = '#ea580c';
-        capColor = '#ea580c';
+        uniformColor = '#ea580c'; capColor = '#ea580c';
     } else if (ts.type === EnemyType.BLACK_SPECOPS) {
-        uniformColor = '#1e293b';
-        capColor = '#0f172a';
+        uniformColor = '#1e293b'; capColor = '#0f172a';
     }
-
-    // 躯干
-    ctx.fillStyle = uniformColor;
-    ctx.fillRect(-10, -18, 20, 26);
-
-    // 头部与帽子
-    ctx.fillStyle = '#fed7aa';
-    ctx.beginPath();
-    ctx.arc(0, -26, 9, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = capColor;
-    ctx.fillRect(-10, -35, 20, 9);
-    ctx.fillRect(-2, -30, 14, 4);
-
-    // 惊慌挣扎四肢 (抛向空中乱舞)
-    ctx.fillStyle = '#334155';
-    // 乱踢双腿
-    ctx.save();
-    ctx.translate(-6, 8);
-    ctx.rotate(-0.6);
-    ctx.fillRect(-4, 0, 8, 20);
-    ctx.restore();
-
-    ctx.save();
-    ctx.translate(6, 8);
-    ctx.rotate(0.7);
-    ctx.fillRect(-4, 0, 8, 20);
-    ctx.restore();
-
-    // 乱挥双臂
-    ctx.fillStyle = uniformColor;
-    ctx.save();
-    ctx.translate(-10, -10);
-    ctx.rotate(-1.2);
-    ctx.fillRect(-4, 0, 8, 18);
-    ctx.restore();
-
-    ctx.save();
-    ctx.translate(10, -10);
-    ctx.rotate(1.2);
-    ctx.fillRect(-4, 0, 8, 18);
-    ctx.restore();
-
-    ctx.restore();
+    ctx.fillStyle = uniformColor; ctx.fillRect(-10, -18, 20, 26);
+    ctx.fillStyle = '#fed7aa'; ctx.beginPath(); ctx.arc(0, -26, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = capColor; ctx.fillRect(-10, -35, 20, 9);
 }
 
 // ==========================================
 // 绘制敌兵独立兵种 (蓝帽电击枪、灰帽冲锋、红帽喷火、黑色特种兵)
 // ==========================================
 function drawBlueCapSoldier(e, ctx) {
-    const wc = e.walkCycle || 0;
-    const legA = Math.sin(wc) * 0.45;
-    const legB = Math.sin(wc + Math.PI) * 0.45;
-    const bodyBob = Math.abs(Math.sin(wc * 2)) * 2;
+    let spriteKey = 'blue_cap_0';
+    let sScale = 1.12;
 
-    // 1. 裤子与双腿走动 (Tactical Stride)
-    ctx.fillStyle = '#334155';
-    // 后腿
-    ctx.save();
-    ctx.translate(-5, -24 + bodyBob);
-    ctx.rotate(legA);
-    ctx.fillRect(-5, 0, 10, 24);
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(-5, 20, 14, 6);
-    ctx.restore();
-
-    // 前腿
-    ctx.save();
-    ctx.translate(5, -24 + bodyBob);
-    ctx.rotate(legB);
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(-5, 0, 10, 24);
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(-5, 20, 14, 6);
-    ctx.restore();
-
-    // 2. 躯干与蓝夹克
-    ctx.save();
-    ctx.translate(0, bodyBob);
-    ctx.fillStyle = '#1d4ed8'; // 皇家蓝制服
-    ctx.fillRect(-12, -58, 24, 34);
-
-    // 腰带与金属搭扣
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(-12, -26, 24, 4);
-    ctx.fillStyle = '#e2e8f0';
-    ctx.fillRect(-2, -26, 4, 4);
-
-    // 3. 头部肤色与五官
-    ctx.fillStyle = '#fed7aa';
-    ctx.beginPath();
-    ctx.arc(0, -66, 11, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 眼睛与眉毛
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(4, -68, 2.5, 3.5);
-
-    // 4. 蓝帽与帽檐
-    ctx.fillStyle = '#1e40af';
-    ctx.fillRect(-12, -77, 24, 11);
-    ctx.fillRect(0, -72, 19, 5); // 挺拔前突帽檐
-
-    // 5. 手持两手电击枪 (STUN GUN)
-    ctx.fillStyle = '#334155'; // 枪身
-    ctx.fillRect(6, -46, 26, 8);
-    ctx.fillStyle = '#06b6d4'; // 能量电极核心
-    ctx.fillRect(16, -45, 8, 6);
-    ctx.fillStyle = '#94a3b8'; // 双放电极针
-    ctx.fillRect(32, -47, 9, 3);
-    ctx.fillRect(32, -42, 9, 3);
-
-    // 双手持枪肤色
-    ctx.fillStyle = '#fed7aa';
-    ctx.fillRect(10, -42, 6, 6);
-    ctx.fillRect(24, -42, 6, 6);
-
-    // 6. 发射高压电弧 (0.5 DMG + SHOCK)
     if (e.isFiring) {
-        ctx.strokeStyle = '#00e5ff';
-        ctx.lineWidth = 3;
-        ctx.shadowColor = '#00e5ff';
-        ctx.shadowBlur = 14;
-        ctx.beginPath();
-        let zx = 41, zy = -44;
-        ctx.moveTo(zx, zy);
-        for (let seg = 0; seg < 8; seg++) {
-            zx += 24;
-            zy += (Math.random() - 0.5) * 22;
-            ctx.lineTo(zx, zy);
-        }
-        ctx.stroke();
-
-        // 闪电中心纯白高光核
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
+        spriteKey = 'blue_cap_3';
+        sScale = 1.15;
+    } else if (Math.abs(e.vx || 0) > 5 || e.walkCycle > 0) {
+        const frame = Math.floor((e.walkCycle || 0) * 1.4) % 3;
+        spriteKey = 'blue_cap_' + frame;
     }
-    ctx.restore();
+
+    const spr = labSprites[spriteKey];
+    if (spr && spr.complete && spr.naturalWidth > 0) {
+        const sw = spr.naturalWidth * sScale;
+        const sh = spr.naturalHeight * sScale;
+        ctx.drawImage(spr, -sw / 2, -sh, sw, sh);
+    } else {
+        drawBlueCapSoldierVector(e, ctx);
+    }
+}
+
+function drawBlueCapSoldierVector(e, ctx) {
+    ctx.fillStyle = '#1d4ed8'; ctx.fillRect(-12, -58, 24, 34);
+    ctx.fillStyle = '#fed7aa'; ctx.beginPath(); ctx.arc(0, -66, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1e40af'; ctx.fillRect(-12, -77, 24, 11);
 }
 
 function drawGrayCapRunner(e, ctx) {
-    const wc = (e.walkCycle || 0) * 2.2;
-    // 狂奔腿部高抬腿
-    const legA = Math.sin(wc) * 0.75;
-    const legB = Math.sin(wc + Math.PI) * 0.75;
-    const bodyBob = Math.abs(Math.sin(wc)) * 4;
+    const frame = Math.floor((e.walkCycle || 0) * 2.6) % 4;
+    const spriteKey = 'gray_cap_' + frame;
+    const sScale = 1.12;
 
-    ctx.save();
-    // 狂奔身体前倾 24 度 (DASH POSE)
-    ctx.rotate(0.42);
-    ctx.translate(0, bodyBob);
+    const spr = labSprites[spriteKey];
+    if (spr && spr.complete && spr.naturalWidth > 0) {
+        const sw = spr.naturalWidth * sScale;
+        const sh = spr.naturalHeight * sScale;
+        ctx.drawImage(spr, -sw / 2, -sh, sw, sh);
 
-    // 1. 灰色运动长裤与奔跑双腿
-    ctx.fillStyle = '#475569';
-    // 后腿高蹬
-    ctx.save();
-    ctx.translate(-6, -24);
-    ctx.rotate(legA);
-    ctx.fillRect(-5, 0, 10, 24);
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(-5, 20, 14, 6);
-    ctx.restore();
+        // 奔跑脚后跟烟尘微粒
+        if (Math.random() < 0.35) {
+            activeParticles.push({
+                x: e.x + (e.facing === 1 ? -18 : 18),
+                y: e.y - 4,
+                vx: (e.facing === 1 ? -1 : 1) * (Math.random() * 60 + 20),
+                vy: -Math.random() * 25 - 5,
+                size: Math.random() * 5 + 3,
+                color: 'rgba(180, 195, 210, 0.6)',
+                life: 0.35
+            });
+        }
+    } else {
+        drawGrayCapRunnerVector(e, ctx);
+    }
+}
 
-    // 前腿高抬膝
-    ctx.save();
-    ctx.translate(6, -24);
-    ctx.rotate(legB);
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(-5, 0, 10, 24);
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(-5, 20, 14, 6);
-    ctx.restore();
-
-    // 2. 灰夹克上身
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(-12, -58, 24, 34);
-
-    // 3. 奔跑剧烈前后摆臂 (PUMPING ARMS)
-    const armSwing = Math.sin(wc) * 18;
-    ctx.fillStyle = '#cbd5e1';
-    ctx.fillRect(4 + armSwing, -50, 16, 7);
-    ctx.fillRect(-10 - armSwing, -46, 16, 7);
-    // 握拳肤色
-    ctx.fillStyle = '#fed7aa';
-    ctx.fillRect(18 + armSwing, -50, 7, 7);
-    ctx.fillRect(-14 - armSwing, -46, 7, 7);
-
-    // 4. 头部与灰帽
-    ctx.fillStyle = '#fed7aa';
-    ctx.beginPath();
-    ctx.arc(2, -66, 11, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(6, -68, 2.5, 3.5);
-
-    ctx.fillStyle = '#64748b'; // 灰帽
-    ctx.fillRect(-10, -77, 24, 11);
-    ctx.fillRect(2, -72, 19, 5); // 狂奔前倾帽檐
-
-    ctx.restore();
+function drawGrayCapRunnerVector(e, ctx) {
+    ctx.fillStyle = '#94a3b8'; ctx.fillRect(-12, -58, 24, 34);
+    ctx.fillStyle = '#fed7aa'; ctx.beginPath(); ctx.arc(2, -66, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#64748b'; ctx.fillRect(-10, -77, 24, 11);
 }
 
 function drawRedOrangeCapFlamer(e, ctx) {
-    const wc = e.walkCycle || 0;
-    const legA = Math.sin(wc) * 0.45;
-    const legB = Math.sin(wc + Math.PI) * 0.45;
-    const bodyBob = Math.abs(Math.sin(wc * 2)) * 2;
+    let spriteKey = 'red_orange_cap_0';
+    let sScale = 1.12;
 
-    ctx.save();
-    ctx.translate(0, bodyBob);
-
-    // 1. 双腿与防火长裤
-    ctx.fillStyle = '#1e293b';
-    ctx.save();
-    ctx.translate(-5, -24);
-    ctx.rotate(legA);
-    ctx.fillRect(-5, 0, 10, 24);
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(-5, 20, 14, 6);
-    ctx.restore();
-
-    ctx.save();
-    ctx.translate(5, -24);
-    ctx.rotate(legB);
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(-5, 0, 10, 24);
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(-5, 20, 14, 6);
-    ctx.restore();
-
-    // 2. 鲜明橘红重型防火夹克
-    ctx.fillStyle = '#ea580c';
-    ctx.fillRect(-13, -58, 26, 34);
-
-    // 防火肩甲与腰带
-    ctx.fillStyle = '#9a3412';
-    ctx.fillRect(-14, -60, 28, 6);
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(-13, -26, 26, 4);
-
-    // 3. 头部与橘红遮阳帽
-    ctx.fillStyle = '#fed7aa';
-    ctx.beginPath();
-    ctx.arc(0, -66, 11, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(4, -68, 2.5, 3.5);
-
-    ctx.fillStyle = '#ea580c'; // 橘红帽子
-    ctx.fillRect(-12, -77, 24, 11);
-    ctx.fillRect(0, -72, 19, 5);
-
-    // 4. 双手持重型喷火枪 (FLAMETHROWER)
-    ctx.fillStyle = '#334155'; // 枪管
-    ctx.fillRect(6, -46, 28, 8);
-    ctx.fillStyle = '#f97316'; // 喷火嘴耐热圆环
-    ctx.beginPath();
-    ctx.arc(34, -42, 7, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 双手持枪
-    ctx.fillStyle = '#fed7aa';
-    ctx.fillRect(10, -42, 6, 6);
-    ctx.fillRect(24, -42, 6, 6);
-
-    // 5. 喷吐烈火火舌
-    if (e.flameTimer > 0) {
-        ctx.fillStyle = '#ff3d00';
-        ctx.shadowColor = '#ff6d00';
-        ctx.shadowBlur = 18;
-        ctx.beginPath();
-        ctx.moveTo(38, -48);
-        ctx.lineTo(72, -42);
-        ctx.lineTo(38, -36);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#ffea00';
-        ctx.beginPath();
-        ctx.moveTo(38, -45);
-        ctx.lineTo(58, -42);
-        ctx.lineTo(38, -39);
-        ctx.closePath();
-        ctx.fill();
-        ctx.shadowBlur = 0;
+    if (e.isFiring || (e.flameTimer && e.flameTimer > 0)) {
+        spriteKey = 'red_orange_cap_1';
+        sScale = 1.15;
     }
 
-    ctx.restore();
+    const spr = labSprites[spriteKey];
+    if (spr && spr.complete && spr.naturalWidth > 0) {
+        const sw = spr.naturalWidth * sScale;
+        const sh = spr.naturalHeight * sScale;
+        ctx.drawImage(spr, -sw / 2, -sh, sw, sh);
+    } else {
+        drawRedOrangeCapFlamerVector(e, ctx);
+    }
+}
+
+function drawRedOrangeCapFlamerVector(e, ctx) {
+    ctx.fillStyle = '#ea580c'; ctx.fillRect(-12, -58, 24, 34);
+    ctx.fillStyle = '#fed7aa'; ctx.beginPath(); ctx.arc(0, -66, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ea580c'; ctx.fillRect(-12, -77, 24, 11);
 }
 
 function drawBlackSpecopsGrenadier(e, ctx) {
-    const wc = e.walkCycle || 0;
-    const legA = Math.sin(wc) * 0.45;
-    const legB = Math.sin(wc + Math.PI) * 0.45;
-    const bodyBob = Math.abs(Math.sin(wc * 2)) * 2;
+    let spriteKey = 'black_specops_0';
+    let sScale = 1.12;
 
-    ctx.save();
-    ctx.translate(0, bodyBob);
-
-    // 1. 全黑战术裤与特种战靴
-    ctx.fillStyle = '#0f172a';
-    ctx.save();
-    ctx.translate(-5, -24);
-    ctx.rotate(legA);
-    ctx.fillRect(-5, 0, 10, 24);
-    ctx.fillStyle = '#020617';
-    ctx.fillRect(-5, 20, 14, 6);
-    ctx.restore();
-
-    ctx.save();
-    ctx.translate(5, -24);
-    ctx.rotate(legB);
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(-5, 0, 10, 24);
-    ctx.fillStyle = '#020617';
-    ctx.fillRect(-5, 20, 14, 6);
-    ctx.restore();
-
-    // 2. 全黑特种防弹战术背心
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(-13, -58, 26, 34);
-
-    // 弹药与手雷战术挂袋
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(-11, -48, 6, 8);
-    ctx.fillRect(-3, -48, 6, 8);
-    ctx.fillRect(5, -48, 6, 8);
-
-    // 3. 全黑战术防弹头盔与面罩
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(-13, -78, 26, 18);
-
-    // 战术夜视镜翠绿发光条 (Glowing Visor)
-    ctx.fillStyle = '#22c55e';
-    ctx.shadowColor = '#22c55e';
-    ctx.shadowBlur = 8;
-    ctx.fillRect(3, -69, 12, 4.5);
-    ctx.shadowBlur = 0;
-
-    // 4. 扔手雷投掷手臂动作 (THROW GRENADE)
-    if (e.timer >= 8.5) {
-        // 蓄力拔引信高高举起右手
-        ctx.fillStyle = '#0f172a';
-        ctx.save();
-        ctx.translate(-4, -55);
-        ctx.rotate(-0.9); // 手臂后扬
-        ctx.fillRect(-4, -18, 8, 22);
-
-        // 手持深绿菠萝手雷
-        ctx.fillStyle = '#365314';
-        ctx.beginPath();
-        ctx.ellipse(0, -22, 6.5, 9, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 闪烁急促红色引信
-        ctx.fillStyle = (Math.sin(performance.now() * 0.03) > 0) ? '#ef4444' : '#ffffff';
-        ctx.fillRect(-2, -30, 4, 6);
-        ctx.restore();
-
-        // 左手前伸瞄准
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(6, -48, 16, 7);
-    } else {
-        // 战术巡逻备战持姿
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(4, -48, 18, 7);
-        ctx.fillStyle = '#365314';
-        ctx.beginPath();
-        ctx.ellipse(22, -48, 5, 7, 0, 0, Math.PI * 2);
-        ctx.fill();
+    if (e.timer >= 8.2) {
+        if (e.timer < 8.8) {
+            spriteKey = 'black_specops_1';
+        } else if (e.timer < 9.4) {
+            spriteKey = 'black_specops_2';
+        } else {
+            spriteKey = 'black_specops_3';
+            sScale = 1.18;
+        }
     }
 
-    ctx.restore();
+    const spr = labSprites[spriteKey];
+    if (spr && spr.complete && spr.naturalWidth > 0) {
+        const sw = spr.naturalWidth * sScale;
+        const sh = spr.naturalHeight * sScale;
+        ctx.drawImage(spr, -sw / 2, -sh, sw, sh);
+    } else {
+        drawBlackSpecopsGrenadierVector(e, ctx);
+    }
+}
+
+function drawBlackSpecopsGrenadierVector(e, ctx) {
+    ctx.fillStyle = '#1e293b'; ctx.fillRect(-13, -58, 26, 34);
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(-13, -78, 26, 18);
+    ctx.fillStyle = '#22c55e'; ctx.fillRect(3, -69, 12, 4.5);
 }
 
 function drawEnemies() {
