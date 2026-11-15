@@ -2178,7 +2178,7 @@
         <h1 id="homeTitle">积木小院</h1>
         <div class="home-buttons">
             <button class="btn-home" id="startBtn" onclick="startGame(gameState.mode)">▶ 开始游戏</button>
-            <button class="btn-home" id="m9OneToOneBtn" onclick="openMachinariumModal()" style="display: none; background: linear-gradient(135deg, #e65100 0%, #ff9800 100%); color: white; border: 2px solid #ffe082; box-shadow: 0 4px 12px rgba(255,153,0,0.4); font-weight: bold;">⚡ 机械迷城 1:1 独立大集合版 (14大模块)</button>
+            <button class="btn-home" id="m9OneToOneBtn" onclick="openMachinariumModal(true)" style="display: none; background: linear-gradient(135deg, #e65100 0%, #ff9800 100%); color: white; border: 2px solid #ffe082; box-shadow: 0 4px 12px rgba(255,153,0,0.4); font-weight: bold;">⚡ 机械迷城 1:1 独立版</button>
             <button class="btn-home" onclick="openLeaderboard()">🏆 排行榜</button>
             <button class="btn-home" onclick="openModeModal()">⚙️ 选择模式 (<span id="modeDisplayBtn">一</span>)</button>
             <button class="btn-home" onclick="openInstructionsModal()">📖 游戏说明</button>
@@ -4969,11 +4969,12 @@
         }
         function closeInstructionsModal() { document.getElementById('instructionsModal').classList.add('hidden'); }
 
-        function openMachinariumModal() {
+        function openMachinariumModal(autoStart = false) {
             const modal = document.getElementById('machinariumModal');
             const iframe = document.getElementById('machinariumIframe');
-            if (iframe && (iframe.src === 'about:blank' || !iframe.src.includes('machinarium.html'))) {
-                iframe.src = 'machinarium.html';
+            const targetSrc = autoStart ? 'machinarium.html?autostart=1' : 'machinarium.html';
+            if (iframe && (iframe.src === 'about:blank' || !iframe.src.includes('machinarium.html') || autoStart)) {
+                iframe.src = targetSrc;
             }
             if (modal) modal.classList.remove('hidden');
         }
@@ -11966,13 +11967,13 @@
                 startBtn.innerHTML = "▶ 开启保龄球 (模式八)";
             } else if (mode === 9) {
                 // 进入“机械迷城”主题
-                title.textContent = "机械迷城 (Machinarium)";
+                title.textContent = "机械迷城";
                 title.style.color = "#ffe082";
                 title.style.textShadow = "0 4px 12px rgba(0, 0, 0, 0.9), 0 0 25px rgba(255, 179, 0, 0.6)";
                 screen.style.background = "linear-gradient(135deg, #2b1f17 0%, #4a3828 50%, #1e150f 100%)";
                 startBtn.style.background = "linear-gradient(135deg, #8d6e63 0%, #4e342e 100%)";
                 startBtn.style.color = "#ffffff";
-                startBtn.innerHTML = "▶ 开启机械迷城冒险 (模式九)";
+                startBtn.innerHTML = "▶ 开始游戏";
             } else {
                 // 默认“积木小院”主题
                 title.textContent = "积木小院";
@@ -12051,6 +12052,7 @@
                     startMode8Level(startLevel);
                 }
             } else if (mode === 9) {
+                openMachinariumModal(true);
                 if (typeof window.startMode9Level === 'function') {
                     startMode9Level(startLevel);
                 }

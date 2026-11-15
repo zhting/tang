@@ -162,38 +162,24 @@
         }
 
         .btn-start {
-            display: inline-flex;
-            align-items: baseline;
+            display: inline-block;
             background: transparent;
             border: none;
             font-family: 'Amatic SC', 'Microsoft YaHei', sans-serif;
-            font-size: 2.7rem;
+            font-size: 3.2rem;
             font-weight: 700;
             color: #36291e;
             cursor: pointer;
-            letter-spacing: 2.5px;
-            padding: 4px 10px;
+            letter-spacing: 3px;
+            padding: 4px 14px;
             text-decoration: none;
             transition: color 0.2s ease, transform 0.2s ease, text-shadow 0.2s ease;
-        }
-
-        .btn-start .btn-sub {
-            font-size: 1.45rem;
-            font-weight: 700;
-            color: #554233;
-            margin-left: 10px;
-            letter-spacing: 1px;
-            transition: color 0.2s ease;
         }
 
         .btn-start:hover {
             color: #f7eedc;
             text-shadow: 0 0 10px rgba(43, 33, 24, 0.95), 0 0 18px rgba(230, 207, 163, 0.55);
             transform: translateX(8px);
-        }
-
-        .btn-start:hover .btn-sub {
-            color: #dec8a5;
         }
 
         .btn-start:active {
@@ -524,8 +510,7 @@
     <div class="ui-menu">
       <h1 class="game-title">Machinarium</h1>
       <div class="menu-options">
-        <button id="btn-start" class="btn-start">Play New Game <span class="btn-sub">/ 开始游戏</span></button>
-        <button id="btn-resume" class="btn-start">Resume Game <span class="btn-sub">/ 继续游戏</span></button>
+        <button id="btn-start" class="btn-start">开始游戏</button>
       </div>
     </div>
   </div>
@@ -537,8 +522,8 @@
 
     <!-- 右上角返回菜单 / 重新开始按钮 -->
     <div class="game-top-bar">
-      <button id="btn-restart" class="btn-restart">重新开始 (Restart)</button>
-      <button class="btn-restart" onclick="restartToHome()" style="margin-left: 10px;">🏠 首页菜单 (Menu)</button>
+      <button id="btn-restart" class="btn-restart">重新开始</button>
+      <button class="btn-restart" onclick="restartToHome()" style="margin-left: 10px;">首页菜单</button>
     </div>
 
     <!-- 废土灯塔与垃圾山背景风景层 -->
@@ -594,20 +579,20 @@
           <canvas id="gameCanvas" width="1024" height="576"></canvas>
       </div>
       <div id="global-ui">
-          <button class="ui-btn" id="btn-menu" onclick="restartToHome()">🏠 0. 首页菜单 (起步动画)</button>
-          <button class="ui-btn active" id="btn-junkyard" onclick="changeEngineMode('junkyard')">🔧 1. 垃圾场 (组装/踢桶/绳荡)</button>
-          <button class="ui-btn" id="btn-pole" onclick="changeEngineMode('pole')">⚡ 2. 电线杆 (铜线拼图/电击坠猫)</button>
-          <button class="ui-btn" id="btn-bird" onclick="changeEngineMode('bird')">🦅 3. 鸟与方块 (贪吃鸟俯冲/卡扣下落)</button>
-          <button class="ui-btn" id="btn-fishing" onclick="changeEngineMode('fishing')">🎣 4. 水池抛竿 (物理钓鱼/鱼线阻尼)</button>
-          <button class="ui-btn" id="btn-fan_quiz" onclick="changeEngineMode('fan_quiz')">💨 5. 温室风扇 (大风扇3关图形解谜)</button>
-          <button class="ui-btn" id="btn-band" onclick="changeEngineMode('band')">🎷 6. 流浪歌手 (多声轨独立同步乐器合奏)</button>
-          <button class="ui-btn" id="btn-gomoku" onclick="changeEngineMode('gomoku')">🏁 7. 酒馆五子棋 (与老烟枪对弈完全AI)</button>
-          <button class="ui-btn" id="btn-bubble" onclick="changeEngineMode('bubble')">💭 8. 思维气泡 (全场景自适应连环画)</button>
-          <button class="ui-btn" id="btn-plug" onclick="changeEngineMode('plug')">🧠 9. 博士病毒插销 (红绿矩阵逻辑对调)</button>
-          <button class="ui-btn" id="btn-shoot" onclick="changeEngineMode('shoot')">🎮 10. 街机打枪 (CRT扫描线/飞虫弹幕)</button>
-          <button class="ui-btn" id="btn-spider" onclick="triggerSpiderGame()">🕷️ 11. 蜘蛛射击 (通关秘籍专属小游戏)</button>
-          <button class="ui-btn" id="btn-movie_gf" onclick="triggerLoreMovie('girlfriend')">🎬 电影A: 女友悲伤回忆连环画</button>
-          <button class="ui-btn" id="btn-movie_doc" onclick="triggerLoreMovie('meet_doctor')">🎬 电影B: 顶层老博士放映机交代</button>
+          <button class="ui-btn" id="btn-menu" onclick="restartToHome()">🏠 首页菜单</button>
+          <button class="ui-btn active" id="btn-junkyard" onclick="changeEngineMode('junkyard')">🔧 1. 垃圾场</button>
+          <button class="ui-btn" id="btn-pole" onclick="changeEngineMode('pole')">⚡ 2. 电线杆</button>
+          <button class="ui-btn" id="btn-bird" onclick="changeEngineMode('bird')">🦅 3. 鸟与方块</button>
+          <button class="ui-btn" id="btn-fishing" onclick="changeEngineMode('fishing')">🎣 4. 水池抛竿</button>
+          <button class="ui-btn" id="btn-fan_quiz" onclick="changeEngineMode('fan_quiz')">💨 5. 温室风扇</button>
+          <button class="ui-btn" id="btn-band" onclick="changeEngineMode('band')">🎷 6. 流浪歌手</button>
+          <button class="ui-btn" id="btn-gomoku" onclick="changeEngineMode('gomoku')">🏁 7. 酒馆五子棋</button>
+          <button class="ui-btn" id="btn-bubble" onclick="changeEngineMode('bubble')">💭 8. 思维气泡</button>
+          <button class="ui-btn" id="btn-plug" onclick="changeEngineMode('plug')">🧠 9. 病毒插销</button>
+          <button class="ui-btn" id="btn-shoot" onclick="changeEngineMode('shoot')">🎮 10. 街机打枪</button>
+          <button class="ui-btn" id="btn-spider" onclick="triggerSpiderGame()">🕷️ 11. 蜘蛛射击</button>
+          <button class="ui-btn" id="btn-movie_gf" onclick="triggerLoreMovie('girlfriend')">🎬 女友回忆</button>
+          <button class="ui-btn" id="btn-movie_doc" onclick="triggerLoreMovie('meet_doctor')">🎬 老博士交代</button>
           <a href="index.html" class="ui-btn" style="background:#3d2416; color:#ffcc80;">⬅️ 返回积木小院</a>
       </div>
     </div>
@@ -862,7 +847,7 @@ function drawMenuModule() {
     ctx.fillStyle = '#b39674'; ctx.font = 'bold 52px Courier New'; ctx.fillText("MACHINARIUM", 315, 160);
     ctx.strokeStyle = '#423324'; ctx.lineWidth = 2.5; drawHandDrawnShape([{x:300,y:185},{x:730,y:185}]);
     ctx.fillStyle = '#261b12'; ctx.strokeStyle = '#4a3625'; ctx.fillRect(387,310,250,42); ctx.strokeRect(387,310,250,42);
-    ctx.fillStyle = '#8a7761'; ctx.font = 'bold 12px monospace'; ctx.fillText("START GAME (点击下方切换独立沙盒)", 396, 336);
+    ctx.fillStyle = '#8a7761'; ctx.font = 'bold 16px sans-serif'; ctx.fillText("开始游戏", 475, 336);
 
     state.flies.forEach(fly => {
         ctx.save(); ctx.translate(fly.x, fly.y);
@@ -1475,7 +1460,7 @@ function resetCurrentLevel() {
     playProceduralSound('page');
 }
 
-// 绑定首页【开始游戏 / Play New Game】按钮
+// 绑定首页【开始游戏】按钮（单个开始按钮，点击直接进入）
 if (btnStart) {
     btnStart.addEventListener('click', () => {
         if (homeScreen) homeScreen.classList.remove('active');
@@ -1485,22 +1470,21 @@ if (btnStart) {
     });
 }
 
-// 绑定首页【继续游戏 / Resume Game】按钮
-if (btnResume) {
-    btnResume.addEventListener('click', () => {
-        if (homeScreen) homeScreen.classList.remove('active');
-        if (gameScreen) gameScreen.classList.add('active');
-        initGame('恢复进度 — 已加载上一次关卡存档');
-        resumeGame();
-    });
-}
-
 // 绑定游戏内【重新开始】按钮
 if (btnRestart) {
     btnRestart.addEventListener('click', () => {
         initGame('关卡已重新开始 — 所有机关与状态已重置');
         resetCurrentLevel();
     });
+}
+
+// 支持 URL autostart=1，直接进入游戏场景
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('autostart') === '1') {
+    if (homeScreen) homeScreen.classList.remove('active');
+    if (gameScreen) gameScreen.classList.add('active');
+    initGame('游戏已开始 — 废土初始场景（已就绪）');
+    startNewGame();
 }
 
 function switchScene(m) { changeEngineMode(m); }
