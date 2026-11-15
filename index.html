@@ -2179,6 +2179,7 @@
         <div class="home-buttons">
             <button class="btn-home" id="startBtn" onclick="startGame(gameState.mode)">▶ 开始游戏</button>
             <button class="btn-home" id="m9OneToOneBtn" onclick="openMachinariumModal(true)" style="display: none; background: linear-gradient(135deg, #e65100 0%, #ff9800 100%); color: white; border: 2px solid #ffe082; box-shadow: 0 4px 12px rgba(255,153,0,0.4); font-weight: bold;">⚡ 机械迷城 1:1 独立版</button>
+            <button class="btn-home" id="m10OneToOneBtn" onclick="openEscapeLabModal(true)" style="display: none; background: linear-gradient(135deg, #0277bd 0%, #01579b 100%); color: white; border: 2px solid #80d8ff; box-shadow: 0 4px 12px rgba(2,119,189,0.5); font-weight: bold;">🐉 逃离实验室 1:1 独立版</button>
             <button class="btn-home" onclick="openLeaderboard()">🏆 排行榜</button>
             <button class="btn-home" onclick="openModeModal()">⚙️ 选择模式 (<span id="modeDisplayBtn">一</span>)</button>
             <button class="btn-home" onclick="openInstructionsModal()">📖 游戏说明</button>
@@ -2437,7 +2438,7 @@
                     <!-- 动态生成的模式按钮会放在这里 -->
                 </div>
                 <div id="modeScrollHint" style="font-size: 12px; color: #888; padding: 4px 0 2px 0; text-align: center; pointer-events: none; opacity: 0.85;">
-                    ↕ 上下滑动可选择更多模式 (模式七、模式八、模式九)
+                    ↕ 上下滑动可选择更多模式 (模式八、模式九、模式十)
                 </div>
             </div>
             <button class="btn-secondary" onclick="closeModeModal()">关闭</button>
@@ -2468,6 +2469,22 @@
                 </div>
             </div>
             <iframe id="machinariumIframe" src="about:blank" style="flex: 1; width: 100%; border: none; border-radius: 4px; background: #1a1512;"></iframe>
+        </div>
+    </div>
+
+    <!-- 🐉 逃离实验室 1:1 独立舞台弹窗 -->
+    <div id="escapeLabModal" class="modal-overlay hidden" style="z-index: 1500; background: rgba(0, 0, 0, 0.88); padding: 10px;">
+        <div class="modal-content" style="max-width: 1060px; width: 98%; height: 92vh; max-height: 880px; padding: 12px; display: flex; flex-direction: column; background: #07111e; border: 3px solid #00b0ff; box-shadow: 0 0 35px rgba(0,176,255,0.45);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                <h3 style="color: #80d8ff; margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px;">
+                    <span>🐉</span> 模式十：逃离实验室 (变身巨龙 · 吞噬突围)
+                </h3>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <a href="escape_lab.html" target="_blank" style="padding: 4px 10px; font-size: 12px; color: #80d8ff; background: #0b2246; border: 1px solid #00b0ff; text-decoration: none; border-radius: 3px; font-weight: bold;">↗️ 全屏独立窗口</a>
+                    <button class="btn-secondary" onclick="closeEscapeLabModal()" style="margin: 0; padding: 4px 14px; font-size: 13px; color: #fff; background: #132f58; border: 1px solid #1e88e5; cursor: pointer;">关闭 ✖</button>
+                </div>
+            </div>
+            <iframe id="escapeLabIframe" src="about:blank" style="flex: 1; width: 100%; border: none; border-radius: 4px; background: #07111e;"></iframe>
         </div>
     </div>
 
@@ -4418,6 +4435,15 @@
                 return;
             }
 
+            // 启动模式十：逃离实验室
+            if (/模式10|第十模式|逃离实验室|escapelab|escape|lab|mode\s*10|m10/.test(cmd)) {
+                gameState.mode = 10;
+                updateHomeTheme();
+                openEscapeLabModal(true);
+                devLog('🐉 已启动第十模式：逃离实验室');
+                return;
+            }
+
             // 跳关
             if (/跳关|level|第.*关|关卡|去第|到第|切换关/.test(cmd)) {
                 if (num === null || num < 1) { devLog('请指定关卡数，例如：跳到第99关', 'error'); return; }
@@ -4542,7 +4568,7 @@
         const PROGRESS_KEY = 'brick_game_mode_progress';
 
         function getUnlockedMode() {
-            return 9; // 默认解锁全部模式，方便立即体验！
+            return 10; // 默认解锁全部模式，方便立即体验！
         }
 
         function unlockNextMode(currentMode) {
@@ -4727,7 +4753,8 @@
                 { id: 7, name: '模式七：第七音 (简单模式)', icon: '🟢', color: 'linear-gradient(135deg, #1b5e20 0%, #43a047 100%)', text: 'white', diff: 'easy' },
                 { id: 7.5, name: '模式七：第七音 (普通模式)', icon: '🟠', color: 'linear-gradient(135deg, #e65100 0%, #ffa000 100%)', text: 'white', diff: 'normal' },
                 { id: 8, name: '模式八：坚果保龄球 (种植版)', icon: '🌰', color: 'linear-gradient(135deg, #5D4037 0%, #388E3C 100%)', text: 'white' },
-                { id: 9, name: '模式九：机械迷城 (1:1 大集合版)', icon: '🤖', color: 'linear-gradient(135deg, #4b382a 0%, #8d6e63 100%)', text: '#ffe082', isNew: true }
+                { id: 9, name: '模式九：机械迷城 (1:1 大集合版)', icon: '🤖', color: 'linear-gradient(135deg, #4b382a 0%, #8d6e63 100%)', text: '#ffe082' },
+                { id: 10, name: '模式十：逃离实验室', icon: '🐉', color: 'linear-gradient(135deg, #0b1f3a 0%, #1976d2 50%, #0d47a1 100%)', text: '#80d8ff', isNew: true }
             ];
 
             modes.forEach(m => {
@@ -4811,7 +4838,7 @@
                 window.loadMode6Assets();
             }
             updateHomeTheme();
-            const modeNames = ["一", "二", "三", "四", "五", "六", "七", "八", "九"];
+            const modeNames = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
             document.getElementById('modeDisplayBtn').textContent = modeNames[modeId - 1] || modeId;
 
             closeModeModal();
@@ -4957,12 +4984,32 @@
                         </a>
                     </div>
                 `;
+            } else if (mode === 10) {
+                content.innerHTML = `
+                    <p style="margin-bottom: 8px; color: #FFF;"><b>【玩法：逃离实验室（Escape the Lab）】</b></p>
+                    <p style="margin-bottom: 12px;">变身十倍巨型蓝龙，撞破牢笼横扫实验室，一路吞噬突围！</p>
+                    <p style="margin-bottom: 8px; color: #FFF;"><b>【巨龙操控与技能】</b></p>
+                    <p style="margin-bottom: 12px;">
+                        ⬅️➡️ <b>移动奔跑 (A / D / 方向键)：</b> 随着腹中吞食人数增加，体型膨胀，移速略微降低。<br>
+                        ⬆️ <b>起跳凌空 (W / 空格键)：</b> 巨大身躯跃起跨越障碍。<br>
+                        😋 <b>吞噬捕食 (J / 鼠标左键)：</b> 优先低头吃掉地面的手雷；无手雷时挑起士兵吞入腹中（上限10人）。<br>
+                        💣 <b>腹内闷爆：</b> 手雷吃进肚子5秒后引爆，炸碎腹中所有吞噬的士兵，清空腹中人数！<br>
+                        ⚡ <b>感电与火焰伤害：</b> 蓝帽发射电击枪（感电持续掉血），红橘帽发射火焰弹，特种兵抛掷高爆手雷。
+                    </p>
+                    <p style="margin-bottom: 8px; color: #FFF;"><b>【通关目标】</b></p>
+                    <p style="margin-bottom: 0;">维持血量（初始20点），一路冲破防线抵达终点防爆大门成功逃离！</p>
+                    <div style="margin-top: 14px; text-align: center;">
+                        <a href="escape_lab.html" onclick="openEscapeLabModal(true); closeInstructionsModal(); return false;" class="mc-btn" style="display: inline-block; background: #0288d1; color: #ffffff; font-weight: bold; text-decoration: none; padding: 8px 18px; border-radius: 4px; box-shadow: 0 4px 12px rgba(2,136,209,0.5); font-size: 13px;">
+                            🐉 开启【逃离实验室 1:1 独立版】
+                        </a>
+                    </div>
+                `;
             } else {
                 content.innerHTML = `
                     <p style="margin-bottom: 8px; color: #FFF;"><b>【玩法：神秘领域】</b></p>
                     <p style="margin-bottom: 12px;">全新的挑战正在开发中，这里将会有更加复杂的物理效果和互动机制。</p>
                     <p style="margin-bottom: 8px; color: #FFF;"><b>【敬请期待】</b></p>
-                    <p style="margin-bottom: 0;">目前开放至第 9 模式（机械迷城）。</p>
+                    <p style="margin-bottom: 0;">目前开放至第 10 模式（逃离实验室）。</p>
                 `;
             }
             document.getElementById('instructionsModal').classList.remove('hidden'); 
@@ -4984,6 +5031,22 @@
         }
         window.openMachinariumModal = openMachinariumModal;
         window.closeMachinariumModal = closeMachinariumModal;
+
+        function openEscapeLabModal(autoStart = false) {
+            const modal = document.getElementById('escapeLabModal');
+            const iframe = document.getElementById('escapeLabIframe');
+            const targetSrc = 'escape_lab.html';
+            if (iframe && (iframe.src === 'about:blank' || !iframe.src.includes('escape_lab.html') || autoStart)) {
+                iframe.src = targetSrc;
+            }
+            if (modal) modal.classList.remove('hidden');
+        }
+        function closeEscapeLabModal() {
+            const modal = document.getElementById('escapeLabModal');
+            if (modal) modal.classList.add('hidden');
+        }
+        window.openEscapeLabModal = openEscapeLabModal;
+        window.closeEscapeLabModal = closeEscapeLabModal;
 
         // ===== 🧑‍🌾 村民交易商铺控制逻辑 =====
         function openVillagerModal() {
@@ -6058,8 +6121,8 @@
         function createSplash(x, y) { for (let i = 0; i < 8; i++) gameState.effects.push(new Effect('splash', x, y)); }
 
         function drawScene() {
-            if (gameState.mode === 3 || gameState.mpGameMode === 3 || gameState.mode === 7 || gameState.mode === 8 || gameState.mode === 9) {
-                // 我的世界 3D、第七音、模式八、模式九等拥有独立的专属全屏渲染体系，跳过 2D 默认天空背景
+            if (gameState.mode === 3 || gameState.mpGameMode === 3 || gameState.mode === 7 || gameState.mode === 8 || gameState.mode === 9 || gameState.mode === 10) {
+                // 我的世界 3D、第七音、模式八、模式九、模式十等拥有独立的专属全屏渲染体系，跳过 2D 默认天空背景
                 return;
             }
             const grad = ctx.createLinearGradient(0, 0, 0, height);
@@ -11870,7 +11933,7 @@
                 mpBtn.style.color = "";
             }
             
-            const mText = (mode === 1 ? '一' : (mode === 2 ? '二' : (mode === 3 ? '三' : (mode === 4 ? '四' : (mode === 5 ? '五' : (mode === 6 ? '六' : (mode === 7 ? '七' : (mode === 8 ? '八' : '九'))))))));
+            const mText = ({ 1: '一', 2: '二', 3: '三', 4: '四', 5: '五', 6: '六', 7: '七', 8: '八', 9: '九', 10: '十' })[mode] || mode;
             
             // 恢复原始图标
             startBtn.innerHTML = "▶ 开始游戏";
@@ -11974,6 +12037,15 @@
                 startBtn.style.background = "linear-gradient(135deg, #8d6e63 0%, #4e342e 100%)";
                 startBtn.style.color = "#ffffff";
                 startBtn.innerHTML = "▶ 开始游戏";
+            } else if (mode === 10) {
+                // 进入“逃离实验室”主题
+                title.textContent = "逃离实验室";
+                title.style.color = "#80d8ff";
+                title.style.textShadow = "0 4px 12px rgba(0, 0, 0, 0.9), 0 0 25px rgba(0, 176, 255, 0.6)";
+                screen.style.background = "linear-gradient(135deg, #051329 0%, #0d274d 50%, #0a192f 100%)";
+                startBtn.style.background = "linear-gradient(135deg, #0288d1 0%, #01579b 100%)";
+                startBtn.style.color = "#ffffff";
+                startBtn.innerHTML = "▶ 开始游戏";
             } else {
                 // 默认“积木小院”主题
                 title.textContent = "积木小院";
@@ -11984,6 +12056,10 @@
             const m9Btn = document.getElementById('m9OneToOneBtn');
             if (m9Btn) {
                 m9Btn.style.display = (mode === 9) ? 'block' : 'none';
+            }
+            const m10Btn = document.getElementById('m10OneToOneBtn');
+            if (m10Btn) {
+                m10Btn.style.display = (mode === 10) ? 'block' : 'none';
             }
         }
 
@@ -12056,6 +12132,8 @@
                 if (typeof window.startMode9Level === 'function') {
                     startMode9Level(startLevel);
                 }
+            } else if (mode === 10) {
+                openEscapeLabModal(true);
             }
 
             scheduleNextFrame();
@@ -12698,6 +12776,20 @@
             document.getElementById('usernameModal').classList.add('hidden');
             if (window.location.hash === '#machinarium' || new URLSearchParams(window.location.search).get('m9') === '1') {
                 setTimeout(() => openMachinariumModal(), 100);
+            }
+        }
+
+        // 🟢 模式十与逃离实验室 1:1 独立版快捷访问入口：支持 #m10、#escapelab、?mode=10、?m10=1
+        const isPathM10 = window.location.hash === '#m10' || 
+                          window.location.hash === '#escapelab' || 
+                          new URLSearchParams(window.location.search).get('mode') === '10' ||
+                          new URLSearchParams(window.location.search).get('m10') === '1';
+
+        if (isPathM10) {
+            selectMode(10);
+            document.getElementById('usernameModal').classList.add('hidden');
+            if (window.location.hash === '#escapelab' || new URLSearchParams(window.location.search).get('m10') === '1') {
+                setTimeout(() => openEscapeLabModal(true), 100);
             }
         }
     </script>

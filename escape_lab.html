@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>逃离实验室 - 模式十</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #050b14;
+            font-family: 'Microsoft YaHei', -apple-system, sans-serif;
+            color: #d9e9ff;
+        }
+
+        #game-wrapper {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #02070f;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            box-shadow: 0 0 60px rgba(0, 50, 120, 0.6);
+            background: #081220;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        /* HUD 图层 */
+        .hud-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 16px 24px;
+            z-index: 20;
+        }
+
+        .hud-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            pointer-events: auto;
+        }
+
+        .hud-card {
+            background: rgba(10, 25, 45, 0.85);
+            border: 2px solid #1e88e5;
+            border-radius: 8px;
+            padding: 10px 16px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(30, 136, 229, 0.2);
+            backdrop-filter: blur(4px);
+        }
+
+        .hp-card {
+            min-width: 220px;
+        }
+
+        .hp-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: #90caf9;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .hp-bar-bg {
+            width: 100%;
+            height: 14px;
+            background: #0d1b2a;
+            border-radius: 7px;
+            overflow: hidden;
+            border: 1px solid #1565c0;
+        }
+
+        .hp-bar-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #d32f2f 0%, #ff5252 50%, #42a5f5 100%);
+            border-radius: 6px;
+            transition: width 0.2s ease;
+        }
+
+        .belly-card {
+            min-width: 260px;
+            text-align: center;
+        }
+
+        .belly-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: #80d8ff;
+            margin-bottom: 6px;
+        }
+
+        .belly-slots {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .belly-slot {
+            width: 18px;
+            height: 18px;
+            border: 1.5px solid #1976d2;
+            border-radius: 4px;
+            background: rgba(13, 71, 161, 0.25);
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .belly-slot.filled {
+            background: #00e5ff;
+            border-color: #e0f7fa;
+            box-shadow: 0 0 8px #00e5ff;
+            transform: scale(1.1);
+        }
+
+        .belly-digest-info {
+            font-size: 11px;
+            color: #b0bec5;
+            margin-top: 4px;
+        }
+
+        .hud-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-hud {
+            background: rgba(13, 71, 161, 0.85);
+            color: #ffffff;
+            border: 1.5px solid #42a5f5;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        .btn-hud:hover {
+            background: #1976d2;
+            border-color: #82b1ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 14px rgba(33, 150, 243, 0.5);
+        }
+
+        .btn-hud:active {
+            transform: translateY(1px);
+        }
+
+        /* 底部状态提示条 */
+        .hud-bottom-bar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .hint-banner {
+            background: rgba(5, 15, 30, 0.88);
+            border: 1.5px solid #29b6f6;
+            color: #e1f5fe;
+            padding: 8px 24px;
+            border-radius: 20px;
+            font-size: 15px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 10px rgba(41, 182, 246, 0.3);
+            text-align: center;
+            max-width: 90%;
+            transition: all 0.3s ease;
+        }
+
+        /* 移动端操作按钮组 */
+        .touch-controls {
+            display: none;
+            position: absolute;
+            bottom: 20px;
+            width: calc(100% - 40px);
+            left: 20px;
+            justify-content: space-between;
+            pointer-events: auto;
+            z-index: 25;
+        }
+
+        .touch-dpad {
+            display: flex;
+            gap: 12px;
+        }
+
+        .touch-btn {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: rgba(13, 71, 161, 0.75);
+            border: 2px solid #42a5f5;
+            color: #fff;
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .touch-btn:active {
+            background: #1976d2;
+            transform: scale(0.92);
+        }
+
+        .touch-btn.swallow {
+            width: 76px;
+            height: 76px;
+            background: linear-gradient(135deg, #00b0ff 0%, #0091ea 100%);
+            border-color: #e0f7fa;
+            font-size: 16px;
+        }
+
+        /* 剧情过场黑屏与字幕容器 */
+        #cutscene-overlay {
+            position: absolute;
+            inset: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding-bottom: 70px;
+            z-index: 50;
+            pointer-events: none;
+            opacity: 1;
+            transition: opacity 0.8s ease;
+        }
+
+        .cutscene-subtitle {
+            color: #ffffff;
+            font-size: 2.2rem;
+            font-weight: bold;
+            letter-spacing: 3px;
+            text-shadow: 0 0 12px rgba(255, 255, 255, 0.8), 0 4px 8px rgba(0, 0, 0, 0.9);
+            text-align: center;
+            min-height: 48px;
+            transition: opacity 0.4s ease;
+        }
+
+        #white-flash {
+            position: absolute;
+            inset: 0;
+            background: #ffffff;
+            z-index: 60;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.35s ease;
+        }
+
+        /* 通关结算与失败弹窗 */
+        .modal-screen {
+            position: absolute;
+            inset: 0;
+            background: rgba(2, 6, 15, 0.92);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 70;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        .modal-screen.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-box {
+            background: linear-gradient(135deg, #0b1f3a 0%, #153b6c 100%);
+            border: 3px solid #29b6f6;
+            border-radius: 14px;
+            padding: 30px 48px;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(41, 182, 246, 0.5);
+            max-width: 480px;
+        }
+
+        .modal-title {
+            font-size: 2.4rem;
+            color: #80d8ff;
+            margin-bottom: 12px;
+            text-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
+        }
+
+        .modal-desc {
+            font-size: 1.15rem;
+            color: #e0f2fe;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .btn-modal {
+            background: #0288d1;
+            color: #ffffff;
+            border: 2px solid #81d4fa;
+            border-radius: 8px;
+            padding: 10px 28px;
+            font-size: 1.25rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(2, 136, 209, 0.5);
+            transition: all 0.2s ease;
+        }
+
+        .btn-modal:hover {
+            background: #039be5;
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 768px) {
+            .touch-controls { display: flex; }
+            .hud-overlay { padding: 8px 12px; }
+            .cutscene-subtitle { font-size: 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+    <canvas id="gameCanvas" width="1280" height="720"></canvas>
+
+    <!-- 闪光层与全屏黑屏字幕过场 -->
+    <div id="white-flash"></div>
+    <div id="cutscene-overlay">
+        <div class="cutscene-subtitle" id="cutsceneSubtitle"></div>
+    </div>
+
+    <!-- HUD 战斗界面 -->
+    <div class="hud-overlay" id="hudOverlay" style="display: none;">
+        <div class="hud-top-bar">
+            <!-- 龙血量 (20.0点) -->
+            <div class="hud-card hp-card">
+                <div class="hp-title">
+                    <span>🐉 巨龙生命值</span>
+                    <span id="hpText">20.0 / 20.0</span>
+                </div>
+                <div class="hp-bar-bg">
+                    <div class="hp-bar-fill" id="hpBarFill"></div>
+                </div>
+            </div>
+
+            <!-- 腹中人数 (上限10人) -->
+            <div class="hud-card belly-card">
+                <div class="belly-title" id="bellyTitle">腹中人数：0 / 10</div>
+                <div class="belly-slots" id="bellySlots">
+                    <!-- 10个槽位动态生成 -->
+                </div>
+                <div class="belly-digest-info" id="bellyDigestInfo">自然消化冷却中</div>
+            </div>
+
+            <!-- 控制按钮 -->
+            <div class="hud-actions">
+                <button class="btn-hud" onclick="restartLevel()">重新开始</button>
+                <a href="index.html" class="btn-hud" style="text-decoration:none; display:inline-block;">返回小院</a>
+            </div>
+        </div>
+
+        <!-- 底部提示栏 -->
+        <div class="hud-bottom-bar">
+            <div class="hint-banner" id="hintBanner">加载中...</div>
+        </div>
+    </div>
+
+    <!-- 移动端触控按键 -->
+    <div class="touch-controls" id="touchControls">
+        <div class="touch-dpad">
+            <button class="touch-btn" id="btnTouchLeft">◀</button>
+            <button class="touch-btn" id="btnTouchRight">▶</button>
+        </div>
+        <div class="touch-dpad">
+            <button class="touch-btn" id="btnTouchJump">跳跃</button>
+            <button class="touch-btn swallow" id="btnTouchSwallow">吞噬</button>
+        </div>
+    </div>
+
+    <!-- 通关结算弹窗 -->
+    <div class="modal-screen" id="clearModal">
+        <div class="modal-box">
+            <h2 class="modal-title">🎉 第一关通关！</h2>
+            <p class="modal-desc" id="clearDesc">巨龙成功撞破实验室最后防爆大门，冲出绝密设施！</p>
+            <button class="btn-modal" onclick="restartLevel()">再次挑战</button>
+        </div>
+    </div>
+
+    <!-- 失败结算弹窗 -->
+    <div class="modal-screen" id="gameOverModal">
+        <div class="modal-box" style="border-color: #f44336; box-shadow: 0 0 40px rgba(244, 67, 54, 0.5);">
+            <h2 class="modal-title" style="color: #ff5252;">💀 巨龙倒下了！</h2>
+            <p class="modal-desc">血量耗尽（0 / 20.0）。按 R 键或点击下方按钮重新挑战第一关。</p>
+            <button class="btn-modal" style="background: #d32f2f; border-color: #ff8a80;" onclick="restartLevel()">重新开始</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ==========================================
+// 🔊 WEB AUDIO API 工业级声音合成器
+// ==========================================
+let audioCtx = null;
+function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+}
+
+function playSound(type) {
+    try {
+        const ctx = getAudioCtx();
+        const now = ctx.currentTime;
+        if (type === 'laser') {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(120, now + 0.35);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(now + 0.35);
+        } else if (type === 'roar') {
+            // 龙啸声
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(90, now);
+            osc.frequency.linearRampToValueAtTime(140, now + 0.15);
+            osc.frequency.exponentialRampToValueAtTime(45, now + 0.85);
+            gain.gain.setValueAtTime(0.4, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.85);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(now + 0.85);
+        } else if (type === 'cage_break') {
+            // 铁笼断裂金属撞击
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(260, now);
+            osc.frequency.exponentialRampToValueAtTime(60, now + 0.45);
+            gain.gain.setValueAtTime(0.35, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(now + 0.45);
+        } else if (type === 'swallow') {
+            // 吞咽声
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(320, now);
+            osc.frequency.exponentialRampToValueAtTime(140, now + 0.28);
+            gain.gain.setValueAtTime(0.35, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(now + 0.28);
+        } else if (type === 'belly_bomb') {
+            // 肚子内手雷闷爆重低音
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(160, now);
+            osc.frequency.exponentialRampToValueAtTime(30, now + 0.6);
+            gain.gain.setValueAtTime(0.55, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(now + 0.6);
+        } else if (type === 'explosion') {
+            // 地面爆炸
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(220, now);
+            osc.frequency.exponentialRampToValueAtTime(25, now + 0.5);
+            gain.gain.setValueAtTime(0.45, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(now + 0.5);
+        } else if (type === 'shock') {
+            // 电击
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.setValueAtTime(880, now + 0.05);
+            osc.frequency.setValueAtTime(220, now + 0.1);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(now + 0.2);
+        } else if (type === 'fire') {
+            // 火焰喷射
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(360, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(now + 0.3);
+        }
+    } catch(e) {}
+}
+
+// ==========================================
+// 全局游戏状态机定义（与 GDScript 保持 1:1 对齐）
+// ==========================================
+const GameState = {
+    CUTSCENE: 0,        // 1. 开场小视频过场
+    TRAPPED_IN_CAGE: 1, // 2. 变身巨龙被困在笼子里（按攻击/移动键破笼）
+    LEVEL_1_ACTIVE: 2,  // 3. 第一关实机前冲与吞噬战斗
+    LEVEL_CLEAR: 3,     // 4. 第一关通关
+    GAME_OVER: 4        // 5. 血量归零失败
+};
+
+const EnemyType = {
+    BLUE_HAT: 0,      // 蓝帽：电击枪（0.5伤害 + 5秒持续0.5/秒）
+    GRAY_HAT: 1,      // 灰帽：向玩家冲锋
+    RED_ORANGE: 2,    // 红/橘帽：喷火枪（火焰弹伤害 1）
+    BLACK_SPECOPS: 3  // 黑色特种兵：10秒蓄力扔手雷（手雷5秒爆炸，伤害 5）
+};
+
+// ==========================================
+// 游戏全局变量
+// ==========================================
+const DRAGON_MAX_HP = 20.0;
+const MAX_BELLY_CAPACITY = 10;
+const NATURAL_DIGEST_INTERVAL = 10.0; // 10秒消化1人
+const FINISH_LINE_X = 5200.0;
+
+let currentState = GameState.CUTSCENE;
+let dragonHp = 20.0;
+let swallowedHumans = 0;
+let naturalDigestTimer = 0.0;
+
+// 感电持续伤害
+let electricTicksLeft = 0;
+let electricTickTimer = 0.0;
+
+// 巨龙物理属性 (人约为 36x72, 巨龙约其10倍大)
+let dragon = {
+    x: 350.0,
+    y: 540.0,
+    vx: 0.0,
+    vy: 0.0,
+    width: 320.0,
+    height: 180.0,
+    facing: 1, // 1: 右, -1: 左
+    isOnFloor: true,
+    moveSpeed: 320.0,
+    jumpVelocity: -460.0,
+    bellyBulgeAnim: 0.0, // 手雷闷爆肚子突鼓
+    swallowAnimTimer: 0.0, // 吞噬咬合动作计时
+    swallowTarget: null, // 当前被挑起抛空的士兵
+    stepCount: 0
+};
+
+// 牢笼对象
+let cage = {
+    x: 350.0,
+    y: 540.0,
+    w: 380.0,
+    h: 220.0,
+    broken: false,
+    breakAnim: 0.0
+};
+
+const gravity = 980.0;
+let activeEnemies = [];
+let activeFireballs = [];
+let activeGrenades = [];
+let activeParticles = [];
+
+// 摄像机 X 偏移
+let cameraX = 0.0;
+
+// DOM 引用
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const cutsceneOverlay = document.getElementById('cutscene-overlay');
+const cutsceneSubtitle = document.getElementById('cutsceneSubtitle');
+const whiteFlash = document.getElementById('white-flash');
+const hudOverlay = document.getElementById('hudOverlay');
+const hpText = document.getElementById('hpText');
+const hpBarFill = document.getElementById('hpBarFill');
+const bellyTitle = document.getElementById('bellyTitle');
+const bellySlots = document.getElementById('bellySlots');
+const bellyDigestInfo = document.getElementById('bellyDigestInfo');
+const hintBanner = document.getElementById('hintBanner');
+const clearModal = document.getElementById('clearModal');
+const gameOverModal = document.getElementById('gameOverModal');
+
+// 初始化 10 个腹中槽位
+for (let i = 0; i < 10; i++) {
+    const s = document.createElement('div');
+    s.className = 'belly-slot';
+    s.id = `belly-slot-${i}`;
+    bellySlots.appendChild(s);
+}
+
+// 按键输入监听
+const keys = {
+    left: false,
+    right: false,
+    jump: false,
+    swallow: false,
+    autoRun: false
+};
+
+window.addEventListener('keydown', e => {
+    if (e.repeat) return;
+    const k = e.key.toLowerCase();
+    if (k === 'd' || k === 'arrowright') keys.right = true;
+    if (k === 'a' || k === 'arrowleft') keys.left = true;
+    if (k === 'w' || k === 'arrowup' || k === ' ') { keys.jump = true; e.preventDefault(); }
+    if (k === 'j' || k === 'f' || k === 'z') { keys.swallow = true; }
+    if (k === 'shift') keys.autoRun = true;
+    if (k === 'r') restartLevel();
+
+    // 牢笼中按任意动作键破笼
+    if (currentState === GameState.TRAPPED_IN_CAGE) {
+        if (keys.swallow || keys.right || keys.jump) {
+            breakOutOfCage();
+        }
+    }
+});
+
+window.addEventListener('keyup', e => {
+    const k = e.key.toLowerCase();
+    if (k === 'd' || k === 'arrowright') keys.right = false;
+    if (k === 'a' || k === 'arrowleft') keys.left = false;
+    if (k === 'w' || k === 'arrowup' || k === ' ') keys.jump = false;
+    if (k === 'j' || k === 'f' || k === 'z') keys.swallow = false;
+    if (k === 'shift') keys.autoRun = false;
+});
+
+// 鼠标左键触发吞噬
+canvas.addEventListener('mousedown', e => {
+    if (e.button === 0) {
+        if (currentState === GameState.TRAPPED_IN_CAGE) {
+            breakOutOfCage();
+        } else if (currentState === GameState.LEVEL_1_ACTIVE) {
+            performDragonSwallow();
+        }
+    }
+});
+
+// 触控支持
+const bindTouch = (id, onStart, onEnd) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('touchstart', e => { e.preventDefault(); onStart(); });
+    el.addEventListener('touchend', e => { e.preventDefault(); onEnd(); });
+};
+bindTouch('btnTouchLeft', () => keys.left = true, () => keys.left = false);
+bindTouch('btnTouchRight', () => { keys.right = true; if(currentState===GameState.TRAPPED_IN_CAGE) breakOutOfCage(); }, () => keys.right = false);
+bindTouch('btnTouchJump', () => { keys.jump = true; if(currentState===GameState.TRAPPED_IN_CAGE) breakOutOfCage(); }, () => keys.jump = false);
+bindTouch('btnTouchSwallow', () => {
+    if (currentState === GameState.TRAPPED_IN_CAGE) breakOutOfCage();
+    else if (currentState === GameState.LEVEL_1_ACTIVE) performDragonSwallow();
+}, () => {});
+
+// ==========================================
+// 1. 开场剧情过场流程 (CUTSCENE)
+// ==========================================
+let cutsceneTimeouts = [];
+function addCutsceneTimeout(fn, ms) {
+    const id = setTimeout(fn, ms);
+    cutsceneTimeouts.push(id);
+    return id;
+}
+function clearAllCutsceneTimeouts() {
+    cutsceneTimeouts.forEach(id => clearTimeout(id));
+    cutsceneTimeouts = [];
+}
+
+function playOpeningCutscene() {
+    clearAllCutsceneTimeouts();
+    currentState = GameState.CUTSCENE;
+    hudOverlay.style.display = 'none';
+    clearModal.classList.remove('active');
+    gameOverModal.classList.remove('active');
+    cutsceneOverlay.style.display = 'flex';
+    cutsceneOverlay.style.opacity = '1';
+    cutsceneSubtitle.textContent = '';
+    whiteFlash.style.opacity = '0';
+
+    // 1. 实验室高压电光束射中人类强闪光
+    playSound('laser');
+    whiteFlash.style.opacity = '0.95';
+    addCutsceneTimeout(() => {
+        whiteFlash.style.opacity = '0.0';
+    }, 450);
+
+    // 2. 画面变黑，底部白色字幕依次显示
+    const lines = [
+        "啊，是龙！",
+        "快跑！",
+        "快把他抓起来！"
+    ];
+
+    addCutsceneTimeout(() => {
+        showSubtitleSequence(lines, 0, () => {
+            playSound('laser');
+            whiteFlash.style.opacity = '1.0';
+            addCutsceneTimeout(() => {
+                cutsceneOverlay.style.display = 'none';
+                hudOverlay.style.display = 'flex';
+                setupLevel1Entities();
+                updateHud();
+                whiteFlash.style.opacity = '0.0';
+                currentState = GameState.TRAPPED_IN_CAGE;
+                hintBanner.textContent = "你已变成巨龙并被困在笼中！按 [J 键] 或 [D 键前冲] 撞破牢笼！";
+            }, 400);
+        });
+    }, 1200);
+}
+
+function showSubtitleSequence(lines, index, onComplete) {
+    if (index >= lines.length) {
+        cutsceneSubtitle.textContent = '';
+        if (onComplete) onComplete();
+        return;
+    }
+    cutsceneSubtitle.textContent = lines[index];
+    cutsceneSubtitle.style.opacity = '1';
+    addCutsceneTimeout(() => {
+        cutsceneSubtitle.style.opacity = '0';
+        addCutsceneTimeout(() => {
+            showSubtitleSequence(lines, index + 1, onComplete);
+        }, 300);
+    }, 1300);
+}
+
+// 撞破牢笼
+function breakOutOfCage() {
+    if (cage.broken) return;
+    cage.broken = true;
+    playSound('cage_break');
+    playSound('roar');
+
+    // 碎裂飞溅粒子
+    for (let i = 0; i < 24; i++) {
+        activeParticles.push({
+            x: cage.x + (Math.random() - 0.5) * cage.w,
+            y: cage.y - Math.random() * cage.h,
+            vx: (Math.random() - 0.5) * 500,
+            vy: -Math.random() * 400 - 100,
+            size: Math.random() * 8 + 4,
+            color: '#78909c',
+            life: 1.2
+        });
+    }
+
+    currentState = GameState.LEVEL_1_ACTIVE;
+    hintBanner.textContent = "破笼而出！一路往前冲！按 [J键] 挑起吃人，有手雷时低头直接吃掉！";
+}
+
+// ==========================================
+// 2. 第一关实体与敌人数据生成 (与 GDScript 一致)
+// ==========================================
+function setupLevel1Entities() {
+    dragon.x = 350.0;
+    dragon.y = 540.0;
+    dragon.vx = 0;
+    dragon.vy = 0;
+    dragonHp = 20.0;
+    swallowedHumans = 0;
+    naturalDigestTimer = 0.0;
+    electricTicksLeft = 0;
+    electricTickTimer = 0.0;
+    cage.broken = false;
+    activeEnemies = [];
+    activeFireballs = [];
+    activeGrenades = [];
+    activeParticles = [];
+    window.activeEnemies = activeEnemies;
+    window.activeGrenades = activeGrenades;
+    window.activeFireballs = activeFireballs;
+
+    // 关卡沿途刷怪配置表（10倍龙尺寸下横向分布）
+    const spawnPlan = [
+        { type: EnemyType.GRAY_HAT,      x: 950.0 },
+        { type: EnemyType.BLUE_HAT,      x: 1400.0 },
+        { type: EnemyType.RED_ORANGE,    x: 1900.0 },
+        { type: EnemyType.BLACK_SPECOPS, x: 2350.0 }, // 黑色特种兵（抛手雷）
+        { type: EnemyType.GRAY_HAT,      x: 2650.0 },
+        { type: EnemyType.BLUE_HAT,      x: 3100.0 },
+        { type: EnemyType.BLACK_SPECOPS, x: 3550.0 },
+        { type: EnemyType.RED_ORANGE,    x: 4000.0 },
+        { type: EnemyType.GRAY_HAT,      x: 4400.0 },
+        { type: EnemyType.BLACK_SPECOPS, x: 4850.0 }
+    ];
+
+    spawnPlan.forEach(sp => {
+        activeEnemies.push({
+            type: sp.type,
+            x: sp.x,
+            y: 540.0,
+            width: 36.0,
+            height: 72.0,
+            timer: sp.type === EnemyType.BLACK_SPECOPS ? 7.0 : 0.0 // 特种兵初次7秒抛雷
+        });
+    });
+}
+
+// ==========================================
+// 3. 巨龙吞噬核心机制 (优先吃手雷 / 挑起吃人)
+// ==========================================
+function performDragonSwallow() {
+    if (currentState !== GameState.LEVEL_1_ACTIVE) return;
+
+    dragon.swallowAnimTimer = 0.35; // 触发张嘴咬合动作
+    const mouthX = dragon.x + (dragon.width * 0.45 * dragon.facing);
+    const mouthY = dragon.y - dragon.height * 0.45;
+
+    // 1. 优先低头吃前方地面的手雷
+    for (let i = activeGrenades.length - 1; i >= 0; i--) {
+        const g = activeGrenades[i];
+        if (!g.swallowed && Math.hypot(g.x - mouthX, g.y - mouthY) <= 220.0) {
+            g.swallowed = true;
+            playSound('swallow');
+            hintBanner.textContent = "蓝龙低头一口吃掉了手雷！等待肚内引爆消化！";
+            return;
+        }
+    }
+
+    // 2. 没有手雷时，挑起吞人（上限 10 人）
+    if (swallowedHumans >= MAX_BELLY_CAPACITY) {
+        hintBanner.textContent = "肚子已经装满 10 个人了！快吃颗手雷炸掉消化！";
+        return;
+    }
+
+    for (let i = activeEnemies.length - 1; i >= 0; i--) {
+        const e = activeEnemies[i];
+        if (Math.hypot(e.x - mouthX, e.y - mouthY) <= 240.0) {
+            // 执行挑起吃人抛空动效
+            playSound('swallow');
+            swallowedHumans++;
+            activeEnemies.splice(i, 1);
+            updateHud();
+            hintBanner.textContent = `挑起咬住并吞下了 1 名士兵！（腹中：${swallowedHumans}/10）`;
+            return;
+        }
+    }
+}
+
+// 手雷在肚子内闷爆引爆
+function triggerBellyGrenadeExplosion() {
+    playSound('belly_bomb');
+    const count = swallowedHumans;
+    swallowedHumans = 0;
+    naturalDigestTimer = 0.0;
+    dragon.bellyBulgeAnim = 1.0; // 肚子瞬间鼓胀震颤
+
+    // 腹部周围震出烟雾微粒
+    for (let i = 0; i < 16; i++) {
+        activeParticles.push({
+            x: dragon.x + (Math.random() - 0.5) * 80,
+            y: dragon.y - 40 + (Math.random() - 0.5) * 40,
+            vx: (Math.random() - 0.5) * 160,
+            vy: -Math.random() * 120,
+            size: Math.random() * 10 + 6,
+            color: 'rgba(255, 140, 0, 0.7)',
+            life: 0.6
+        });
+    }
+
+    updateHud();
+    hintBanner.textContent = `轰！手雷在肚子里闷爆，肚子猛鼓一下，腹中 ${count} 人瞬间全部消化！`;
+}
+
+// 受到伤害
+function applyDamageToDragon(amount, reason) {
+    dragonHp = Math.max(0.0, dragonHp - amount);
+    hintBanner.textContent = reason;
+    updateHud();
+
+    // 受伤屏幕震颤与红色辉光
+    if (dragonHp <= 0.0) {
+        currentState = GameState.GAME_OVER;
+        gameOverModal.classList.add('active');
+        hintBanner.textContent = "血量耗尽（0 / 20.0），蓝龙倒下了！按 R 键重新开始第一关。";
+    }
+}
+
+// 重新开始
+function restartLevel() {
+    clearModal.classList.remove('active');
+    gameOverModal.classList.remove('active');
+    setupLevel1Entities();
+    updateHud();
+    currentState = GameState.TRAPPED_IN_CAGE;
+    hintBanner.textContent = "已重置第一关！被困在笼中，按 [J 键] 或 [D 键] 破笼前冲！";
+}
+
+// ==========================================
+// 4. 物理与逻辑主更新循环
+// ==========================================
+let lastTime = performance.now();
+function updateGame(dt) {
+    if (currentState === GameState.LEVEL_1_ACTIVE) {
+        // --- A. 巨龙移动与重力 ---
+        let dir = 0;
+        if (keys.right || keys.autoRun) dir += 1;
+        if (keys.left) dir -= 1;
+
+        if (dir !== 0) {
+            dragon.facing = dir > 0 ? 1 : -1;
+            dragon.stepCount += dt * 8;
+        }
+
+        // 吞人越多速度越沉重
+        const speedFactor = 1.0 - (swallowedHumans * 0.025);
+        dragon.vx = dir * dragon.moveSpeed * speedFactor;
+
+        // 重力与跳跃
+        dragon.vy += gravity * dt;
+        dragon.x += dragon.vx * dt;
+        dragon.y += dragon.vy * dt;
+
+        if (dragon.y >= 540.0) {
+            dragon.y = 540.0;
+            dragon.vy = 0;
+            dragon.isOnFloor = true;
+        } else {
+            dragon.isOnFloor = false;
+        }
+
+        if (keys.jump && dragon.isOnFloor) {
+            dragon.vy = dragon.jumpVelocity;
+            dragon.isOnFloor = false;
+            keys.jump = false;
+        }
+
+        if (keys.swallow) {
+            performDragonSwallow();
+            keys.swallow = false;
+        }
+
+        // 动作动画衰减
+        if (dragon.swallowAnimTimer > 0) dragon.swallowAnimTimer -= dt;
+        if (dragon.bellyBulgeAnim > 0) dragon.bellyBulgeAnim = Math.max(0, dragon.bellyBulgeAnim - dt * 2.8);
+
+        // --- B. 感电状态与自然消化 ---
+        if (electricTicksLeft > 0) {
+            electricTickTimer += dt;
+            if (electricTickTimer >= 1.0) {
+                electricTickTimer -= 1.0;
+                electricTicksLeft--;
+                applyDamageToDragon(0.5, "电击持续感电伤害 (-0.5)");
+                playSound('shock');
+            }
+        }
+
+        if (swallowedHumans > 0) {
+            naturalDigestTimer += dt;
+            if (naturalDigestTimer >= NATURAL_DIGEST_INTERVAL) {
+                naturalDigestTimer = 0.0;
+                swallowedHumans--;
+                updateHud();
+                hintBanner.textContent = `自然消化了 1 个人！剩余腹中人数：${swallowedHumans}`;
+            }
+        } else {
+            naturalDigestTimer = 0.0;
+        }
+
+        // --- C. 沿途士兵 AI ---
+        activeEnemies.forEach(e => {
+            const dist = Math.hypot(dragon.x - e.x, dragon.y - e.y);
+            const dirX = Math.sign(dragon.x - e.x);
+
+            if (e.type === EnemyType.BLUE_HAT) {
+                // 蓝帽：电击枪 (距离 < 420 蓄力射击)
+                if (dist < 420.0) {
+                    e.timer += dt;
+                    if (e.timer >= 3.0) {
+                        e.timer = 0.0;
+                        applyDamageToDragon(0.5, "被蓝帽电击枪击中！(-0.5，进入5秒感电)");
+                        electricTicksLeft = 5;
+                        electricTickTimer = 0.0;
+                        playSound('shock');
+                    }
+                }
+            } else if (e.type === EnemyType.GRAY_HAT) {
+                // 灰帽：冲锋 (距离 < 600 加速冲向龙)
+                if (dist < 600.0) {
+                    e.x += dirX * 350.0 * dt;
+                }
+            } else if (e.type === EnemyType.RED_ORANGE) {
+                // 红/橘帽：喷火枪 (发射火焰弹，每3秒一发，伤害1)
+                if (dist < 550.0) {
+                    e.timer += dt;
+                    if (e.timer >= 3.0) {
+                        e.timer = 0.0;
+                        playSound('fire');
+                        activeFireballs.push({
+                            x: e.x,
+                            y: e.y - 45,
+                            vx: dirX * 380.0
+                        });
+                    }
+                }
+            } else if (e.type === EnemyType.BLACK_SPECOPS) {
+                // 黑色特种兵：10秒抛出手雷
+                if (dist < 650.0) {
+                    e.timer += dt;
+                    if (e.timer >= 10.0) {
+                        e.timer = 0.0;
+                        activeGrenades.push({
+                            x: e.x,
+                            y: e.y - 50,
+                            vx: dirX * 280.0,
+                            vy: -320.0,
+                            fuse: 5.0,
+                            swallowed: false
+                        });
+                        hintBanner.textContent = "警告！特种兵抛出了手雷，5秒内低头吃掉它！";
+                    }
+                }
+            }
+        });
+
+        // --- D. 火焰弹与手雷更新 ---
+        for (let i = activeFireballs.length - 1; i >= 0; i--) {
+            const fb = activeFireballs[i];
+            fb.x += fb.vx * dt;
+            if (Math.hypot(fb.x - dragon.x, fb.y - (dragon.y - 70)) < 90.0) {
+                applyDamageToDragon(1.0, "被火焰弹击中！(-1.0 血)");
+                activeFireballs.splice(i, 1);
+            } else if (Math.abs(fb.x - dragon.x) > 1200.0) {
+                activeFireballs.splice(i, 1);
+            }
+        }
+
+        for (let i = activeGrenades.length - 1; i >= 0; i--) {
+            const g = activeGrenades[i];
+            g.fuse -= dt;
+
+            if (g.swallowed) {
+                // 跟随龙移动在龙腹内
+                g.x = dragon.x;
+                g.y = dragon.y - 40;
+            } else {
+                // 空中抛物线落地
+                if (g.y < 530.0) {
+                    g.vy += gravity * dt;
+                    g.y += g.vy * dt;
+                    g.x += g.vx * dt;
+                } else {
+                    g.y = 530.0;
+                    g.vx *= 0.85;
+                }
+            }
+
+            // 引爆
+            if (g.fuse <= 0.0) {
+                if (g.swallowed) {
+                    triggerBellyGrenadeExplosion();
+                } else {
+                    playSound('explosion');
+                    if (Math.hypot(g.x - dragon.x, g.y - dragon.y) <= 220.0) {
+                        applyDamageToDragon(5.0, "手雷在身边爆炸！受到 5.0 点巨额伤害！");
+                    }
+                }
+                activeGrenades.splice(i, 1);
+            }
+        }
+
+        // --- E. 终点判定 ---
+        if (dragon.x >= FINISH_LINE_X) {
+            currentState = GameState.LEVEL_CLEAR;
+            clearModal.classList.add('active');
+            hintBanner.textContent = "恭喜通关！巨龙冲破防爆大门，成功逃离第一层实验室！";
+        }
+
+        // 摄像机平滑跟随
+        cameraX += (dragon.x - 380 - cameraX) * 0.12;
+    }
+
+    // 粒子更新
+    for (let i = activeParticles.length - 1; i >= 0; i--) {
+        const p = activeParticles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        if (p.life <= 0) activeParticles.splice(i, 1);
+    }
+}
+
+// ==========================================
+// 5. 渲染循环 (2D 画布绘制实验室、巨龙、敌兵)
+// ==========================================
+function renderGame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 1. 实验室背景长廊
+    drawLabBackground();
+
+    ctx.save();
+    ctx.translate(-cameraX, 0);
+
+    // 2. 牢笼 (破笼前显示完整，破笼后展示残骸)
+    if (!cage.broken) {
+        drawCage();
+    }
+
+    // 3. 终点防爆门 (Finish Line)
+    drawFinishLine();
+
+    // 4. 敌人绘制
+    drawEnemies();
+
+    // 5. 投掷物 (火焰弹、手雷)
+    drawProjectiles();
+
+    // 6. 巨龙绘制 (人类10倍大、腹部动态鼓胀)
+    drawBlueDragon();
+
+    // 7. 粒子绘制
+    drawParticles();
+
+    ctx.restore();
+}
+
+function drawLabBackground() {
+    // 实验室天花板与暗蓝防爆砖
+    ctx.fillStyle = '#060e1a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 墙壁金属网格背景
+    ctx.strokeStyle = '#0e243d';
+    ctx.lineWidth = 1;
+    const startCol = Math.floor(cameraX / 100) * 100;
+    for (let x = startCol - cameraX; x < canvas.width + 100; x += 100) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 540);
+        ctx.stroke();
+    }
+
+    // 顶部警报灯与发光电缆
+    ctx.strokeStyle = '#0288d1';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, 45);
+    ctx.lineTo(canvas.width, 45);
+    ctx.stroke();
+
+    // 金属地板
+    ctx.fillStyle = '#101d2d';
+    ctx.fillRect(0, 540, canvas.width, 180);
+    ctx.fillStyle = '#1e3857';
+    ctx.fillRect(0, 536, canvas.width, 4);
+
+    // 黄黑相间警戒条纹
+    const stripeOffset = -cameraX % 40;
+    ctx.fillStyle = '#fbc02d';
+    for (let x = stripeOffset - 40; x < canvas.width + 40; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 540);
+        ctx.lineTo(x + 18, 540);
+        ctx.lineTo(x + 9, 555);
+        ctx.lineTo(x - 9, 555);
+        ctx.fill();
+    }
+}
+
+function drawCage() {
+    ctx.strokeStyle = '#90a4ae';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(cage.x - cage.w / 2, cage.y - cage.h, cage.w, cage.h);
+
+    // 竖向栏杆
+    ctx.lineWidth = 4;
+    for (let x = cage.x - cage.w / 2 + 30; x < cage.x + cage.w / 2; x += 35) {
+        ctx.beginPath();
+        ctx.moveTo(x, cage.y - cage.h);
+        ctx.lineTo(x, cage.y);
+        ctx.stroke();
+    }
+
+    // 顶部高压警戒锁
+    ctx.fillStyle = '#ff1744';
+    ctx.beginPath();
+    ctx.arc(cage.x, cage.y - cage.h, 12, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function drawFinishLine() {
+    // 终点厚重防爆隔离门
+    ctx.fillStyle = '#263238';
+    ctx.fillRect(FINISH_LINE_X, 100, 40, 440);
+    ctx.fillStyle = '#00e676';
+    ctx.fillRect(FINISH_LINE_X - 6, 260, 12, 80);
+
+    ctx.fillStyle = '#00e676';
+    ctx.font = 'bold 22px monospace';
+    ctx.fillText("EXIT", FINISH_LINE_X - 10, 240);
+}
+
+function drawEnemies() {
+    activeEnemies.forEach(e => {
+        ctx.save();
+        ctx.translate(e.x, e.y);
+
+        // 士兵身躯 (36x72)
+        ctx.fillStyle = '#cfd8dc';
+        ctx.fillRect(-12, -56, 24, 38);
+
+        // 裤子双腿
+        ctx.fillStyle = '#37474f';
+        ctx.fillRect(-10, -18, 8, 18);
+        ctx.fillRect(2, -18, 8, 18);
+
+        // 头与帽子（根据兵种区分）
+        ctx.fillStyle = '#ffcc80'; // 肤色
+        ctx.beginPath();
+        ctx.arc(0, -62, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (e.type === EnemyType.BLUE_HAT) {
+            ctx.fillStyle = '#1e88e5'; // 蓝帽
+            ctx.fillRect(-12, -74, 24, 12);
+            // 电击枪
+            ctx.fillStyle = '#00e5ff';
+            ctx.fillRect(8, -42, 22, 6);
+        } else if (e.type === EnemyType.GRAY_HAT) {
+            ctx.fillStyle = '#78909c'; // 灰帽
+            ctx.fillRect(-12, -74, 24, 12);
+            // 警棍
+            ctx.fillStyle = '#263238';
+            ctx.fillRect(10, -44, 20, 8);
+        } else if (e.type === EnemyType.RED_ORANGE) {
+            ctx.fillStyle = '#ff5722'; // 红/橘帽
+            ctx.fillRect(-12, -74, 24, 12);
+            // 喷火器喷嘴
+            ctx.fillStyle = '#ff9800';
+            ctx.fillRect(8, -42, 26, 8);
+        } else if (e.type === EnemyType.BLACK_SPECOPS) {
+            ctx.fillStyle = '#111820'; // 黑色特种战术头盔
+            ctx.fillRect(-13, -75, 26, 14);
+            // 手雷弹带
+            ctx.fillStyle = '#7cb342';
+            ctx.fillRect(-8, -36, 16, 6);
+        }
+
+        ctx.restore();
+    });
+}
+
+function drawProjectiles() {
+    // 1. 火焰弹
+    activeFireballs.forEach(fb => {
+        ctx.save();
+        ctx.translate(fb.x, fb.y);
+        ctx.fillStyle = '#ff3d00';
+        ctx.beginPath();
+        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffea00';
+        ctx.beginPath();
+        ctx.arc(0, 0, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    });
+
+    // 2. 手雷 (5秒倒计时)
+    activeGrenades.forEach(g => {
+        if (g.swallowed) return; // 吞进肚子后隐藏
+        ctx.save();
+        ctx.translate(g.x, g.y);
+        ctx.fillStyle = '#558b2f';
+        ctx.beginPath();
+        ctx.arc(0, 0, 9, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 引信红光闪烁
+        ctx.fillStyle = (Math.sin(performance.now() * 0.02) > 0) ? '#ff1744' : '#fff';
+        ctx.fillRect(-2, -14, 4, 5);
+
+        // 倒计时提示
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillText(g.fuse.toFixed(1) + "s", -12, -18);
+        ctx.restore();
+    });
+}
+
+function drawBlueDragon() {
+    ctx.save();
+    ctx.translate(dragon.x, dragon.y);
+    ctx.scale(dragon.facing, 1);
+
+    // 肚内手雷闷爆突鼓动画比例
+    const bellyScaleBonus = 1.0 + (dragon.bellyBulgeAnim * 0.32);
+
+    // 1. 龙尾 (根据步频摆动)
+    const tailSwing = Math.sin(dragon.stepCount * 0.8) * 14;
+    ctx.strokeStyle = '#0d47a1';
+    ctx.lineWidth = 26;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-110, -70);
+    ctx.quadraticCurveTo(-180, -90 + tailSwing, -240, -60 + tailSwing * 1.5);
+    ctx.stroke();
+
+    // 龙尾背棘
+    ctx.strokeStyle = '#42a5f5';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    // 2. 后爪
+    const legSwing = Math.sin(dragon.stepCount) * 18;
+    ctx.fillStyle = '#0a3875';
+    ctx.fillRect(-90 + legSwing, -45, 24, 48);
+    ctx.fillRect(-70 - legSwing, -45, 24, 48);
+
+    // 3. 巨龙主躯干
+    ctx.fillStyle = '#1565c0';
+    ctx.beginPath();
+    ctx.ellipse(-20, -75, 110, 52, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 4. 动态大肚子 (根据吞人数 0~10 实时暴涨鼓起！)
+    const bellyRadiusY = (35 + (swallowedHumans * 4.8)) * bellyScaleBonus;
+    const bellyRadiusX = (65 + (swallowedHumans * 3.2)) * bellyScaleBonus;
+    ctx.fillStyle = '#29b6f6'; // 柔软透光肚皮浅蓝
+    ctx.beginPath();
+    ctx.ellipse(-15, -55, bellyRadiusX, bellyRadiusY, 0, 0, Math.PI);
+    ctx.fill();
+    ctx.strokeStyle = '#0288d1';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // 肚皮横纹鳞片
+    ctx.strokeStyle = 'rgba(13, 71, 161, 0.4)';
+    ctx.lineWidth = 2;
+    for (let bx = -bellyRadiusX + 15; bx < bellyRadiusX - 15; bx += 22) {
+        ctx.beginPath();
+        ctx.moveTo(bx - 15, -55);
+        ctx.lineTo(bx - 15, -55 + bellyRadiusY * 0.85);
+        ctx.stroke();
+    }
+
+    // 5. 前爪
+    ctx.fillStyle = '#1565c0';
+    ctx.fillRect(40 - legSwing, -45, 24, 48);
+    ctx.fillRect(65 + legSwing, -45, 24, 48);
+
+    // 6. 龙颈与龙首 (吞噬张嘴动效)
+    ctx.fillStyle = '#1976d2';
+    ctx.beginPath();
+    ctx.moveTo(60, -95);
+    ctx.lineTo(110, -135);
+    ctx.lineTo(150, -115);
+    ctx.lineTo(85, -65);
+    ctx.closePath();
+    ctx.fill();
+
+    // 龙角
+    ctx.strokeStyle = '#90caf9';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(110, -135);
+    ctx.lineTo(80, -170);
+    ctx.stroke();
+
+    // 龙头头部与巨口
+    const mouthOpen = dragon.swallowAnimTimer > 0 ? 25 : 0;
+    ctx.fillStyle = '#0d47a1';
+    // 上颌
+    ctx.beginPath();
+    ctx.moveTo(105, -135);
+    ctx.lineTo(185, -125);
+    ctx.lineTo(155, -95 - mouthOpen);
+    ctx.lineTo(95, -100);
+    ctx.closePath();
+    ctx.fill();
+
+    // 下颌 (咬合动画)
+    ctx.beginPath();
+    ctx.moveTo(95, -100);
+    ctx.lineTo(155, -95 + mouthOpen);
+    ctx.lineTo(170, -75 + mouthOpen);
+    ctx.lineTo(80, -75);
+    ctx.closePath();
+    ctx.fill();
+
+    // 龙眼 (发光金瞳)
+    ctx.fillStyle = '#ffd600';
+    ctx.beginPath();
+    ctx.arc(135, -125, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(136, -125, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 尖锐利齿
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(140, -110 - mouthOpen);
+    ctx.lineTo(145, -100 - mouthOpen);
+    ctx.lineTo(150, -110 - mouthOpen);
+    ctx.fill();
+
+    // 若受到蓝帽电击，周身环绕蓝色感电电弧闪烁
+    if (electricTicksLeft > 0) {
+        ctx.strokeStyle = '#00e5ff';
+        ctx.lineWidth = 2.5;
+        for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            const sx = (Math.random() - 0.5) * 200;
+            const sy = -Math.random() * 140;
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(sx + (Math.random() - 0.5) * 40, sy + (Math.random() - 0.5) * 35);
+            ctx.stroke();
+        }
+    }
+
+    ctx.restore();
+}
+
+function drawParticles() {
+    activeParticles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+}
+
+// ==========================================
+// 6. HUD 更新逻辑
+// ==========================================
+function updateHud() {
+    hpText.textContent = `${dragonHp.toFixed(1)} / ${DRAGON_MAX_HP.toFixed(1)}`;
+    hpBarFill.style.width = `${(dragonHp / DRAGON_MAX_HP) * 100}%`;
+
+    bellyTitle.textContent = `腹中人数：${swallowedHumans} / ${MAX_BELLY_CAPACITY}`;
+    for (let i = 0; i < 10; i++) {
+        const slot = document.getElementById(`belly-slot-${i}`);
+        if (slot) {
+            if (i < swallowedHumans) slot.classList.add('filled');
+            else slot.classList.remove('filled');
+        }
+    }
+
+    if (swallowedHumans > 0) {
+        const leftSec = Math.ceil(NATURAL_DIGEST_INTERVAL - naturalDigestTimer);
+        bellyDigestInfo.textContent = `（${leftSec}秒后自然消化1人）`;
+    } else {
+        bellyDigestInfo.textContent = "肚子空空，请捕食士兵";
+    }
+}
+
+// 主帧循环
+function gameLoop(now) {
+    const dt = Math.min(0.06, (now - lastTime) / 1000);
+    lastTime = now;
+
+    updateGame(dt);
+    renderGame();
+
+    requestAnimationFrame(gameLoop);
+}
+
+function skipCutscene() {
+    clearAllCutsceneTimeouts();
+    cutsceneOverlay.style.display = 'none';
+    hudOverlay.style.display = 'flex';
+    setupLevel1Entities();
+    updateHud();
+    whiteFlash.style.opacity = '0.0';
+    currentState = GameState.TRAPPED_IN_CAGE;
+    hintBanner.textContent = "你已变成巨龙并被困在笼中！按 [J 键] 或 [D 键前冲] 撞破牢笼！";
+}
+
+// 暴露全局变量供调试与自动化测试
+window.GameState = GameState;
+window.getGameState = () => currentState;
+window.dragon = dragon;
+window.cage = cage;
+window.activeEnemies = activeEnemies;
+window.activeGrenades = activeGrenades;
+window.getActiveEnemies = () => activeEnemies;
+window.getActiveGrenades = () => activeGrenades;
+window.getActiveFireballs = () => activeFireballs;
+window.getDragonHp = () => dragonHp;
+window.getSwallowedHumans = () => swallowedHumans;
+window.performDragonSwallow = performDragonSwallow;
+window.breakOutOfCage = breakOutOfCage;
+window.skipCutscene = skipCutscene;
+window.restartLevel = restartLevel;
+
+// 启动游戏
+playOpeningCutscene();
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
