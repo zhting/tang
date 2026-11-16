@@ -645,8 +645,7 @@ const labSpriteList = [
     'blue_cap_0', 'blue_cap_1', 'blue_cap_2', 'blue_cap_3',
     'gray_cap_0', 'gray_cap_1', 'gray_cap_2', 'gray_cap_3',
     'red_orange_cap_0', 'red_orange_cap_1',
-    'black_specops_0', 'black_specops_1', 'black_specops_2', 'black_specops_3',
-    'swallow_toss', 'swallow_lunge', 'swallow_neck'
+    'black_specops_0', 'black_specops_1', 'black_specops_2', 'black_specops_3'
 ];
 let labSpritesLoaded = false;
 let labSpritesLoadedCount = 0;
@@ -815,6 +814,7 @@ let dragon = {
     moveSpeed: 320.0,
     jumpVelocity: -460.0,
     bellyBulgeAnim: 0.0, // 手雷闷爆肚子突鼓
+    aerialSwallow: null, // 蓝龙自主跳跃咬人升空吞噬动作对象
     swallowAnimTimer: 0.0, // 吞噬咬合动作计时
     swallowTarget: null, // 当前被挑起抛空的士兵
     stepCount: 0,
@@ -1120,7 +1120,6 @@ function setupLevel1Entities() {
 function performDragonSwallow() {
     if (currentState !== GameState.LEVEL_1_ACTIVE) return;
 
-    dragon.swallowAnimTimer = 0.45; // 触发张嘴咬合动作
     const mouthX = dragon.x + (dragon.width * 0.42 * dragon.facing);
     const mouthY = dragon.y - dragon.height * 0.35;
 
@@ -1136,32 +1135,49 @@ function performDragonSwallow() {
         }
     }
 
-    // 2. 没有手雷时，挑起吞人（上限 10 人）
+    // 2. 没有手雷时，自主跳起咬住士兵带到空中再吃（上限 10 人）
     if (swallowedHumans >= MAX_BELLY_CAPACITY) {
         hintBanner.textContent = "肚子已经装满 10 个人了！快吃颗手雷炸掉消化！";
         return;
     }
 
+    // 如果正在执行空中跃起咬人吞咽动作，不重复触发
+    if (dragon.aerialSwallow) return;
+
     for (let i = activeEnemies.length - 1; i >= 0; i--) {
         const e = activeEnemies[i];
-        if (Math.hypot(e.x - mouthX, e.y - mouthY) <= 260.0) {
-            // 触发吻部挑起士兵抛空入嘴动效 (1) TOSSING AGENT WITH SNOUT
-            dragon.tossedSoldier = {
-                x: e.x,
-                y: e.y - 20,
-                vx: (mouthX - e.x) * 2.5,
-                vy: -440,
-                rot: 0,
-                rotSpeed: (Math.random() > 0.5 ? 1 : -1) * 7.5,
+        const dist = Math.hypot(e.x - mouthX, e.y - mouthY);
+        // 判定在巨龙前方
+        const inFront = (e.x - dragon.x) * dragon.facing >= -20;
+        if (dist <= 300.0 && inFront) {
+            const capturedEnemy = {
                 type: e.type,
-                timer: 0.45
+                x: e.x,
+                y: e.y,
+                facing: e.facing || (dragon.facing === 1 ? -1 : 1)
             };
 
-            playSound('swallow');
-            swallowedHumans++;
+            // 从常规敌人列表移除，由空中吞咽动力学接管
             activeEnemies.splice(i, 1);
-            updateHud();
-            hintBanner.textContent = `挑起咬住并吞下了 1 名士兵！（腹中：${swallowedHumans}/10）`;
+
+            // 触发蓝龙自主腾空飞扑、空中咬住带到天空、仰头大口吞咽入腹动力学全套动效
+            dragon.aerialSwallow = {
+                timer: 0.0,
+                duration: 1.25,
+                startX: dragon.x,
+                startY: dragon.y,
+                targetX: capturedEnemy.x - dragon.facing * 40,
+                apexY: Math.max(260.0, dragon.y - 180.0), // 跃起至空中高点
+                enemy: capturedEnemy,
+                jawOpen: 0.0,
+                swallowLumpT: -1.0,
+                biteSoundTriggered: false,
+                eatenTriggered: false
+            };
+
+            dragon.isOnFloor = false;
+            playSound('jump');
+            hintBanner.textContent = "蓝龙猛然跃起腾空，咬住士兵带到空中吞咽！";
             return;
         }
     }
@@ -1222,62 +1238,155 @@ function restartLevel() {
 // 4. 物理与逻辑主更新循环
 // ==========================================
 let lastTime = performance.now();
-function updateGame(dt) {
-    if (currentState === GameState.LEVEL_1_ACTIVE) {
-        // --- A. 巨龙移动与重力 ---
-        let dir = 0;
-        if (keys.right || keys.autoRun) dir += 1;
-        if (keys.left) dir -= 1;
 
-        if (dir !== 0) {
-            dragon.facing = dir > 0 ? 1 : -1;
-            const prevStep = Math.floor(dragon.stepCount * 1.1);
-            dragon.stepCount += dt * 9.5;
-            const newStep = Math.floor(dragon.stepCount * 1.1);
-            if (newStep !== prevStep && dragon.isOnFloor) {
-                // 巨龙四足踏地扬尘
-                const isHeavy = swallowedHumans >= 5;
-                const dustCount = isHeavy ? 4 : 2;
-                for (let i = 0; i < dustCount; i++) {
-                    activeParticles.push({
-                        x: dragon.x - dragon.facing * (Math.random() * 50 + 20),
-                        y: dragon.y - 2,
-                        vx: -dragon.facing * (Math.random() * 60 + 20),
-                        vy: -Math.random() * 25 - 5,
-                        size: Math.random() * (isHeavy ? 6 : 4) + 2.5,
-                        color: 'rgba(175, 195, 215, 0.5)',
-                        life: 0.32
-                    });
-                }
+// ==========================================
+// 🚀 蓝龙自主跳跃咬人带到空中大口吞咽动力学
+// ==========================================
+function updateAerialSwallow(dt) {
+    const asw = dragon.aerialSwallow;
+    asw.timer += dt;
+    const p = Math.min(1.0, asw.timer / asw.duration);
+
+    // 阶段 0: 蓝龙俯冲起跳扑击地面士兵 (0.00 ~ 0.32)
+    if (p < 0.32) {
+        const t0 = p / 0.32;
+        const easeT0 = t0 * t0 * (3.0 - 2.0 * t0);
+        dragon.x = asw.startX + (asw.targetX - asw.startX) * easeT0;
+        // 向上跃起前抛弧线
+        dragon.y = asw.startY - Math.sin(t0 * Math.PI * 0.5) * (asw.startY - asw.apexY * 0.7);
+        asw.jawOpen = Math.min(1.0, t0 * 1.35); // 飞扑大张嘴
+    }
+    // 阶段 1: 咬住士兵，带到空中最高点 (0.32 ~ 0.60)
+    else if (p < 0.60) {
+        const t1 = (p - 0.32) / 0.28;
+        if (!asw.biteSoundTriggered) {
+            asw.biteSoundTriggered = true;
+            playSound('swallow');
+            // 产生咬住士兵的受击火花
+            for (let i = 0; i < 6; i++) {
+                activeParticles.push({
+                    x: dragon.x + dragon.facing * 70,
+                    y: dragon.y - 45,
+                    vx: (Math.random() - 0.5) * 120,
+                    vy: -Math.random() * 80,
+                    size: Math.random() * 4 + 2,
+                    color: '#60a5fa',
+                    life: 0.25
+                });
             }
         }
+        asw.jawOpen = 0.22; // 紧咬住士兵身体
+        dragon.x = asw.targetX + dragon.facing * 45 * t1;
+        dragon.y = (asw.startY - (asw.startY - asw.apexY * 0.7)) - Math.sin(t1 * Math.PI * 0.5) * (asw.apexY * 0.3);
+    }
+    // 阶段 2: 空中昂首大口吞咽，喉部鼓包入腹 (0.60 ~ 0.85)
+    else if (p < 0.85) {
+        const t2 = (p - 0.60) / 0.25;
+        dragon.x += dragon.facing * 22.0 * dt; // 空中微幅向前滑翔
+        dragon.y = asw.apexY + Math.pow(t2, 2.0) * 35.0; // 在空中最高点悬浮
+        asw.swallowLumpT = t2; // 鼓包连续滑移
+        if (t2 < 0.45) {
+            asw.jawOpen = 0.65; // 张嘴将士兵顺入口腔
+        } else {
+            asw.jawOpen = 0.0;
+        }
 
-        // 吞人越多速度越沉重 (与 GDScript 一致)
-        const speedFactor = 1.0 - (swallowedHumans * 0.025);
-        dragon.vx = dir * dragon.moveSpeed * speedFactor;
-
-        // 重力与跳跃
-        dragon.vy += gravity * dt;
-        dragon.x += dragon.vx * dt;
-        dragon.y += dragon.vy * dt;
-
-        if (dragon.y >= 540.0) {
+        // 入腹完成瞬间 (+1 人数、弹性果冻震颤)
+        if (t2 >= 0.80 && !asw.eatenTriggered) {
+            asw.eatenTriggered = true;
+            swallowedHumans = Math.min(MAX_BELLY_CAPACITY, swallowedHumans + 1);
+            dragon.bellyBulgeAnim = 1.0;
+            updateHud();
+            playSound('belly_bomb');
+            hintBanner.textContent = `在空中咬住并成功吞下士兵！（腹中人数：${swallowedHumans}/10）`;
+        }
+    }
+    // 阶段 3: 霸气着陆缓冲 (0.85 ~ 1.00)
+    else {
+        const t3 = (p - 0.85) / 0.15;
+        dragon.y = (asw.apexY + 35.0) + (540.0 - (asw.apexY + 35.0)) * Math.pow(t3, 2.0);
+        if (p >= 1.0) {
             dragon.y = 540.0;
             dragon.vy = 0;
             dragon.isOnFloor = true;
+            dragon.aerialSwallow = null;
+            // 着地巨龙踏地烟尘
+            for (let k = 0; k < 12; k++) {
+                activeParticles.push({
+                    x: dragon.x + (Math.random() - 0.5) * 140,
+                    y: 538,
+                    vx: (Math.random() - 0.5) * 200,
+                    vy: -Math.random() * 80 - 20,
+                    size: Math.random() * 5 + 3,
+                    color: 'rgba(160, 185, 210, 0.7)',
+                    life: 0.45
+                });
+            }
+            playSound('step');
+        }
+    }
+}
+
+function updateGame(dt) {
+    if (currentState === GameState.LEVEL_1_ACTIVE) {
+        // --- A. 蓝龙飞跃咬人吞噬动力学 OR 常规移动与重力 ---
+        if (dragon.aerialSwallow) {
+            updateAerialSwallow(dt);
         } else {
-            dragon.isOnFloor = false;
-        }
+            let dir = 0;
+            if (keys.right || keys.autoRun) dir += 1;
+            if (keys.left) dir -= 1;
 
-        if (keys.jump && dragon.isOnFloor) {
-            dragon.vy = dragon.jumpVelocity;
-            dragon.isOnFloor = false;
-            keys.jump = false;
-        }
+            if (dir !== 0) {
+                dragon.facing = dir > 0 ? 1 : -1;
+                const prevStep = Math.floor(dragon.stepCount * 1.1);
+                dragon.stepCount += dt * 9.5;
+                const newStep = Math.floor(dragon.stepCount * 1.1);
+                if (newStep !== prevStep && dragon.isOnFloor) {
+                    // 巨龙四足踏地扬尘
+                    const isHeavy = swallowedHumans >= 5;
+                    const dustCount = isHeavy ? 4 : 2;
+                    for (let i = 0; i < dustCount; i++) {
+                        activeParticles.push({
+                            x: dragon.x - dragon.facing * (Math.random() * 50 + 20),
+                            y: dragon.y - 2,
+                            vx: -dragon.facing * (Math.random() * 60 + 20),
+                            vy: -Math.random() * 25 - 5,
+                            size: Math.random() * (isHeavy ? 6 : 4) + 2.5,
+                            color: 'rgba(175, 195, 215, 0.5)',
+                            life: 0.32
+                        });
+                    }
+                }
+            }
 
-        if (keys.swallow) {
-            performDragonSwallow();
-            keys.swallow = false;
+            // 吞人越多速度越沉重 (与 GDScript 一致)
+            const speedFactor = 1.0 - (swallowedHumans * 0.025);
+            dragon.vx = dir * dragon.moveSpeed * speedFactor;
+
+            // 重力与跳跃
+            dragon.vy += gravity * dt;
+            dragon.x += dragon.vx * dt;
+            dragon.y += dragon.vy * dt;
+
+            if (dragon.y >= 540.0) {
+                dragon.y = 540.0;
+                dragon.vy = 0;
+                dragon.isOnFloor = true;
+            } else {
+                dragon.isOnFloor = false;
+            }
+
+            if (keys.jump && dragon.isOnFloor) {
+                dragon.vy = dragon.jumpVelocity;
+                dragon.isOnFloor = false;
+                keys.jump = false;
+            }
+
+            if (keys.swallow) {
+                performDragonSwallow();
+                keys.swallow = false;
+            }
         }
 
         // 动作动画衰减
@@ -2042,7 +2151,497 @@ function drawFinishLine() {
 // ==========================================
 // 绘制巨龙 (高保真原版动作序列贴图与帧循环引擎)
 // ==========================================
+
+// ==========================================
+// 🎨 纯手绘动态四足蓝龙空中扑击咬人与吞咽渲染器 (100% 动态，无任何截屏切片)
+// ==========================================
+function drawAerialDragon(ctx, asw) {
+    ctx.save();
+    ctx.translate(dragon.x, dragon.y);
+    ctx.scale(dragon.facing, 1);
+
+    const p = Math.min(1.0, asw.timer / asw.duration);
+    const nowMs = performance.now();
+    const wingFlap = Math.sin(asw.timer * 24.0) * 28.0;
+    const tailWag = Math.sin(asw.timer * 14.0) * 18.0;
+
+    let pitch = 0.0;
+    if (p < 0.32) {
+        pitch = -0.15 * (p / 0.32);
+    } else if (p < 0.60) {
+        const t1 = (p - 0.32) / 0.28;
+        pitch = -0.15 + 0.30 * t1; // 升空抬头
+    } else if (p < 0.85) {
+        pitch = 0.10;
+    } else {
+        const t3 = (p - 0.85) / 0.15;
+        pitch = 0.10 * (1.0 - t3);
+    }
+    ctx.rotate(pitch);
+
+    // 调色板
+    const cOutline = '#0b1329';
+    const cScaleDark = '#172554';
+    const cScaleMain = '#1d4ed8';
+    const cScaleLight = '#3b82f6';
+    const cBellyMain = '#60a5fa';
+    const cBellyDark = '#2563eb';
+    const cHorn = '#bae6fd';
+    const cEye = '#facc15';
+    const cMouth = '#881337';
+
+    // 1. 远侧（里侧）龙翼
+    ctx.save();
+    ctx.beginPath();
+    const fWingRoot = { x: -10, y: -90 };
+    const fWingElbow = { x: -65, y: -180 + wingFlap };
+    const fWingTip = { x: -145, y: -150 + wingFlap * 1.3 };
+    ctx.moveTo(fWingRoot.x, fWingRoot.y);
+    ctx.lineTo(fWingElbow.x, fWingElbow.y);
+    ctx.lineTo(fWingTip.x, fWingTip.y);
+    ctx.quadraticCurveTo(fWingElbow.x - 20, fWingElbow.y + 45, fWingRoot.x - 25, fWingRoot.y + 20);
+    ctx.closePath();
+    ctx.fillStyle = cScaleDark;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = cOutline;
+    ctx.stroke();
+    // 翼骨
+    ctx.beginPath();
+    ctx.moveTo(fWingRoot.x, fWingRoot.y);
+    ctx.lineTo(fWingElbow.x, fWingElbow.y);
+    ctx.lineTo(fWingTip.x, fWingTip.y);
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = cScaleMain;
+    ctx.stroke();
+    ctx.restore();
+
+    // 2. 远侧（里侧）双腿
+    ctx.save();
+    ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = cScaleDark;
+    const isLanding = p >= 0.85;
+    const landT = isLanding ? (p - 0.85) / 0.15 : 0.0;
+    // 远侧后腿
+    const fHindJoint = { x: -50, y: -80 };
+    const fHindFootY = isLanding ? (-35 + 33 * landT) : -45;
+    const fHindFootX = isLanding ? -55 : -75;
+    ctx.beginPath();
+    ctx.moveTo(fHindJoint.x, fHindJoint.y);
+    ctx.lineTo(fHindJoint.x - 15, (fHindJoint.y + fHindFootY) * 0.5);
+    ctx.lineTo(fHindFootX, fHindFootY);
+    ctx.stroke();
+    // 远侧前腿
+    const fForeJoint = { x: 35, y: -80 };
+    const fForeFootY = isLanding ? (-35 + 33 * landT) : -45;
+    const fForeFootX = isLanding ? 35 : 15;
+    ctx.beginPath();
+    ctx.moveTo(fForeJoint.x, fForeJoint.y);
+    ctx.lineTo(fForeJoint.x + 10, (fForeJoint.y + fForeFootY) * 0.5);
+    ctx.lineTo(fForeFootX, fForeFootY);
+    ctx.stroke();
+    ctx.restore();
+
+    // 3. 长尾巴与背部尖刺
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(-75, -88);
+    const tailTipX = -195;
+    const tailTipY = -115 + tailWag;
+    ctx.quadraticCurveTo(-140, -80 + tailWag * 0.4, tailTipX, tailTipY);
+    ctx.lineWidth = 16;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = cScaleMain;
+    ctx.stroke();
+    // 尾部背刺
+    for (let i = 1; i <= 4; i++) {
+        const tt = i / 5.0;
+        const tx = -75 + (tailTipX - (-75)) * tt;
+        const ty = -88 + (tailTipY - (-88)) * tt - 6;
+        ctx.fillStyle = cHorn;
+        ctx.beginPath();
+        ctx.moveTo(tx - 4, ty);
+        ctx.lineTo(tx, ty - 12);
+        ctx.lineTo(tx + 4, ty);
+        ctx.closePath();
+        ctx.fill();
+    }
+    ctx.restore();
+
+    // 4. 躯干主龙身
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(0, -92, 85, 46, 0, 0, Math.PI * 2);
+    ctx.fillStyle = cScaleMain;
+    ctx.fill();
+    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = cOutline;
+    ctx.stroke();
+    // 背脊高光
+    ctx.beginPath();
+    ctx.ellipse(0, -112, 70, 16, 0, 0, Math.PI * 2);
+    ctx.fillStyle = cScaleLight;
+    ctx.fill();
+    // 背脊尖刺
+    for (let x = -50; x <= 40; x += 18) {
+        ctx.fillStyle = cHorn;
+        ctx.beginPath();
+        ctx.moveTo(x - 5, -125);
+        ctx.lineTo(x, -142);
+        ctx.lineTo(x + 5, -125);
+        ctx.closePath();
+        ctx.fill();
+    }
+    ctx.restore();
+
+    // 5. 身下悬垂膨胀的肚子
+    const bellyBonus = (swallowedHumans * 3.6) + (dragon.bellyBulgeAnim * 24.0);
+    const bellyR = 36.0 + bellyBonus;
+    const bellyCenter = { x: 5, y: -72 + (swallowedHumans * 1.5) };
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(bellyCenter.x, bellyCenter.y, bellyR * 1.25, bellyR * 0.96, 0, 0, Math.PI * 2);
+    ctx.fillStyle = cBellyMain;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = cBellyDark;
+    ctx.stroke();
+    // 肚内士兵微动凸起
+    if (swallowedHumans > 0) {
+        for (let k = 0; k < Math.min(10, swallowedHumans); k++) {
+            const ang = k * 1.25 + asw.timer * 2.0;
+            const bx = bellyCenter.x + Math.cos(ang) * (bellyR * 0.55);
+            const by = bellyCenter.y + Math.sin(ang) * (bellyR * 0.45);
+            ctx.fillStyle = cBellyDark;
+            ctx.beginPath();
+            ctx.arc(bx, by, 7.0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = cScaleLight;
+            ctx.beginPath();
+            ctx.arc(bx - 2, by - 2, 4.0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    // 爆炸透光
+    if (dragon.bellyBulgeAnim > 0.05) {
+        ctx.beginPath();
+        ctx.ellipse(bellyCenter.x, bellyCenter.y, bellyR * 1.15, bellyR * 0.88, 0, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 140, 0, ${0.65 * dragon.bellyBulgeAnim})`;
+        ctx.fill();
+    }
+    ctx.restore();
+
+    // 6. 近侧粗壮双腿与爪子
+    ctx.save();
+    ctx.lineWidth = 12;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = cScaleMain;
+    // 近侧后腿
+    const nHindJoint = { x: -40, y: -78 };
+    const nHindFootY = isLanding ? (-30 + 30 * landT) : -40;
+    const nHindFootX = isLanding ? -40 : -60;
+    ctx.beginPath();
+    ctx.moveTo(nHindJoint.x, nHindJoint.y);
+    ctx.lineTo(nHindJoint.x - 12, (nHindJoint.y + nHindFootY) * 0.5);
+    ctx.lineTo(nHindFootX, nHindFootY);
+    ctx.stroke();
+    ctx.fillStyle = cHorn;
+    ctx.beginPath();
+    ctx.ellipse(nHindFootX + 3, nHindFootY, 8, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // 近侧前腿
+    const nForeJoint = { x: 45, y: -78 };
+    const nForeFootY = isLanding ? (-30 + 30 * landT) : -38;
+    const nForeFootX = isLanding ? 45 : 25;
+    ctx.beginPath();
+    ctx.moveTo(nForeJoint.x, nForeJoint.y);
+    ctx.lineTo(nForeJoint.x + 10, (nForeJoint.y + nForeFootY) * 0.5);
+    ctx.lineTo(nForeFootX, nForeFootY);
+    ctx.stroke();
+    ctx.fillStyle = cHorn;
+    ctx.beginPath();
+    ctx.ellipse(nForeFootX + 3, nForeFootY, 8, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 7. 近侧长龙翼
+    ctx.save();
+    ctx.beginPath();
+    const nWingRoot = { x: 10, y: -105 };
+    const nWingElbow = { x: -45, y: -195 + wingFlap * 1.1 };
+    const nWingTip = { x: -140, y: -175 + wingFlap * 1.4 };
+    ctx.moveTo(nWingRoot.x, nWingRoot.y);
+    ctx.lineTo(nWingElbow.x, nWingElbow.y);
+    ctx.lineTo(nWingTip.x, nWingTip.y);
+    ctx.quadraticCurveTo(nWingElbow.x - 15, nWingElbow.y + 55, nWingRoot.x - 20, nWingRoot.y + 25);
+    ctx.closePath();
+    ctx.fillStyle = cScaleMain;
+    ctx.fill();
+    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = cOutline;
+    ctx.stroke();
+    // 翼骨与爪
+    ctx.beginPath();
+    ctx.moveTo(nWingRoot.x, nWingRoot.y);
+    ctx.lineTo(nWingElbow.x, nWingElbow.y);
+    ctx.lineTo(nWingTip.x, nWingTip.y);
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = cScaleLight;
+    ctx.stroke();
+    ctx.fillStyle = cHorn;
+    ctx.beginPath();
+    ctx.moveTo(nWingElbow.x - 4, nWingElbow.y);
+    ctx.lineTo(nWingElbow.x, nWingElbow.y - 12);
+    ctx.lineTo(nWingElbow.x + 4, nWingElbow.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // 8. 龙头位置计算与颈部
+    const neckBase = { x: 50, y: -95 };
+    let headX = 120;
+    let headY = -85;
+    let headAngle = 0.0;
+    let jawOpen = asw.jawOpen || 0.0;
+
+    if (p < 0.32) {
+        // 扑咬地面士兵
+        const t0 = p / 0.32;
+        headX = 105 + (128 - 105) * t0;
+        headY = -85 + (-45 - (-85)) * t0;
+        headAngle = 0.20;
+    } else if (p < 0.60) {
+        // 咬住士兵带向空中高点
+        headX = 128;
+        headY = -85;
+        headAngle = -0.10;
+    } else if (p < 0.85) {
+        // 空中昂首大口吞咽
+        const t2 = (p - 0.60) / 0.25;
+        headX = 128 + (85 - 128) * t2;
+        headY = -85 + (-145 - (-85)) * t2;
+        headAngle = -0.10 + (-0.65 - (-0.10)) * t2;
+    } else {
+        // 落地复位
+        const t3 = (p - 0.85) / 0.15;
+        headX = 85 + (110 - 85) * t3;
+        headY = -145 + (-90 - (-145)) * t3;
+        headAngle = -0.65 + (0.0 - (-0.65)) * t3;
+    }
+
+    // 绘制龙颈
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(neckBase.x, neckBase.y);
+    ctx.quadraticCurveTo((neckBase.x + headX) * 0.5, (neckBase.y + headY) * 0.5 - 12, headX, headY);
+    ctx.lineWidth = 26;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = cScaleMain;
+    ctx.stroke();
+    // 浅蓝咽喉腹甲
+    ctx.beginPath();
+    ctx.moveTo(neckBase.x + 2, neckBase.y + 6);
+    ctx.quadraticCurveTo((neckBase.x + headX) * 0.5 + 2, (neckBase.y + headY) * 0.5 - 6, headX - 2, headY + 8);
+    ctx.lineWidth = 14;
+    ctx.strokeStyle = cBellyMain;
+    ctx.stroke();
+
+    // 吞咽鼓包在龙颈上滑移入腹
+    if (asw.swallowLumpT >= 0.0) {
+        const lt = asw.swallowLumpT;
+        let lx, ly;
+        if (lt < 0.7) {
+            const u = lt / 0.7;
+            lx = headX + (neckBase.x - headX) * u;
+            ly = (headY + 6) + (neckBase.y - (headY + 6)) * u;
+        } else {
+            const u = (lt - 0.7) / 0.3;
+            lx = neckBase.x + (bellyCenter.x - neckBase.x) * u;
+            ly = neckBase.y + ((bellyCenter.y - 10) - neckBase.y) * u;
+        }
+        ctx.fillStyle = cBellyDark;
+        ctx.beginPath();
+        ctx.arc(lx, ly, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = cScaleLight;
+        ctx.beginPath();
+        ctx.arc(lx - 2, ly - 2, 8, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.restore();
+
+    // 9. 龙头、龙角、锐利龙眼与大张/咬合之嘴
+    ctx.save();
+    ctx.translate(headX, headY);
+    ctx.rotate(headAngle);
+
+    // 双龙角向后延伸
+    ctx.fillStyle = cHorn;
+    ctx.beginPath();
+    ctx.moveTo(-10, -8);
+    ctx.lineTo(-48, -26);
+    ctx.lineTo(-12, -18);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = cOutline;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-5, -4);
+    ctx.lineTo(-38, -14);
+    ctx.lineTo(-8, -10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 上颌与鼻吻
+    ctx.fillStyle = cScaleMain;
+    ctx.beginPath();
+    ctx.ellipse(14, -6, 26, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(26, -3, 15, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 锐利龙眼与黑色坚瞳
+    ctx.fillStyle = cEye;
+    ctx.beginPath();
+    ctx.arc(8, -10, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.ellipse(8, -10, 1.8, 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = cOutline;
+    ctx.beginPath();
+    ctx.moveTo(0, -14);
+    ctx.lineTo(15, -12);
+    ctx.stroke();
+
+    // 上牙
+    ctx.fillStyle = '#ffffff';
+    for (let tx = 10; tx <= 34; tx += 6) {
+        ctx.beginPath();
+        ctx.moveTo(tx - 3, 2);
+        ctx.lineTo(tx, 9);
+        ctx.lineTo(tx + 3, 2);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // 下颌与暗红口腔
+    const jawDrop = jawOpen * 24.0;
+    if (jawOpen > 0.08) {
+        ctx.fillStyle = cMouth;
+        ctx.beginPath();
+        ctx.ellipse(20, 4 + jawDrop * 0.5, 18, jawDrop * 0.5 + 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    // 下颌骨
+    ctx.fillStyle = cBellyMain;
+    ctx.beginPath();
+    ctx.ellipse(18, 4 + jawDrop, 22, 6, 0.05, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = cOutline;
+    ctx.stroke();
+    // 下牙
+    if (jawOpen > 0.15) {
+        ctx.fillStyle = '#ffffff';
+        for (let tx = 8; tx <= 30; tx += 6) {
+            ctx.beginPath();
+            ctx.moveTo(tx - 2, 4 + jawDrop);
+            ctx.lineTo(tx, 4 + jawDrop - 6);
+            ctx.lineTo(tx + 2, 4 + jawDrop);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
+    // 10. 咬在口中的士兵（纯代码手绘动态士兵，四肢空中惊恐挣扎）
+    if (p >= 0.32 && p < 0.78) {
+        ctx.save();
+        ctx.translate(22, 6 + jawDrop * 0.4);
+        
+        let uniformColor = '#1d4ed8';
+        let capColor = '#1e40af';
+        if (asw.enemy.type === EnemyType.GRAY_HAT) {
+            uniformColor = '#94a3b8'; capColor = '#64748b';
+        } else if (asw.enemy.type === EnemyType.RED_ORANGE) {
+            uniformColor = '#ea580c'; capColor = '#ea580c';
+        } else if (asw.enemy.type === EnemyType.BLACK_SPECOPS) {
+            uniformColor = '#1e293b'; capColor = '#0f172a';
+        }
+
+        // 士兵四肢在空中疯狂扑腾
+        const flailLeg = Math.sin(nowMs * 0.04) * 12.0;
+        const flailArm = Math.cos(nowMs * 0.04) * 10.0;
+
+        // 如果在吞咽滑入期 (0.60 ~ 0.78)，士兵往嘴巴深处滑进
+        if (p >= 0.60) {
+            const slideT = (p - 0.60) / 0.18;
+            ctx.translate(-slideT * 22, -slideT * 8);
+            ctx.scale(Math.max(0.2, 1.0 - slideT * 0.8), Math.max(0.2, 1.0 - slideT * 0.8));
+        }
+
+        // 士兵身体
+        ctx.fillStyle = uniformColor;
+        ctx.fillRect(-8, -12, 16, 22);
+        // 双手在空中惊慌乱挥
+        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = uniformColor;
+        ctx.beginPath();
+        ctx.moveTo(-8, -6);
+        ctx.lineTo(-18, -14 + flailArm);
+        ctx.moveTo(8, -6);
+        ctx.lineTo(18, -14 - flailArm);
+        ctx.stroke();
+        // 双腿在空中拼命乱蹬
+        ctx.strokeStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.moveTo(-4, 10);
+        ctx.lineTo(-8, 22 + flailLeg);
+        ctx.moveTo(4, 10);
+        ctx.lineTo(8, 22 - flailLeg);
+        ctx.stroke();
+        // 头部与帽子
+        ctx.fillStyle = '#fed7aa';
+        ctx.beginPath();
+        ctx.arc(0, -18, 7.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = capColor;
+        ctx.fillRect(-8, -25, 16, 8);
+        ctx.fillRect(-10, -18, 20, 3);
+        // 惊恐圆眼
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-2.5, -17, 2, 0, Math.PI * 2);
+        ctx.arc(2.5, -17, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(-2.5, -17, 1, 0, Math.PI * 2);
+        ctx.arc(2.5, -17, 1, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    ctx.restore(); // 龙头 restore
+    ctx.restore(); // 整体 restore
+}
+
 function drawBlueDragon() {
+    // 蓝龙自主跳跃咬人带到空中吞咽（纯手绘动力学动态，彻底摒弃截屏贴图）
+    if (dragon.aerialSwallow) {
+        drawAerialDragon(ctx, dragon.aerialSwallow);
+        return;
+    }
+
     ctx.save();
     ctx.translate(dragon.x, dragon.y);
     ctx.scale(dragon.facing, 1);
@@ -2074,19 +2673,9 @@ function drawBlueDragon() {
         spriteKey = (dragon.feedingGrenadeTimer > 0.22) ? 'dragon_feed_0' : 'dragon_feed_1';
         sScale = 1.65;
     }
-    // 3. 挑起吞人吞咽动作 (SWALLOWING SEQUENCE: 抛起 -> 昂头咬合 -> 喉部蠕动下咽)
+    // 3. 吞人吞咽动作兜底
     else if (dragon.swallowAnimTimer > 0) {
-        if (dragon.swallowAnimTimer < 0.22 && labSprites['swallow_neck']) {
-            spriteKey = 'swallow_neck';
-            sScale = 1.85;
-            offsetX = -30;
-            offsetY = -25;
-        } else if (labSprites['swallow_lunge']) {
-            spriteKey = 'swallow_lunge';
-            sScale = 2.2;
-        } else {
-            spriteKey = (swallowedHumans >= 5) ? 'dragon_heavy_0' : 'dragon_walk_0';
-        }
+        spriteKey = (swallowedHumans >= 5) ? 'dragon_heavy_0' : 'dragon_walk_0';
     }
     // 4. 腹中吃满/饱腹 (FULL BELLY: 5~10 人, 沉甸下垂饱满巨肚, 严格四足基底不触地，重甲沉重行进)
     else if (swallowedHumans >= 5) {
@@ -2172,15 +2761,7 @@ function drawTossedSoldier() {
     ctx.save();
     ctx.translate(ts.x, ts.y);
     ctx.rotate(ts.rot);
-
-    const spr = labSprites['swallow_toss'];
-    if (spr && spr.complete && spr.naturalWidth > 0) {
-        const sw = spr.naturalWidth * 1.05;
-        const sh = spr.naturalHeight * 1.05;
-        ctx.drawImage(spr, -sw / 2, -sh / 2, sw, sh);
-    } else {
-        drawTossedSoldierVector(ts);
-    }
+    drawTossedSoldierVector(ts);
     ctx.restore();
 }
 
@@ -2321,6 +2902,24 @@ function drawBlackSpecopsGrenadierVector(e, ctx) {
 }
 
 function drawEnemies() {
+    // 如果蓝龙正在飞扑起跳前段 (p < 0.32)，绘制地面上即将被咬的士兵
+    if (dragon.aerialSwallow && (dragon.aerialSwallow.timer / dragon.aerialSwallow.duration) < 0.32) {
+        const ce = dragon.aerialSwallow.enemy;
+        ctx.save();
+        ctx.translate(ce.x, ce.y);
+        ctx.scale(ce.facing || -dragon.facing, 1);
+        if (ce.type === EnemyType.BLUE_CAP) drawBlueCapSoldier(ce, ctx);
+        else if (ce.type === EnemyType.GRAY_HAT) drawGrayCapRunner(ce, ctx);
+        else if (ce.type === EnemyType.RED_ORANGE) drawRedOrangeCapFlamer(ce, ctx);
+        else if (ce.type === EnemyType.BLACK_SPECOPS) drawBlackSpecopsGrenadier(ce, ctx);
+        // 士兵头顶惊恐冷汗微粒
+        ctx.fillStyle = '#60a5fa';
+        ctx.beginPath();
+        ctx.arc(6, -82, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
     activeEnemies.forEach(e => {
         ctx.save();
         ctx.translate(e.x, e.y);
