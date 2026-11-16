@@ -891,7 +891,24 @@ const keys = {
     autoRun: false
 };
 
+function skipCutscene() {
+    clearAllCutsceneTimeouts();
+    cutsceneOverlay.style.display = 'none';
+    hudOverlay.style.display = 'flex';
+    setupLevel1Entities();
+    updateHud();
+    whiteFlash.style.opacity = '0.0';
+    currentState = GameState.TRAPPED_IN_CAGE;
+    hintBanner.textContent = "你已变成巨龙并被困在笼中！按 [J 键] 或 [D 键前冲] 撞破牢笼！";
+}
+
+cutsceneOverlay.addEventListener('click', skipCutscene);
+
 window.addEventListener('keydown', e => {
+    if (currentState === GameState.CUTSCENE) {
+        skipCutscene();
+        return;
+    }
     if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keys.left = true;
     if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keys.right = true;
     if (e.key === 'w' || e.key === 'W' || e.key === ' ' || e.key === 'ArrowUp') {
@@ -1214,7 +1231,25 @@ function updateGame(dt) {
 
         if (dir !== 0) {
             dragon.facing = dir > 0 ? 1 : -1;
+            const prevStep = Math.floor(dragon.stepCount * 1.1);
             dragon.stepCount += dt * 9.5;
+            const newStep = Math.floor(dragon.stepCount * 1.1);
+            if (newStep !== prevStep && dragon.isOnFloor) {
+                // 巨龙四足踏地扬尘
+                const isHeavy = swallowedHumans >= 5;
+                const dustCount = isHeavy ? 4 : 2;
+                for (let i = 0; i < dustCount; i++) {
+                    activeParticles.push({
+                        x: dragon.x - dragon.facing * (Math.random() * 50 + 20),
+                        y: dragon.y - 2,
+                        vx: -dragon.facing * (Math.random() * 60 + 20),
+                        vy: -Math.random() * 25 - 5,
+                        size: Math.random() * (isHeavy ? 6 : 4) + 2.5,
+                        color: 'rgba(175, 195, 215, 0.5)',
+                        life: 0.32
+                    });
+                }
+            }
         }
 
         // 吞人越多速度越沉重 (与 GDScript 一致)
@@ -1477,258 +1512,569 @@ function renderGame() {
     ctx.restore();
 }
 
-// 绘制明亮高科技实验室背景 (对齐原图第3部分：白银冷钢墙面与计算机监视站)
+// ==========================================
+// 绘制高科技实验室背景 (1:1 像素级复刻原图第3部分：白银冷钢走廊、嵌入式天花板灯、双屏工作站与桁架)
+// ==========================================
 function drawLabBackground() {
-    // 实验室上部明亮冷钢银蓝渐变墙面
+    // 1. 实验室金属银白冷钢墙面渐变
     const bgGrad = ctx.createLinearGradient(0, 0, 0, 540);
-    bgGrad.addColorStop(0, '#e3edf7');
-    bgGrad.addColorStop(0.3, '#d2e2f0');
-    bgGrad.addColorStop(0.85, '#bcd0e4');
-    bgGrad.addColorStop(1, '#a6bed4');
+    bgGrad.addColorStop(0, '#eaf2f8');
+    bgGrad.addColorStop(0.2, '#ddeaf5');
+    bgGrad.addColorStop(0.6, '#cbdeee');
+    bgGrad.addColorStop(0.9, '#b8cee0');
+    bgGrad.addColorStop(1.0, '#a5bcd0');
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, canvas.width, 540);
 
-    // 顶部结构天花板与灯管管道
-    ctx.fillStyle = '#8ea4ba';
-    ctx.fillRect(0, 0, canvas.width, 55);
-    ctx.fillStyle = '#00b0ff';
-    ctx.fillRect(0, 53, canvas.width, 2);
+    // 2. 顶部重型金属天花板构架梁 (Y: 0 ~ 44)
+    const ceilGrad = ctx.createLinearGradient(0, 0, 0, 44);
+    ceilGrad.addColorStop(0, '#8fa5b8');
+    ceilGrad.addColorStop(0.85, '#6b8296');
+    ceilGrad.addColorStop(1, '#53687c');
+    ctx.fillStyle = ceilGrad;
+    ctx.fillRect(0, 0, canvas.width, 44);
 
-    // 悬挂荧光冷白灯管
-    const startLight = Math.floor(cameraX / 280) * 280;
-    for (let lx = startLight - cameraX; lx < canvas.width + 280; lx += 280) {
-        ctx.fillStyle = '#5c738a';
-        ctx.fillRect(lx + 40, 16, 120, 8);
+    // 天花板底部亮面铝合金压条
+    ctx.fillStyle = '#b0c4d6';
+    ctx.fillRect(0, 42, canvas.width, 2);
+
+    // 3. 嵌入式冷白荧光顶灯组 (带柔和下照透光光锥)
+    const nowMs = performance.now();
+    const lightSpacing = 320;
+    const startLight = Math.floor(cameraX / lightSpacing) * lightSpacing;
+    for (let lx = startLight - cameraX; lx < canvas.width + lightSpacing; lx += lightSpacing) {
+        // 灯具外框槽 (嵌在天花板底边)
+        ctx.fillStyle = '#425565';
+        ctx.fillRect(lx + 40, 14, 150, 16);
+        ctx.strokeStyle = '#2d3b46';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(lx + 40, 14, 150, 16);
+
+        // 发光荧光漫射板
         ctx.fillStyle = '#ffffff';
         ctx.shadowColor = '#80d8ff';
-        ctx.shadowBlur = 10;
-        ctx.fillRect(lx + 45, 24, 110, 6);
+        ctx.shadowBlur = 14;
+        ctx.fillRect(lx + 46, 18, 138, 8);
         ctx.shadowBlur = 0;
+
+        // 柔和半透明下照光锥梯形 (Soft Volumetric Down-Light Cone)
+        ctx.save();
+        const coneGrad = ctx.createLinearGradient(0, 44, 0, 460);
+        coneGrad.addColorStop(0, 'rgba(230, 246, 255, 0.16)');
+        coneGrad.addColorStop(0.5, 'rgba(215, 238, 255, 0.08)');
+        coneGrad.addColorStop(1, 'rgba(200, 230, 255, 0)');
+        ctx.fillStyle = coneGrad;
+        ctx.beginPath();
+        ctx.moveTo(lx + 42, 44);
+        ctx.lineTo(lx + 188, 44);
+        ctx.lineTo(lx + 245, 460);
+        ctx.lineTo(lx - 15, 460);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
     }
 
-    // 模块化白钢隔板接缝与金属压条
-    const startCol = Math.floor(cameraX / 180) * 180;
-    ctx.strokeStyle = '#8da4ba';
-    ctx.lineWidth = 2;
-    for (let x = startCol - cameraX; x < canvas.width + 180; x += 180) {
+    // 4. 模块化金属墙板双线缝隙与六角防脱螺栓
+    const colSpacing = 160;
+    const startCol = Math.floor(cameraX / colSpacing) * colSpacing;
+    for (let x = startCol - cameraX; x < canvas.width + colSpacing; x += colSpacing) {
+        // 双线精密接缝：暗凹槽 + 高光边
+        ctx.strokeStyle = '#859cb0';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(x, 55);
+        ctx.moveTo(x, 44);
         ctx.lineTo(x, 540);
         ctx.stroke();
 
-        // 工业六角螺栓
-        ctx.fillStyle = '#6b8299';
-        for (let y = 85; y < 530; y += 85) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x + 1.5, 44);
+        ctx.lineTo(x + 1.5, 540);
+        ctx.stroke();
+
+        // 精密内六角沉头螺栓 (嵌入金属板边缘)
+        const boltYs = [75, 155, 240, 325, 410, 495];
+        boltYs.forEach(by => {
+            ctx.fillStyle = '#546b7e';
             ctx.beginPath();
-            ctx.arc(x + 8, y, 2.5, 0, Math.PI * 2);
-            ctx.arc(x - 8, y, 2.5, 0, Math.PI * 2);
+            ctx.arc(x - 6, by, 2.5, 0, Math.PI * 2);
+            ctx.arc(x + 8, by, 2.5, 0, Math.PI * 2);
             ctx.fill();
-        }
-    }
 
-    // 墙壁中段水平线缆槽压条
-    ctx.fillStyle = '#7a92a8';
-    ctx.fillRect(0, 160, canvas.width, 5);
-    ctx.fillRect(0, 440, canvas.width, 5);
-
-    // 墙面仪器与工作站监视屏 (动态示波器波形与状态指示)
-    const nowMs = performance.now();
-    const startStation = Math.floor(cameraX / 560) * 560;
-    for (let sx = startStation - cameraX; sx < canvas.width + 560; sx += 560) {
-        // 双显示器机架
-        ctx.fillStyle = '#37474f';
-        ctx.strokeStyle = '#0288d1';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(sx + 50, 195, 145, 95);
-        ctx.fillRect(sx + 50, 195, 145, 95);
-
-        // 监视器内部示波器深邃视窗
-        ctx.fillStyle = '#02101e';
-        ctx.fillRect(sx + 56, 201, 133, 83);
-
-        ctx.strokeStyle = '#00e5ff';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        for (let px = 0; px < 133; px += 4) {
-            const py = Math.sin((sx + px) * 0.08 + nowMs * 0.006) * 16 + 242;
-            if (px === 0) ctx.moveTo(sx + 56 + px, py);
-            else ctx.lineTo(sx + 56 + px, py);
-        }
-        ctx.stroke();
-
-        // 附属机箱与闪烁指示灯
-        ctx.fillStyle = '#455a64';
-        ctx.fillRect(sx + 208, 215, 48, 75);
-        ctx.fillStyle = (Math.sin(nowMs * 0.005 + sx) > 0) ? '#00e676' : '#263238';
-        ctx.beginPath(); ctx.arc(sx + 222, 230, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = (Math.cos(nowMs * 0.007 + sx) > 0) ? '#ff9100' : '#263238';
-        ctx.beginPath(); ctx.arc(sx + 238, 230, 4, 0, Math.PI * 2); ctx.fill();
-    }
-
-    // 高架钢桁架地面 (Y: 540 ~ 720)
-    // 1. 行走钢板台面
-    ctx.fillStyle = '#546e7a';
-    ctx.fillRect(0, 540, canvas.width, 180);
-    ctx.fillStyle = '#78909c';
-    ctx.fillRect(0, 540, canvas.width, 6);
-
-    // 2. 黄黑相间安全警戒条纹
-    const stripeOffset = -cameraX % 36;
-    ctx.fillStyle = '#ffb300';
-    for (let x = stripeOffset - 36; x < canvas.width + 36; x += 36) {
-        ctx.beginPath();
-        ctx.moveTo(x, 546);
-        ctx.lineTo(x + 18, 546);
-        ctx.lineTo(x + 6, 560);
-        ctx.lineTo(x - 12, 560);
-        ctx.closePath();
-        ctx.fill();
-    }
-    ctx.fillStyle = '#212121';
-    for (let x = stripeOffset - 36; x < canvas.width + 36; x += 36) {
-        ctx.beginPath();
-        ctx.moveTo(x + 18, 546);
-        ctx.lineTo(x + 36, 546);
-        ctx.lineTo(x + 24, 560);
-        ctx.lineTo(x + 6, 560);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    // 3. 底部 X 型钢桁架支撑梁 (X-Bracing Trusses)
-    ctx.strokeStyle = '#37474f';
-    ctx.lineWidth = 4;
-    for (let x = startCol - cameraX; x < canvas.width + 180; x += 180) {
-        // 立柱
-        ctx.fillStyle = '#263238';
-        ctx.fillRect(x - 8, 560, 16, 160);
-
-        // X型斜撑交叉
-        ctx.beginPath();
-        ctx.moveTo(x + 8, 565);
-        ctx.lineTo(x + 172, 715);
-        ctx.moveTo(x + 172, 565);
-        ctx.lineTo(x + 8, 715);
-        ctx.stroke();
-
-        // 节点连接圆板
-        ctx.fillStyle = '#455a64';
-        ctx.beginPath();
-        ctx.arc(x + 90, 640, 9, 0, Math.PI * 2);
-        ctx.fill();
-    }
-}
-
-// 绘制牢笼与破笼残骸
-function drawCage() {
-    ctx.save();
-    if (!cage.broken) {
-        // 破笼前：完整高压电磁锁牢笼
-        ctx.strokeStyle = '#37474f';
-        ctx.lineWidth = 6;
-        ctx.strokeRect(cage.x - cage.w / 2, cage.y - cage.h, cage.w, cage.h);
-
-        // 竖向栏杆
-        ctx.lineWidth = 4.5;
-        for (let x = cage.x - cage.w / 2 + 25; x < cage.x + cage.w / 2; x += 28) {
-            ctx.beginPath();
-            ctx.moveTo(x, cage.y - cage.h);
-            ctx.lineTo(x, cage.y);
-            ctx.stroke();
-        }
-
-        // 顶部高压警戒锁球
-        ctx.fillStyle = '#d50000';
-        ctx.beginPath();
-        ctx.arc(cage.x, cage.y - cage.h, 14, 0, Math.PI * 2);
-        ctx.fill();
-    } else {
-        // 破笼后：断裂扭曲的金属栏杆残骸
-        ctx.strokeStyle = '#37474f';
-        ctx.lineWidth = 5;
-
-        // 左侧残余门柱
-        ctx.beginPath();
-        ctx.moveTo(cage.x - cage.w / 2, cage.y);
-        ctx.lineTo(cage.x - cage.w / 2, cage.y - cage.h);
-        ctx.lineTo(cage.x - cage.w / 2 + 80, cage.y - cage.h);
-        ctx.stroke();
-
-        // 被巨龙冲撞弯曲爆裂的栏杆
-        const brokenBars = [
-            { sx: cage.x - 120, ex: cage.x - 150, ey: cage.y - 110 },
-            { sx: cage.x - 90, ex: cage.x - 125, ey: cage.y - 85 },
-            { sx: cage.x - 60, ex: cage.x - 98, ey: cage.y - 60 },
-            { sx: cage.x + 40, ex: cage.x + 90, ey: cage.y - 75 },
-            { sx: cage.x + 80, ex: cage.x + 135, ey: cage.y - 95 },
-            { sx: cage.x + 120, ex: cage.x + 165, ey: cage.y - 130 }
-        ];
-
-        brokenBars.forEach(b => {
-            ctx.beginPath();
-            ctx.moveTo(b.sx, cage.y);
-            ctx.lineTo(b.ex, b.ey);
-            ctx.stroke();
+            // 螺栓金属高光点
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(x - 7, by - 1, 1, 1);
+            ctx.fillRect(x + 7, by - 1, 1, 1);
         });
     }
-    ctx.restore();
+
+    // 墙板中段水平拉丝铝合金导轨线槽 (Y: 175 & 460)
+    ctx.fillStyle = '#7a91a4';
+    ctx.fillRect(0, 175, canvas.width, 5);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 175, canvas.width, 1);
+
+    ctx.fillStyle = '#72899c';
+    ctx.fillRect(0, 460, canvas.width, 6);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 460, canvas.width, 1);
+
+    // 5. 墙面高科技终端工作站 (1:1 对齐原图：双显示屏、示波器电波、数据终端、服务器机柜、键盘托板)
+    const stationSpacing = 640;
+    const startStation = Math.floor(cameraX / stationSpacing) * stationSpacing;
+    for (let sx = startStation - cameraX; sx < canvas.width + stationSpacing; sx += stationSpacing) {
+        // A. 顶部天花板下垂线缆导管 (两根黑色柔性管线)
+        ctx.fillStyle = '#2c3945';
+        ctx.fillRect(sx + 70, 44, 4, 180);
+        ctx.fillRect(sx + 240, 44, 4, 180);
+
+        // B. 左显示屏 (终端数据与代码扫描线)
+        // 外部金属外壳边框
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(sx + 30, 218, 140, 86);
+        ctx.strokeStyle = '#0284c7';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(sx + 30, 218, 140, 86);
+
+        // 内部屏幕深海青视窗
+        ctx.fillStyle = '#031726';
+        ctx.fillRect(sx + 35, 223, 130, 76);
+
+        // 终端代码扫描线数据块 (青色动态数据流)
+        ctx.fillStyle = '#00e5ff';
+        const lineRows = [
+            { y: 232, w: 75 }, { y: 240, w: 105 }, { y: 248, w: 55 },
+            { y: 256, w: 90 }, { y: 264, w: 65 }, { y: 272, w: 110 },
+            { y: 280, w: 45 }, { y: 288, w: 80 }
+        ];
+        lineRows.forEach((row, idx) => {
+            const flicker = Math.sin(nowMs * 0.008 + sx + idx) > -0.6;
+            if (flicker) {
+                ctx.fillRect(sx + 40, row.y, row.w, 3.5);
+                // 末尾闪烁光标
+                if (idx === 7 && Math.sin(nowMs * 0.01) > 0) {
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.fillRect(sx + 40 + row.w + 4, row.y - 1, 5, 5.5);
+                    ctx.fillStyle = '#00e5ff';
+                }
+            }
+        });
+
+        // C. 右显示屏 (精密生物电波 / 声纳示波器雷达视窗)
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(sx + 185, 218, 140, 86);
+        ctx.strokeStyle = '#0284c7';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(sx + 185, 218, 140, 86);
+
+        ctx.fillStyle = '#031726';
+        ctx.fillRect(sx + 190, 223, 130, 76);
+
+        // 示波器深暗网格线
+        ctx.strokeStyle = 'rgba(0, 229, 255, 0.18)';
+        ctx.lineWidth = 1;
+        for (let gx = 200; gx < 315; gx += 15) {
+            ctx.beginPath(); ctx.moveTo(sx + gx, 223); ctx.lineTo(sx + gx, 299); ctx.stroke();
+        }
+        for (let gy = 233; gy < 295; gy += 13) {
+            ctx.beginPath(); ctx.moveTo(sx + 190, gy); ctx.lineTo(sx + 320, gy); ctx.stroke();
+        }
+
+        // 示波器动态发光青色正弦波 (带有辉光效果)
+        ctx.save();
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 8;
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        for (let px = 0; px < 130; px += 3) {
+            const py = Math.sin((sx + px) * 0.09 + nowMs * 0.005) * 17 + 261;
+            if (px === 0) ctx.moveTo(sx + 190 + px, py);
+            else ctx.lineTo(sx + 190 + px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // D. 双显示器下方壁挂键盘操作台板
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(sx + 35, 308, 285, 12);
+        ctx.fillStyle = '#64748b';
+        ctx.fillRect(sx + 35, 308, 285, 2);
+        // 微型背光按键列
+        ctx.fillStyle = '#38bdf8';
+        for (let kx = 42; kx < 310; kx += 7) {
+            ctx.fillRect(sx + kx, 312, 4.5, 3);
+        }
+
+        // E. 右侧机房主控服务器机柜塔 (Server Rack Tower)
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(sx + 338, 214, 52, 108);
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(sx + 338, 214, 52, 108);
+
+        // 机柜散热水平百叶槽
+        ctx.fillStyle = '#0f172a';
+        for (let ly = 250; ly < 315; ly += 7) {
+            ctx.fillRect(sx + 344, ly, 40, 3);
+        }
+
+        // 垂直排列微型指示灯组 (绿色、青色、琥珀色、红色交替微闪)
+        const ledList = [
+            { col: '#22c55e', blink: Math.sin(nowMs * 0.006 + sx) > -0.2 },
+            { col: '#06b6d4', blink: true },
+            { col: '#22c55e', blink: Math.cos(nowMs * 0.009 + sx) > -0.4 },
+            { col: '#f59e0b', blink: Math.sin(nowMs * 0.012 + sx) > 0.2 },
+            { col: '#ef4444', blink: Math.sin(nowMs * 0.004 + sx) > 0.6 }
+        ];
+        ledList.forEach((led, i) => {
+            ctx.fillStyle = led.blink ? led.col : '#1e293b';
+            ctx.beginPath();
+            ctx.arc(sx + 352 + (i % 2) * 18, 226 + Math.floor(i / 2) * 11, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+
+    // 6. 高架工业走廊钢桁架地面 (Y: 540 ~ 720)
+    // A. 行走高抗磨防滑钢板台面 (Y: 540 ~ 552)
+    const deckGrad = ctx.createLinearGradient(0, 540, 0, 552);
+    deckGrad.addColorStop(0, '#62798e');
+    deckGrad.addColorStop(0.3, '#4d6377');
+    deckGrad.addColorStop(1, '#344758');
+    ctx.fillStyle = deckGrad;
+    ctx.fillRect(0, 540, canvas.width, 12);
+
+    // 行走面顶部金属抛光边
+    ctx.fillStyle = '#8ea4ba';
+    ctx.fillRect(0, 540, canvas.width, 1.8);
+
+    // B. 安全警示斜向黄黑斑马线条带 (1:1 比例：12px 精密斜纹)
+    const stripeW = 18;
+    const stripeOffset = -cameraX % (stripeW * 2);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(0, 552, canvas.width, 12);
+    ctx.fillStyle = '#1e293b';
+    for (let x = stripeOffset - stripeW * 2; x < canvas.width + stripeW * 2; x += stripeW * 2) {
+        ctx.beginPath();
+        ctx.moveTo(x, 552);
+        ctx.lineTo(x + stripeW, 552);
+        ctx.lineTo(x, 564);
+        ctx.lineTo(x - stripeW, 564);
+        ctx.closePath();
+        ctx.fill();
+    }
+    // 警示条上下精密收边条
+    ctx.fillStyle = '#37474f';
+    ctx.fillRect(0, 552, canvas.width, 1);
+    ctx.fillRect(0, 563, canvas.width, 1.5);
+
+    // C. 底部暗层深渊与结构 X 型钢桁架支撑梁 (Y: 564 ~ 720)
+    const underGrad = ctx.createLinearGradient(0, 564, 0, 720);
+    underGrad.addColorStop(0, '#101722');
+    underGrad.addColorStop(0.5, '#0c121b');
+    underGrad.addColorStop(1, '#070a10');
+    ctx.fillStyle = underGrad;
+    ctx.fillRect(0, 564, canvas.width, 156);
+
+    // 结构立柱与 X 型斜撑
+    const trussSpacing = 160;
+    const startTruss = Math.floor(cameraX / trussSpacing) * trussSpacing;
+    for (let x = startTruss - cameraX; x < canvas.width + trussSpacing; x += trussSpacing) {
+        // 重工工字钢立柱 (Vertical Columns)
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(x - 9, 564, 18, 156);
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(x - 9, 564, 3, 156);
+        ctx.fillRect(x + 6, 564, 3, 156);
+
+        // X型斜撑杆 (立体光影双色线)
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#334155';
+        ctx.beginPath();
+        ctx.moveTo(x + 9, 568);
+        ctx.lineTo(x + trussSpacing - 9, 705);
+        ctx.moveTo(x + trussSpacing - 9, 568);
+        ctx.lineTo(x + 9, 705);
+        ctx.stroke();
+
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = '#64748b';
+        ctx.beginPath();
+        ctx.moveTo(x + 9, 568);
+        ctx.lineTo(x + trussSpacing - 9, 705);
+        ctx.stroke();
+
+        // 桁架中心加固圆盘节点板 (Gusset Plate) 与四角铆钉
+        const cx = x + trussSpacing / 2;
+        const cy = 636;
+        ctx.fillStyle = '#334155';
+        ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.fillStyle = '#94a3b8';
+        [-4, 4].forEach(ox => {
+            [-4, 4].forEach(oy => {
+                ctx.fillRect(cx + ox - 1, cy + oy - 1, 2, 2);
+            });
+        });
+    }
+
+    // 桁架底部横梁基座
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, 706, canvas.width, 14);
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(0, 706, canvas.width, 2);
 }
 
-// 绘制终点厚重防爆大门
-function drawFinishLine() {
+// ==========================================
+// 绘制高压牢笼 (1:1 原图：圆柱体反光铁柱 vs 撞破断裂残骸与散落铁渣)
+// ==========================================
+function drawCage() {
     ctx.save();
-    // 门体框
-    ctx.fillStyle = '#263238';
-    ctx.fillRect(FINISH_LINE_X - 20, 80, 80, 460);
-    ctx.strokeStyle = '#00e676';
-    ctx.lineWidth = 3.5;
-    ctx.strokeRect(FINISH_LINE_X - 20, 80, 80, 460);
+    const cageLeft = cage.x - cage.w / 2;
+    const cageRight = cage.x + cage.w / 2;
+    const cageTop = cage.y - cage.h;
+    const cageBottom = cage.y;
 
-    // 机械锁轮
-    ctx.fillStyle = '#455a64';
-    ctx.beginPath();
-    ctx.arc(FINISH_LINE_X + 20, 310, 26, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#b0bec5';
-    ctx.lineWidth = 4;
-    ctx.stroke();
+    if (!cage.broken) {
+        // --- 破笼前：高压激光锁牢笼 ---
+        // 顶部与底部重型箱型钢梁 (带有金属高光)
+        const beamGrad = ctx.createLinearGradient(0, cageTop, 0, cageTop + 24);
+        beamGrad.addColorStop(0, '#64748b');
+        beamGrad.addColorStop(0.5, '#334155');
+        beamGrad.addColorStop(1, '#1e293b');
 
-    // 门顶逃生 EXIT 警示牌
-    ctx.fillStyle = '#00c853';
-    ctx.font = 'bold 22px monospace';
-    ctx.fillText("逃离出口", FINISH_LINE_X - 25, 65);
+        ctx.fillStyle = beamGrad;
+        ctx.fillRect(cageLeft, cageTop, cage.w, 24);
+        ctx.fillRect(cageLeft, cageBottom - 18, cage.w, 18);
+
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(cageLeft, cageTop, cage.w, 24);
+        ctx.strokeRect(cageLeft, cageBottom - 18, cage.w, 18);
+
+        // 牢笼两侧立柱
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(cageLeft, cageTop, 18, cage.h);
+        ctx.fillRect(cageRight - 18, cageTop, 18, cage.h);
+
+        // 立体圆柱形金属栏杆 (中心反光高光渐变，呈现真实圆柱钢管质感)
+        const barSpacing = 26;
+        for (let bx = cageLeft + 28; bx < cageRight - 18; bx += barSpacing) {
+            const barGrad = ctx.createLinearGradient(bx - 4, 0, bx + 4, 0);
+            barGrad.addColorStop(0, '#1e293b');
+            barGrad.addColorStop(0.35, '#cbd5e1');
+            barGrad.addColorStop(0.65, '#ffffff');
+            barGrad.addColorStop(1, '#0f172a');
+            ctx.fillStyle = barGrad;
+            ctx.fillRect(bx - 4, cageTop + 24, 8, cage.h - 42);
+        }
+
+        // 顶部高压电磁锁红灯中枢 (Pulsing Security Beacon)
+        const nowMs = performance.now();
+        const pulse = Math.sin(nowMs * 0.008) * 0.3 + 0.7;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cage.x, cageTop, 15, 0, Math.PI * 2);
+        ctx.fillStyle = '#dc2626';
+        ctx.shadowColor = '#ef4444';
+        ctx.shadowBlur = 18 * pulse;
+        ctx.fill();
+        ctx.restore();
+
+        // 锁具中心高光晶体
+        ctx.fillStyle = '#fee2e2';
+        ctx.beginPath();
+        ctx.arc(cage.x - 3, cageTop - 4, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 高压警戒标志字
+        ctx.fillStyle = '#facc15';
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText("HIGH VOLTAGE ⚡ 高压牢笼", cage.x, cageTop + 17);
+    } else {
+        // --- 破笼后：被巨龙暴击冲撞断裂、向外扭曲爆裂的钢铁残骸 ---
+        // 左侧残存框架
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(cageLeft, cageTop, 18, cage.h);
+        ctx.fillRect(cageLeft, cageTop, 75, 22);
+        ctx.fillRect(cageLeft, cageBottom - 18, 90, 18);
+
+        // 断裂向右前方炸开的扭曲弯折栏杆
+        ctx.lineCap = 'round';
+        const brokenBars = [
+            // { sx, sy, mx, my, ex, ey }
+            { sx: cageLeft + 30, mx: cageLeft + 35, my: cageBottom - 120, ex: cageLeft + 40, ey: cageTop + 24 },
+            { sx: cageLeft + 55, mx: cageLeft + 60, my: cageBottom - 100, ex: cageLeft + 70, ey: cageTop + 45 },
+            { sx: cageLeft + 80, mx: cageLeft + 120, my: cageBottom - 70, ex: cageLeft + 165, ey: cageBottom - 35 },
+            { sx: cageLeft + 105, mx: cageLeft + 155, my: cageBottom - 85, ex: cageLeft + 210, ey: cageBottom - 45 },
+            { sx: cageLeft + 130, mx: cageLeft + 185, my: cageBottom - 95, ex: cageLeft + 250, ey: cageBottom - 55 },
+            { sx: cageLeft + 155, mx: cageLeft + 205, my: cageBottom - 110, ex: cageLeft + 275, ey: cageBottom - 70 },
+            { sx: cageLeft + 180, mx: cageLeft + 220, my: cageBottom - 130, ex: cageLeft + 290, ey: cageBottom - 85 }
+        ];
+
+        brokenBars.forEach(bar => {
+            // 栏杆阴影与主体
+            ctx.lineWidth = 8;
+            ctx.strokeStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.moveTo(bar.sx, cageBottom - 18);
+            ctx.quadraticCurveTo(bar.mx, bar.my, bar.ex, bar.ey);
+            ctx.stroke();
+
+            // 栏杆反光高光
+            ctx.lineWidth = 3.5;
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.beginPath();
+            ctx.moveTo(bar.sx, cageBottom - 18);
+            ctx.quadraticCurveTo(bar.mx, bar.my, bar.ex, bar.ey);
+            ctx.stroke();
+
+            // 尖锐断口
+            ctx.fillStyle = '#f1f5f9';
+            ctx.beginPath();
+            ctx.arc(bar.ex, bar.ey, 3, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // 地面散落的金属碎渣与断裂螺栓 (Debris)
+        ctx.fillStyle = '#64748b';
+        const debris = [
+            { x: cage.x + 30, y: cageBottom - 4, w: 12, h: 4 },
+            { x: cage.x + 65, y: cageBottom - 6, w: 18, h: 5 },
+            { x: cage.x + 95, y: cageBottom - 4, w: 9, h: 4 },
+            { x: cage.x + 130, y: cageBottom - 5, w: 15, h: 4 },
+            { x: cage.x + 160, y: cageBottom - 4, w: 8, h: 3 },
+            { x: cage.x + 190, y: cageBottom - 6, w: 22, h: 5 }
+        ];
+        debris.forEach(d => {
+            ctx.fillRect(d.x, d.y, d.w, d.h);
+        });
+
+        // 顶部断线迸射的微型电火花 (Electric Sparks)
+        const nowMs = performance.now();
+        if (Math.sin(nowMs * 0.02) > 0.3) {
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cageLeft + 75, cageTop + 22);
+            ctx.lineTo(cageLeft + 85 + (Math.random() - 0.5) * 12, cageTop + 35 + Math.random() * 8);
+            ctx.stroke();
+        }
+    }
     ctx.restore();
 }
 
 // ==========================================
-// 绘制巨龙 (高保真原版动作序列贴图与帧循环)
+// 绘制终点高科技气闸防爆大门 (1:1 原图：LEVEL EXIT 激光边框与重装防爆滑门)
+// ==========================================
+function drawFinishLine() {
+    ctx.save();
+    const fx = FINISH_LINE_X;
+
+    // 1. 防爆门框架与青色高能门框光条
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(fx - 25, 44, 90, 496);
+
+    ctx.save();
+    ctx.strokeStyle = '#00f0ff';
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 16;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(fx - 25, 44, 90, 496);
+    ctx.restore();
+
+    // 2. 双扇重型厚钢气密滑门
+    const doorGrad = ctx.createLinearGradient(fx - 15, 0, fx + 55, 0);
+    doorGrad.addColorStop(0, '#334155');
+    doorGrad.addColorStop(0.5, '#475569');
+    doorGrad.addColorStop(1, '#1e293b');
+    ctx.fillStyle = doorGrad;
+    ctx.fillRect(fx - 15, 52, 70, 480);
+
+    // 门扇中缝黑色橡胶气密密封胶条
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(fx + 18, 52, 4, 480);
+
+    // 水平加固重型冲压横肋
+    ctx.fillStyle = '#64748b';
+    for (let dy = 90; dy < 500; dy += 55) {
+        ctx.fillRect(fx - 10, dy, 60, 6);
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(fx - 10, dy, 60, 1.5);
+        ctx.fillStyle = '#64748b';
+    }
+
+    // 3. 门禁授权指示灯与数字键盘
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(fx - 55, 270, 24, 45);
+    ctx.fillStyle = '#22c55e';
+    ctx.shadowColor = '#22c55e';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(fx - 43, 282, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // 4. 门顶高亮透光标志牌：LEVEL EXIT
+    ctx.save();
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(fx - 40, 16, 120, 24);
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(fx - 40, 16, 120, 24);
+
+    ctx.fillStyle = '#4ade80';
+    ctx.shadowColor = '#22c55e';
+    ctx.shadowBlur = 8;
+    ctx.font = 'bold 13px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText("LEVEL EXIT 🚪", fx + 20, 33);
+    ctx.restore();
+
+    ctx.restore();
+}
+
+// ==========================================
+// 绘制巨龙 (高保真原版动作序列贴图与帧循环引擎)
 // ==========================================
 function drawBlueDragon() {
     ctx.save();
     ctx.translate(dragon.x, dragon.y);
     ctx.scale(dragon.facing, 1);
 
+    const nowMs = performance.now();
     const isMoving = Math.abs(dragon.vx) > 10;
-    const idleBob = (!isMoving && dragon.isOnFloor) ? Math.sin(performance.now() * 0.003) * 2.5 : 0;
+    
+    // 呼吸律动计算 (站立不动时胸腹起伏与微幅摇曳生动动画)
+    const breathePhase = nowMs * 0.0035;
+    const breatheSin = Math.sin(breathePhase);
+    const idleBob = (!isMoving && dragon.isOnFloor) ? breatheSin * 3.2 : 0;
+    const breatheScaleY = (!isMoving && dragon.isOnFloor) ? (1.0 + breatheSin * 0.025) : 1.0;
+    const breatheScaleX = (!isMoving && dragon.isOnFloor) ? (1.0 - breatheSin * 0.015) : 1.0;
 
     let spriteKey = null;
     let sScale = 2.4;
     let offsetX = 0;
     let offsetY = 0;
 
-    // 1. 肚内手雷闷爆 (BELLY EXPLOSION 闪烁震颤)
+    // 1. 肚内手雷闷爆 (BELLY EXPLOSION 闪烁震颤与极度膨胀)
     if (dragon.bellyBulgeAnim > 0.05) {
         spriteKey = 'dragon_explode';
-        sScale = 2.15;
-        offsetX = (Math.random() - 0.5) * 5 * dragon.bellyBulgeAnim;
-        offsetY = (Math.random() - 0.5) * 5 * dragon.bellyBulgeAnim;
+        sScale = 2.15 + dragon.bellyBulgeAnim * 0.2;
+        offsetX = (Math.random() - 0.5) * 8 * dragon.bellyBulgeAnim;
+        offsetY = (Math.random() - 0.5) * 8 * dragon.bellyBulgeAnim;
     }
-    // 2. 贴地吃手雷 (GRENADE FEEDING 动作)
+    // 2. 贴地吃手雷 (GRENADE FEEDING 动作：低头铲地、大口咬下)
     else if (dragon.feedingGrenadeTimer > 0) {
         spriteKey = (dragon.feedingGrenadeTimer > 0.22) ? 'dragon_feed_0' : 'dragon_feed_1';
         sScale = 1.65;
     }
-    // 3. 挑起吞人吞咽动作 (SWALLOWING SEQUENCE)
+    // 3. 挑起吞人吞咽动作 (SWALLOWING SEQUENCE: 抛起 -> 昂头咬合 -> 喉部蠕动下咽)
     else if (dragon.swallowAnimTimer > 0) {
         if (dragon.swallowAnimTimer < 0.22 && labSprites['swallow_neck']) {
             spriteKey = 'swallow_neck';
@@ -1742,13 +2088,13 @@ function drawBlueDragon() {
             spriteKey = (swallowedHumans >= 5) ? 'dragon_heavy_0' : 'dragon_walk_0';
         }
     }
-    // 4. 腹中吃满/饱腹 (FULL BELLY: 5~10 人, 沉甸下垂饱满巨肚, 严格四足基底不触地)
+    // 4. 腹中吃满/饱腹 (FULL BELLY: 5~10 人, 沉甸下垂饱满巨肚, 严格四足基底不触地，重甲沉重行进)
     else if (swallowedHumans >= 5) {
         const frameIdx = isMoving ? (Math.floor(dragon.stepCount * 0.8) % 4) : 0;
         spriteKey = 'dragon_heavy_' + frameIdx;
         sScale = 2.15;
     }
-    // 5. 正常奔跑行进步态 (NORMAL WALK CYCLE: 6 帧真实手绘动作切换)
+    // 5. 正常奔跑行进步态 (NORMAL WALK CYCLE: 6 帧真实手绘动作切换，奔跑带风)
     else {
         const frameIdx = isMoving ? (Math.floor(dragon.stepCount * 1.1) % 6) : 0;
         spriteKey = 'dragon_walk_' + frameIdx;
@@ -1757,17 +2103,23 @@ function drawBlueDragon() {
 
     const spr = labSprites[spriteKey];
     if (spr && spr.complete && spr.naturalWidth > 0) {
-        const sw = spr.naturalWidth * sScale;
-        const sh = spr.naturalHeight * sScale;
+        const sw = spr.naturalWidth * sScale * breatheScaleX;
+        const sh = spr.naturalHeight * sScale * breatheScaleY;
 
-        // 手雷闷爆时腹部高能电火花光晕
+        // 手雷闷爆时腹部高能电火花与体内强闪光晕
         if (dragon.bellyBulgeAnim > 0.05) {
             ctx.save();
             ctx.beginPath();
-            ctx.arc(-20 + offsetX, -sh * 0.45 + offsetY, 55 * dragon.bellyBulgeAnim, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255, 170, 0, ${0.4 * dragon.bellyBulgeAnim})`;
-            ctx.shadowColor = '#ff9100';
-            ctx.shadowBlur = 25 * dragon.bellyBulgeAnim;
+            ctx.arc(-20 + offsetX, -sh * 0.45 + offsetY, 65 * dragon.bellyBulgeAnim, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 160, 0, ${0.5 * dragon.bellyBulgeAnim})`;
+            ctx.shadowColor = '#ff6d00';
+            ctx.shadowBlur = 35 * dragon.bellyBulgeAnim;
+            ctx.fill();
+
+            // 龙鼻孔喷出的黑烟气团
+            ctx.fillStyle = 'rgba(50, 50, 50, 0.7)';
+            ctx.beginPath();
+            ctx.arc(sw * 0.42 + offsetX, -sh * 0.65 + offsetY, 12 * dragon.bellyBulgeAnim, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
         }
