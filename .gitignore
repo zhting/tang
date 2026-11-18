@@ -7,9 +7,21 @@ info.md
 scratch/deploy_to_tencent.py
 scratch/deploy.sh
 scratch/*.png
+scratch/*.jpg
 scratch/test_*.js
 scratch/inline_script_*.js
 scratch/generate_*.js
+scratch/analyze_*.js
+scratch/capture_*.js
+scratch/check_*.js
+scratch/debug_*.js
+scratch/detailed_*.js
+scratch/extract_*.js
+scratch/find_*.js
+scratch/inspect_*.js
+scratch/preview_*.html
+scratch/slice_*.js
+scratch/verify_*.js
 
 # OS metadata
 .DS_Store

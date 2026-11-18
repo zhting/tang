@@ -11,6 +11,16 @@ const MAX_HP: float = 20.0          # 总血量 20 颗
 const MAX_BELLY: int = 10           # 最多吞 10 个人
 const DIGEST_TIME: float = 10.0     # 每 10 秒自然消化 1 个人
 
+# 基础攻击与士兵血量机制
+const SOLDIER_MAX_HP: int = 5       # 每个士兵总血量为 5
+const CLAW_BASE_DAMAGE: int = 1     # 一次基础攻击伤害为 1
+const CLAW_COOLDOWN: float = 0.45   # 挥爪动作冷却时间
+
+var is_clawing: bool = false
+var claw_anim_timer: float = 0.0
+var claw_cd_timer: float = 0.0
+var damage_popups: Array[Dictionary] = []
+
 var hp: float = 20.0
 var belly_count: int = 0
 var digest_timer: float = 0.0
@@ -57,6 +67,10 @@ func reset_level_data() -> void:
 	dragon_vel = Vector2.ZERO
 	action_anim = "IDLE"
 	belly_bulge_extra = 0.0
+	is_clawing = false
+	claw_anim_timer = 0.0
+	claw_cd_timer = 0.0
+	damage_popups.clear()
 	enemies.clear()
 	fireballs.clear()
 	grenades.clear()
@@ -76,9 +90,24 @@ func reset_level_data() -> void:
 		{"type": "BLACK", "x": 3950.0}
 	]
 	for item in layout:
+		var detect := 260.0
+		if item["type"] == "GRAY": detect = 290.0
+		elif item["type"] == "RED": detect = 270.0
+		elif item["type"] == "BLACK": detect = 310.0
+
 		enemies.append({
 			"type": item["type"],
 			"pos": Vector2(item["x"], 480.0),
+			"home_x": item["x"],
+			"hp": SOLDIER_MAX_HP,
+			"max_hp": SOLDIER_MAX_HP,
+			"hit_flash_timer": 0.0,
+			"knockback_vx": 0.0,
+			"state": "PATROL", # PATROL 漫步左右乱走 vs COMBAT 靠近切换战斗形态
+			"dir": -1,
+			"facing": -1,
+			"patrol_timer": randf_range(1.0, 2.5),
+			"detect_range": detect,
 			"cd": 7.0 if item["type"] == "BLACK" else 1.5,
 			"walk_t": randf() * 6.0
 		})
@@ -116,6 +145,7 @@ func _process(delta: float) -> void:
 			update_status_timers(delta)
 			update_enemies(delta)
 			update_projectiles(delta)
+			update_damage_popups(delta)
 			# 摄像机平滑跟随蓝龙向右推进
 			camera_x = max(0.0, dragon_pos.x - 260.0)
 			if dragon_pos.x >= finish_x:
@@ -168,10 +198,56 @@ func update_dragon(delta: float) -> void:
 		dragon_pos.y = 480.0
 		dragon_vel.y = 0.0
 
-	# 4. 按 J 键或鼠标左键触发吞噬
+	# 4. 按 C 键触发基础攻击（抬爪向前挥击）
+	if claw_cd_timer > 0.0:
+		claw_cd_timer -= delta
+	if Input.is_key_just_pressed(KEY_C) and claw_cd_timer <= 0.0:
+		trigger_claw_attack()
+	if is_clawing:
+		claw_anim_timer -= delta
+		if claw_anim_timer <= 0.0:
+			is_clawing = false
+
+	# 5. 按 J 键或鼠标左键触发吞噬
 	if Input.is_key_pressed(KEY_J) or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 		if action_timer <= 0.0:
 			try_swallow()
+
+# ==============================================================================
+# 核心基础攻击（挥爪）与伤害计算
+# ==============================================================================
+func trigger_claw_attack() -> void:
+	is_clawing = true
+	claw_anim_timer = 0.28
+	claw_cd_timer = CLAW_COOLDOWN
+
+	# 计算向前挥爪判定范围（龙前方 170 像素内）
+	var reach_min_x = dragon_pos.x if dragon_facing == 1 else dragon_pos.x - 170.0
+	var reach_max_x = dragon_pos.x + 170.0 if dragon_facing == 1 else dragon_pos.x
+
+	for i in range(enemies.size() - 1, -1, -1):
+		var e = enemies[i]
+		if e["pos"].x >= reach_min_x and e["pos"].x <= reach_max_x:
+			apply_claw_damage_to_soldier(e, i)
+
+func apply_claw_damage_to_soldier(s: Dictionary, index: int) -> void:
+	s["hp"] = max(0, s.get("hp", SOLDIER_MAX_HP) - CLAW_BASE_DAMAGE)
+	s["hit_flash_timer"] = 0.18
+	s["knockback_vx"] = dragon_facing * 240.0
+	damage_popups.append({
+		"pos": s["pos"] + Vector2(0, -92),
+		"text": "-" + str(CLAW_BASE_DAMAGE),
+		"timer": 0.65
+	})
+	if s["hp"] <= 0:
+		enemies.remove_at(index)
+
+func update_damage_popups(delta: float) -> void:
+	for i in range(damage_popups.size() - 1, -1, -1):
+		damage_popups[i]["pos"].y -= 45.0 * delta
+		damage_popups[i]["timer"] -= delta
+		if damage_popups[i]["timer"] <= 0.0:
+			damage_popups.remove_at(i)
 
 func try_swallow() -> void:
 	var mouth_x = dragon_pos.x + dragon_facing * 115.0
@@ -219,42 +295,85 @@ func update_status_timers(delta: float) -> void:
 # ==============================================================================
 func update_enemies(delta: float) -> void:
 	for e in enemies:
-		var dist = e["pos"].x - dragon_pos.x
-		var dir = -1.0 if dist > 0 else 1.0
-		if abs(dist) > 850.0:
+		# 受击硬直闪烁与击退位移
+		if e.get("hit_flash_timer", 0.0) > 0.0:
+			e["hit_flash_timer"] = max(0.0, e["hit_flash_timer"] - delta)
+		if abs(e.get("knockback_vx", 0.0)) > 1.0:
+			e["pos"].x = clamp(e["pos"].x + e["knockback_vx"] * delta, 80.0, finish_x + 200.0)
+			e["knockback_vx"] = move_toward(e["knockback_vx"], 0.0, 950.0 * delta)
+
+		var dist_to_dragon = abs(e["pos"].x - dragon_pos.x)
+		var dir_to_dragon = -1.0 if dragon_pos.x < e["pos"].x else 1.0
+
+		if dist_to_dragon > 1100.0:
 			continue
 
-		match e["type"]:
-			"BLUE": # 蓝帽：电击枪（0.5伤害 + 持续5秒每秒0.5）
-				e["cd"] -= delta
-				if e["cd"] <= 0.0 and abs(dist) < 420.0:
-					e["cd"] = 3.2
-					electric_beams.append({"x1": e["pos"].x, "x2": dragon_pos.x, "t": 0.25})
-					damage_dragon(0.5)
-					shock_seconds_left = 5
-					shock_tick_timer = 0.0
+		# 靠近警戒线切换战斗形态，远离恢复巡逻漫步
+		if dist_to_dragon <= e["detect_range"]:
+			if e["state"] != "COMBAT":
+				e["state"] = "COMBAT"
+			e["facing"] = dir_to_dragon
+			e["dir"] = dir_to_dragon
+		else:
+			e["state"] = "PATROL"
 
-			"GRAY": # 灰帽：发现主角后往龙身边冲
-				if abs(dist) < 550.0:
-					e["pos"].x += dir * 240.0 * delta
-					e["walk_t"] += delta * 14.0
+		# 状态 1：PATROL 慢速左右漫步
+		if e["state"] == "PATROL":
+			e["patrol_timer"] -= delta
+			if e["patrol_timer"] <= 0.0:
+				e["patrol_timer"] = randf_range(1.2, 2.8)
+				var choices = [-1.0, 1.0, -1.0, 1.0, 0.0]
+				e["dir"] = choices[randi() % choices.size()]
+				if e["dir"] != 0.0:
+					e["facing"] = e["dir"]
 
-			"RED": # 红帽：喷火枪，每隔 3 秒发一个小火球（伤害 1）
-				e["cd"] -= delta
-				if e["cd"] <= 0.0 and abs(dist) < 520.0:
-					e["cd"] = 3.0
-					fireballs.append({"pos": Vector2(e["pos"].x + dir * 20, 445.0), "vx": dir * 340.0})
+			if e["dir"] != 0.0:
+				e["pos"].x += e["dir"] * 48.0 * delta
+				e["walk_t"] += delta * 6.5
+				if abs(e["pos"].x - e["home_x"]) > 95.0:
+					e["dir"] = -1.0 if e["pos"].x > e["home_x"] else 1.0
+					e["facing"] = e["dir"]
+			else:
+				e["walk_t"] = 0.0
 
-			"BLACK": # 黑色特种兵：手雷要 10 秒才能抛出来
-				e["cd"] -= delta
-				if e["cd"] <= 0.0 and abs(dist) < 600.0:
-					e["cd"] = 10.0
-					grenades.append({
-						"pos": Vector2(e["pos"].x + dir * 20, 435.0),
-						"vel": Vector2(dir * 240.0, -280.0),
-						"fuse": 5.0,       # 抛出来后 5 秒会炸
-						"swallowed": false
-					})
+		# 状态 2：COMBAT 战斗形态
+		elif e["state"] == "COMBAT":
+			match e["type"]:
+				"BLUE": # 蓝帽：平举电击枪瞄准放电（0.5伤害 + 持续5秒每秒0.5）
+					e["walk_t"] = 0.0
+					e["cd"] -= delta
+					if e["cd"] <= 0.0:
+						e["cd"] = 3.2
+						electric_beams.append({"x1": e["pos"].x, "x2": dragon_pos.x, "t": 0.25})
+						damage_dragon(0.5)
+						shock_seconds_left = 5
+						shock_tick_timer = 0.0
+
+				"GRAY": # 灰帽：冲锋奔跑扑向龙
+					if dist_to_dragon > 45.0:
+						e["pos"].x += e["dir"] * 240.0 * delta
+						e["walk_t"] += delta * 16.0
+					else:
+						e["walk_t"] = 0.0
+
+				"RED": # 红/橘帽：双手端平火枪，每 3 秒发一个小火球（伤害 1）
+					e["walk_t"] = 0.0
+					e["cd"] -= delta
+					if e["cd"] <= 0.0:
+						e["cd"] = 3.0
+						fireballs.append({"pos": Vector2(e["pos"].x + e["facing"] * 24.0, 442.0), "vx": e["facing"] * 340.0})
+
+				"BLACK": # 黑色特种兵：高举手雷蓄力 10 秒抛掷
+					e["walk_t"] = 0.0
+					e["cd"] -= delta
+					if e["cd"] <= 0.0:
+						e["cd"] = 10.0
+						grenades.append({
+							"pos": Vector2(e["pos"].x + e["facing"] * 20.0, 420.0),
+							"vel": Vector2(e["facing"] * 240.0, -280.0),
+							"fuse": 5.0, # 抛出来后 5 秒会炸
+							"swallowed": false
+						})
 
 func update_projectiles(delta: float) -> void:
 	# 电击特效消散
@@ -369,6 +488,13 @@ func draw_game_world() -> void:
 			draw_circle(gp, 9.0, Color(0.15, 0.55, 0.2))
 			draw_string(ThemeDB.fallback_font, gp + Vector2(-10, -14), "%.1fs" % g["fuse"], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.YELLOW)
 
+	# 绘制伤害飘字 (-1)
+	for pop in damage_popups:
+		var alpha = clamp(pop["timer"] / 0.65, 0.0, 1.0)
+		var pop_x = pop["pos"].x - camera_x
+		if pop_x > -50 and pop_x < 1200:
+			draw_string(ThemeDB.fallback_font, Vector2(pop_x, pop["pos"].y), pop["text"], HORIZONTAL_ALIGNMENT_CENTER, -1, 22, Color(1.0, 0.25, 0.25, alpha))
+
 func draw_quadruped_blue_dragon(p: Vector2) -> void:
 	var f = float(dragon_facing)
 	var col_main = Color(0.12, 0.42, 0.88)
@@ -401,19 +527,24 @@ func draw_quadruped_blue_dragon(p: Vector2) -> void:
 	var belly_center = p + Vector2(0, -52 + belly_count * 1.6)
 	draw_circle(belly_center, belly_r, col_belly)
 
-	# 如果肚子里有人，画出肚皮被顶起的轮廓小凸起
-	for k in range(belly_count):
-		var ang = k * 1.1 + walk_cycle * 0.3
-		var bump = belly_center + Vector2(cos(ang) * (belly_r * 0.55), sin(ang) * (belly_r * 0.45))
-		draw_circle(bump, 6.0, col_main)
-
 	# 4. 四条腿严格四脚着地（走路交替迈步动画）
 	var step1 = sin(walk_cycle) * 14.0 if action_anim == "WALK" else 0.0
 	var step2 = -step1
 	draw_rect(Rect2(p.x - 62 + step1, p.y - 52, 18, 52), col_dark) # 后左腿
 	draw_rect(Rect2(p.x - 36 + step2, p.y - 52, 18, 52), col_main) # 后右腿
 	draw_rect(Rect2(p.x + 28 + step2, p.y - 52, 18, 52), col_dark) # 前左腿
-	draw_rect(Rect2(p.x + 52 + step1, p.y - 52, 18, 52), col_main) # 前右腿
+
+	# 右前爪：平时踩地，按 C 键挥击与月牙气浪
+	if is_clawing:
+		var prog = 1.0 - (claw_anim_timer / 0.28)
+		var paw_pos = p + Vector2(f * (55 + sin(prog * PI) * 55.0), -85 + prog * 35.0)
+		draw_line(p + Vector2(f * 45, -72), paw_pos, col_main, 16.0)
+		for c_idx in range(-1, 2):
+			draw_line(paw_pos + Vector2(0, c_idx * 6), paw_pos + Vector2(f * 18, c_idx * 8 + 4), Color.WHITE, 3.0)
+		var slash_x = p.x + f * (95 + prog * 65.0)
+		draw_arc(Vector2(slash_x, p.y - 60), 42.0, -0.9 if f == 1 else PI - 0.9, 0.9 if f == 1 else PI + 0.9, 12, Color(0.5, 0.95, 1.0, 1.0 - prog * 0.6), 6.0)
+	else:
+		draw_rect(Rect2(p.x + 52 + step1, p.y - 52, 18, 52), col_main) # 前右腿
 
 	# 5. 颈部与龙头（根据吞人/低头吃手雷动作变化）
 	var head_offset = Vector2(f * 95, -125)
@@ -429,36 +560,115 @@ func draw_quadruped_blue_dragon(p: Vector2) -> void:
 
 func draw_hat_soldier(e: Dictionary, cam_x: float) -> void:
 	var sx = e["pos"].x - cam_x
-	if sx < -60 or sx > 1220:
+	if sx < -80 or sx > 1230:
 		return
 	var sy = e["pos"].y
-	var leg = sin(e["walk_t"]) * 8.0
-	# 身体与双腿（人类高度约 68px，蓝龙约其数倍大）
-	var suit_col = Color(0.12, 0.12, 0.14) if e["type"] == "BLACK" else Color(0.24, 0.28, 0.34)
-	draw_rect(Rect2(sx - 12 + leg, sy - 24, 8, 24), suit_col)
-	draw_rect(Rect2(sx + 4 - leg, sy - 24, 8, 24), suit_col)
-	draw_rect(Rect2(sx - 14, sy - 54, 28, 32), suit_col)
-	# 头部与压低遮住眼睛的帽子
-	draw_circle(Vector2(sx, sy - 64), 11.0, Color(0.88, 0.74, 0.64))
-	var hat_col = Color.BLUE
-	if e["type"] == "GRAY": hat_col = Color.GRAY
-	elif e["type"] == "RED": hat_col = Color(1.0, 0.35, 0.05)
-	elif e["type"] == "BLACK": hat_col = Color(0.08, 0.08, 0.1)
-	# 帽子压低遮眼
-	draw_rect(Rect2(sx - 14, sy - 76, 28, 13), hat_col)
-	draw_rect(Rect2(sx - 18, sy - 65, 32, 4), hat_col)
+	var f = float(e.get("facing", -1))
+	var is_combat = (e.get("state", "PATROL") == "COMBAT")
+	var is_running = (is_combat and e["type"] == "GRAY")
+	var phase = e["walk_t"]
+	var bob = abs(sin(phase)) * (5.0 if is_running else 2.5) if phase > 0.0 else 0.0
+	var lean = (6.0 * f) if is_running else 0.0
+
+	var is_hit = e.get("hit_flash_timer", 0.0) > 0.0
+	var suit_main = Color(1.0, 0.35, 0.35) if is_hit else (Color(0.10, 0.11, 0.14) if e["type"] == "BLACK" else Color(0.20, 0.24, 0.30))
+	var suit_dark = Color(0.85, 0.25, 0.25) if is_hit else (Color(0.06, 0.07, 0.09) if e["type"] == "BLACK" else Color(0.12, 0.15, 0.20))
+	var hat_col = Color.WHITE if is_hit else Color(0.18, 0.50, 1.00) # BLUE
+	if not is_hit:
+		if e["type"] == "GRAY": hat_col = Color(0.55, 0.58, 0.62)
+		elif e["type"] == "RED": hat_col = Color(1.00, 0.42, 0.08)
+		elif e["type"] == "BLACK": hat_col = Color(0.08, 0.09, 0.12)
+
+	# 1. 双腿步态（深色内腿 + 浅色外腿）
+	var stride = (18.0 if is_running else 9.0) if phase > 0.0 else 0.0
+	var leg_l = sin(phase) * stride
+	var leg_r = -leg_l
+	var lift_l = max(0.0, -cos(phase)) * (10.0 if is_running else 5.0) if phase > 0.0 else 0.0
+	var lift_r = max(0.0, cos(phase)) * (10.0 if is_running else 5.0) if phase > 0.0 else 0.0
+
+	# 内腿
+	draw_line(Vector2(sx - 3 + lean, sy - 28 - bob), Vector2(sx - 3 + lean + leg_l, sy - lift_l), suit_dark, 7.0)
+	# 外腿
+	draw_line(Vector2(sx + 3 + lean, sy - 28 - bob), Vector2(sx + 3 + lean + leg_r, sy - lift_r), suit_main, 7.0)
+
+	# 2. 橘帽背后红色燃料罐
+	if e["type"] == "RED":
+		draw_rect(Rect2(sx - f * 20 + lean, sy - 56 - bob, 12, 28), Color(0.85, 0.18, 0.12))
+		draw_rect(Rect2(sx - f * 17 + lean, sy - 52 - bob, 5, 20), Color(1.0, 0.55, 0.20))
+
+	# 3. 躯干
+	draw_rect(Rect2(sx - 12 + lean, sy - 58 - bob, 24, 34), suit_main)
+	draw_rect(Rect2(sx - 12 + lean, sy - 58 - bob, 24, 34), Color(0.05, 0.06, 0.10), false, 2.0)
+	if e["type"] == "BLACK":
+		# 特种兵胸甲高光
+		draw_rect(Rect2(sx - 7 + lean, sy - 52 - bob, 14, 18), Color(0.22, 0.24, 0.28))
+
+	# 4. 头部与遮眼压低战术帽子
+	var head_y = sy - 68 - bob
+	var head_x = sx + lean
+	draw_circle(Vector2(head_x, head_y), 11.0, Color(0.90, 0.74, 0.62)) # 肤色下巴
+	# 压低帽子
+	draw_rect(Rect2(head_x - 14, head_y - 14, 28, 14), hat_col) # 帽冠
+	draw_rect(Rect2(head_x - 14, head_y - 14, 28, 14), Color(0.05, 0.06, 0.10), false, 2.0)
+	draw_rect(Rect2(head_x - 12 + (2 * f), head_y - 1, 30 * f if f < 0 else 30, 7), hat_col) # 压低长帽檐遮眼
+	# 帽檐下方眼部阴影线
+	draw_line(Vector2(head_x - 8, head_y + 3), Vector2(head_x + 8, head_y + 3), Color(0.05, 0.06, 0.10), 3.0)
+
+	# 5. 手臂与武器
+	var shoulder = Vector2(head_x + f * 4, sy - 50 - bob)
+	if not is_combat:
+		# 巡逻：手臂自然下垂微摆
+		var swing = sin(phase) * 6.0 if phase > 0.0 else 0.0
+		var hand = shoulder + Vector2(-f * swing, 24)
+		draw_line(shoulder, hand, suit_main, 6.0)
+		if e["type"] == "BLUE":
+			draw_rect(Rect2(hand.x - 4, hand.y - 2, 12, 6), Color(0.30, 0.70, 1.00))
+		elif e["type"] == "RED":
+			draw_rect(Rect2(hand.x - 6, hand.y - 2, 20, 6), Color(0.35, 0.35, 0.40))
+	else:
+		# 战斗形态
+		match e["type"]:
+			"BLUE":
+				# 平举电击枪
+				var hand = shoulder + Vector2(f * 22, 0)
+				draw_line(shoulder, hand, suit_main, 6.0)
+				draw_rect(Rect2(hand.x - 2, hand.y - 5, 20 * f if f < 0 else 20, 10), Color(0.25, 0.55, 0.95))
+				draw_circle(hand + Vector2(f * 24, 0), 4.0, Color(0.5, 0.95, 1.0))
+			"GRAY":
+				# 冲锋挥臂
+				var run_arm = sin(phase) * 14.0
+				draw_line(shoulder, shoulder + Vector2(f * run_arm, 18), suit_main, 6.0)
+			"RED":
+				# 双手端喷火枪
+				var hand = shoulder + Vector2(f * 20, 5)
+				draw_line(shoulder, hand, suit_main, 6.0)
+				draw_rect(Rect2(hand.x - 4, hand.y - 6, 28 * f if f < 0 else 28, 11), Color(0.30, 0.32, 0.36))
+				draw_circle(hand + Vector2(f * 28, 0), 6.0, Color(1.0, 0.45, 0.05))
+			"BLACK":
+				# 高举绿色手雷
+				var hand = shoulder + Vector2(f * 10, -26)
+				draw_line(shoulder, hand, suit_main, 6.0)
+				draw_circle(hand + Vector2(0, -6), 7.0, Color(0.18, 0.65, 0.25))
+				draw_circle(hand + Vector2(0, -12), 2.5, Color.YELLOW)
+
+	# 6. 绘制头顶 5 格血条（每格代表 1 点血量）
+	var bar_w = 40.0
+	var bar_x = head_x - bar_w * 0.5
+	var bar_y = sy - 88.0 - bob
+	draw_rect(Rect2(bar_x - 1, bar_y - 1, bar_w + 2, 8), Color.BLACK)
+	var max_hp: int = e.get("max_hp", SOLDIER_MAX_HP)
+	var cur_hp: int = e.get("hp", SOLDIER_MAX_HP)
+	for seg in range(max_hp):
+		var seg_col = Color(0.2, 0.9, 0.35) if seg < cur_hp else Color(0.25, 0.25, 0.25)
+		draw_rect(Rect2(bar_x + seg * 8.0 + 1, bar_y, 6.0, 6.0), seg_col)
 
 func draw_hud_overlay() -> void:
 	# 左上角状态栏（20颗心血量 + 10人肚子容量）
-	draw_rect(Rect2(16, 16, 480, 96), Color(0, 0, 0, 0.65))
-	draw_string(ThemeDB.fallback_font, Vector2(28, 44), "巨龙血量：%.1f / 20.0 颗心" % hp, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(1.0, 0.35, 0.35))
-	var digest_str = "（%d秒后消化1人）" % int(ceil(DIGEST_TIME - digest_timer)) if belly_count > 0 else ""
-	draw_string(ThemeDB.fallback_font, Vector2(28, 74), "腹中人数：%d / 10 %s" % [belly_count, digest_str], HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(0.4, 0.85, 1.0))
-	if state == State.IN_CAGE:
-		draw_string(ThemeDB.fallback_font, Vector2(260, 180), "你已被困在笼子里！按 [D / 右键 / J] 撞破牢笼前冲！", HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color.YELLOW)
-	elif state == State.PLAYING:
-		draw_string(ThemeDB.fallback_font, Vector2(28, 102), "操作：[D]一直往前冲  [W/空格]跳跃  [J/左键]挑起吞人 或 低头直接吃手雷", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.LIGHT_GRAY)
-	elif state == State.WIN:
+	draw_rect(Rect2(16, 16, 440, 92), Color(0, 0, 0, 0.65))
+	draw_string(ThemeDB.fallback_font, Vector2(28, 44), "巨龙血量：%.1f / 20.0" % hp, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1.0, 0.35, 0.35))
+	draw_string(ThemeDB.fallback_font, Vector2(28, 70), "腹中人数：%d / 10" % belly_count, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(0.4, 0.85, 1.0))
+	draw_string(ThemeDB.fallback_font, Vector2(28, 94), "操作：[D]前冲  [W/空格]跳跃  [C]挥爪(伤害1)  [J]挑吃/吞雷", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.YELLOW)
+	if state == State.WIN:
 		draw_rect(Rect2(320, 240, 520, 120), Color(0, 0, 0, 0.85))
 		draw_string(ThemeDB.fallback_font, Vector2(360, 295), "第一关通关成功！按 [R] 键重新游玩", HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color.GREEN)
 	elif state == State.LOSE:

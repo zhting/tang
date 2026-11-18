@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蓝龙基础攻击测试 (C 键挥爪 & 士兵 5 血)</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #0b0f19;
+            color: #e0e6ed;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+        }
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 1152px;
+            background: rgba(18, 24, 38, 0.9);
+            border: 1px solid #1f3352;
+            border-radius: 8px;
+            padding: 10px 18px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #40c4ff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .badge {
+            background: #00e676;
+            color: #003314;
+            font-size: 11px;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-weight: 800;
+        }
+        .controls-info {
+            font-size: 13px;
+            color: #ffeb3b;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            background: #1976d2;
+            color: #fff;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            transition: all 0.15s;
+        }
+        .btn:hover { background: #2196f3; }
+        .btn:active { transform: scale(0.96); }
+        .btn-secondary { background: #37474f; }
+        .btn-secondary:hover { background: #455a64; }
+        .canvas-box {
+            position: relative;
+            width: 1152px;
+            height: 648px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            border: 2px solid #2a3b5c;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #212936;
+            image-rendering: pixelated;
+        }
+        .bottom-bar {
+            width: 1152px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #78909c;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="top-bar">
+        <div class="title">
+            <span>🐉 蓝龙基础挥爪攻击与士兵受击机制测试</span>
+            <span class="badge">PROTOTYPE</span>
+        </div>
+        <div class="controls-info">
+            [C 键] 挥爪攻击 (伤害 1，CD 0.45s) | [A / D] 移动接近 | [R 键] 刷新满血士兵
+        </div>
+        <div class="btn-group">
+            <button class="btn" onclick="triggerClawAttack()">挥爪 [C]</button>
+            <button class="btn btn-secondary" onclick="spawnTestSoldiers()">刷新士兵 [R]</button>
+            <a href="escape_lab.html" class="btn btn-secondary" style="text-decoration:none; display:inline-block;">进入主关卡</a>
+        </div>
+    </div>
+
+    <div class="canvas-box">
+        <canvas id="gameCanvas" width="1152" height="648"></canvas>
+    </div>
+
+    <div class="bottom-bar">
+        <span>设定指标：士兵 HP 5，挥爪伤害 1，攻击距离 170px，受击闪白硬直 0.18s，击退初速 240px/s</span>
+        <span>资源模式：原生 4 帧像素动作 (Wind-up / Slash / Impact / Recovery) + 月牙气浪 + 闪光星爆</span>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const SOLDIER_MAX_HP = 5;
+const CLAW_BASE_DAMAGE = 1;
+const CLAW_COOLDOWN = 0.45;
+
+let dragonPos = { x: 320, y: 480 };
+let dragonFacing = 1;
+let isClawing = false;
+let clawAnimTimer = 0.0;
+let clawCdTimer = 0.0;
+
+let soldiers = [];
+let damagePopups = [];
+let hitSparks = [];
+
+// 载入切出的动作帧贴图
+const sprites = {};
+const spriteNames = [
+    'dragon_claw_0', 'dragon_claw_1', 'dragon_claw_2', 'dragon_claw_3',
+    'claw_slash_fx', 'claw_impact_fx',
+    'soldier_blue_recoil', 'soldier_gray_recoil', 'soldier_orange_recoil', 'soldier_black_recoil'
+];
+let loadedCount = 0;
+spriteNames.forEach(name => {
+    const img = new Image();
+    img.src = `assets/mode10/${name}.png`;
+    img.onload = () => { loadedCount++; };
+    sprites[name] = img;
+});
+
+function spawnTestSoldiers() {
+    soldiers = [];
+    const types = ["BLUE", "GRAY", "ORANGE", "BLACK"];
+    for (let i = 0; i < 4; i++) {
+        soldiers.push({
+            type: types[i],
+            pos: { x: 460.0 + i * 115.0, y: 480.0 },
+            hp: SOLDIER_MAX_HP,
+            max_hp: SOLDIER_MAX_HP,
+            hit_flash_timer: 0.0,
+            knockback_vx: 0.0
+        });
+    }
+}
+spawnTestSoldiers();
+
+// 输入监听
+const keys = { a: false, d: false };
+window.addEventListener('keydown', e => {
+    if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keys.d = true;
+    if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keys.a = true;
+    if ((e.key === 'c' || e.key === 'C') && clawCdTimer <= 0.0) {
+        triggerClawAttack();
+    }
+    if (e.key === 'r' || e.key === 'R') {
+        spawnTestSoldiers();
+    }
+});
+window.addEventListener('keyup', e => {
+    if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keys.d = false;
+    if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keys.a = false;
+});
+
+function triggerClawAttack() {
+    if (clawCdTimer > 0.0) return;
+    isClawing = true;
+    clawAnimTimer = 0.28;
+    clawCdTimer = CLAW_COOLDOWN;
+
+    // 攻击判定范围：龙前方 170 像素
+    const reachMinX = (dragonFacing === 1) ? dragonPos.x : (dragonPos.x - 170.0);
+    const reachMaxX = (dragonFacing === 1) ? (dragonPos.x + 170.0) : dragonPos.x;
+
+    for (let i = soldiers.length - 1; i >= 0; i--) {
+        const s = soldiers[i];
+        if (s.pos.x >= reachMinX && s.pos.x <= reachMaxX) {
+            applyClawDamageToSoldier(s, i);
+        }
+    }
+}
+
+function applyClawDamageToSoldier(s, index) {
+    s.hp = Math.max(0, s.hp - CLAW_BASE_DAMAGE);
+    s.hit_flash_timer = 0.18;
+    s.knockback_vx = dragonFacing * 240.0;
+
+    damagePopups.push({
+        pos: { x: s.pos.x, y: s.pos.y - 92 },
+        text: `-${CLAW_BASE_DAMAGE}`,
+        timer: 0.65
+    });
+
+    // 产生星爆击打特效
+    hitSparks.push({
+        x: s.pos.x,
+        y: s.pos.y - 50,
+        timer: 0.25
+    });
+
+    if (s.hp <= 0) {
+        soldiers.splice(index, 1);
+    }
+}
+
+function update(delta) {
+    // 移动
+    let move = 0.0;
+    if (keys.d) move += 1.0;
+    if (keys.a) move -= 1.0;
+    if (move !== 0.0) {
+        dragonFacing = Math.sign(move);
+        dragonPos.x = Math.max(120.0, Math.min(1020.0, dragonPos.x + move * 260.0 * delta));
+    }
+
+    // 挥爪冷却与进度
+    if (clawCdTimer > 0.0) clawCdTimer -= delta;
+    if (isClawing) {
+        clawAnimTimer -= delta;
+        if (clawAnimTimer <= 0.0) {
+            isClawing = false;
+        }
+    }
+
+    // 更新士兵击退与硬直
+    for (let s of soldiers) {
+        if (s.hit_flash_timer > 0.0) {
+            s.hit_flash_timer = Math.max(0.0, s.hit_flash_timer - delta);
+        }
+        if (Math.abs(s.knockback_vx) > 1.0) {
+            s.pos.x = Math.max(80.0, Math.min(1080.0, s.pos.x + s.knockback_vx * delta));
+            s.knockback_vx = (s.knockback_vx > 0) ? Math.max(0, s.knockback_vx - 950.0 * delta) : Math.min(0, s.knockback_vx + 950.0 * delta);
+        }
+    }
+
+    // 更新伤害飘字
+    for (let i = damagePopups.length - 1; i >= 0; i--) {
+        damagePopups[i].pos.y -= 45.0 * delta;
+        damagePopups[i].timer -= delta;
+        if (damagePopups[i].timer <= 0.0) {
+            damagePopups.splice(i, 1);
+        }
+    }
+
+    // 更新打击星爆特效
+    for (let i = hitSparks.length - 1; i >= 0; i--) {
+        hitSparks[i].timer -= delta;
+        if (hitSparks[i].timer <= 0.0) {
+            hitSparks.splice(i, 1);
+        }
+    }
+}
+
+function render() {
+    ctx.clearRect(0, 0, 1152, 648);
+
+    // 背景与地面
+    ctx.fillStyle = '#212938';
+    ctx.fillRect(0, 0, 1152, 480);
+    ctx.fillStyle = '#3d4552';
+    ctx.fillRect(0, 480, 1152, 168);
+
+    ctx.strokeStyle = '#738ca6';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, 480);
+    ctx.lineTo(1152, 480);
+    ctx.stroke();
+
+    // 地面反光栅格线
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < 1152; x += 48) {
+        ctx.beginPath();
+        ctx.moveTo(x, 480);
+        ctx.lineTo(x, 648);
+        ctx.stroke();
+    }
+
+    // 1. 绘制蓝龙
+    drawDragon(dragonPos, dragonFacing);
+
+    // 2. 绘制士兵与 5 格血条
+    for (let s of soldiers) {
+        drawSoldierWithHp(s);
+    }
+
+    // 3. 绘制打击星爆特效
+    for (let sp of hitSparks) {
+        const sparkImg = sprites['claw_impact_fx'];
+        if (sparkImg && sparkImg.complete && sparkImg.naturalWidth > 0) {
+            const alpha = sp.timer / 0.25;
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.drawImage(sparkImg, sp.x - 20, sp.y - 20, 40, 40);
+            ctx.restore();
+        } else {
+            // 备用矢量星爆
+            ctx.save();
+            ctx.fillStyle = '#ff3d00';
+            ctx.beginPath();
+            ctx.arc(sp.x, sp.y, 16 * (sp.timer / 0.25), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    // 4. 绘制头顶伤害飘字 (-1)
+    for (let pop of damagePopups) {
+        const alpha = Math.max(0, Math.min(1.0, pop.timer / 0.65));
+        ctx.save();
+        ctx.font = 'bold 24px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = `rgba(255, 64, 64, ${alpha})`;
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 6;
+        ctx.fillText(pop.text, pop.pos.x, pop.pos.y);
+        ctx.restore();
+    }
+
+    // 5. 绘制 HUD 状态
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.fillRect(20, 20, 680, 84);
+    ctx.strokeStyle = '#2a3b5c';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(20, 20, 680, 84);
+
+    ctx.font = 'bold 18px "PingFang SC", sans-serif';
+    ctx.fillStyle = '#64d8cb';
+    ctx.fillText("基础攻击测试：按 [C 键] 抬爪向前挥舞（伤害 1，士兵血量 5）", 36, 52);
+
+    ctx.font = '15px "PingFang SC", sans-serif';
+    ctx.fillStyle = '#ffeb3b';
+    ctx.fillText("按 [A / D] 移动蓝龙靠近士兵   |   按 [R 键] 刷新满血士兵", 36, 82);
+    ctx.restore();
+}
+
+function drawDragon(p, f) {
+    const prog = isClawing ? (1.0 - (clawAnimTimer / 0.28)) : 0; // 0.0 -> 1.0
+    const frameIdx = isClawing ? Math.min(3, Math.floor(prog * 4)) : 0;
+    const spriteKey = isClawing ? `dragon_claw_${frameIdx}` : 'dragon_claw_3';
+    const spr = sprites[spriteKey];
+
+    if (spr && spr.complete && spr.naturalWidth > 0) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.scale(f, 1);
+
+        // 像素贴图对齐 (约 248x142 贴图，足底贴地)
+        const scale = 1.35;
+        const dw = spr.naturalWidth * scale;
+        const dh = spr.naturalHeight * scale;
+        const dx = -dw * 0.48;
+        const dy = -dh + 12;
+
+        ctx.drawImage(spr, dx, dy, dw, dh);
+
+        // 绘制向前弧光气浪
+        if (isClawing && (frameIdx === 1 || frameIdx === 2)) {
+            const slashImg = sprites['claw_slash_fx'];
+            if (slashImg && slashImg.complete && slashImg.naturalWidth > 0) {
+                const sScale = 1.6;
+                const sw = slashImg.naturalWidth * sScale;
+                const sh = slashImg.naturalHeight * sScale;
+                ctx.drawImage(slashImg, 45, -95, sw, sh);
+            }
+        }
+        ctx.restore();
+    } else {
+        // 矢量备用绘制（完全对应 Godot 代码）
+        drawDragonVector(p, f, prog);
+    }
+}
+
+function drawDragonVector(p, f, prog) {
+    const cMain = '#246be0';
+    const cDark = '#14409e';
+
+    ctx.save();
+    // 尾巴与翅膀
+    ctx.fillStyle = cMain;
+    ctx.beginPath();
+    ctx.moveTo(p.x - f * 65, p.y - 65);
+    ctx.lineTo(p.x - f * 185, p.y - 105);
+    ctx.lineTo(p.x - f * 140, p.y - 58);
+    ctx.fill();
+
+    ctx.fillStyle = cDark;
+    ctx.beginPath();
+    ctx.moveTo(p.x - f * 10, p.y - 85);
+    ctx.lineTo(p.x - f * 115, p.y - 185);
+    ctx.lineTo(p.x - f * 155, p.y - 125);
+    ctx.lineTo(p.x - f * 75, p.y - 100);
+    ctx.fill();
+
+    // 躯干
+    ctx.fillStyle = cMain;
+    ctx.fillRect(p.x - 68, p.y - 90, 136, 42);
+
+    // 脖颈与龙头
+    ctx.strokeStyle = cMain;
+    ctx.lineWidth = 22;
+    ctx.beginPath();
+    ctx.moveTo(p.x + f * 55, p.y - 78);
+    ctx.lineTo(p.x + f * 88, p.y - 122);
+    ctx.stroke();
+
+    ctx.fillRect(p.x + f * 88 - 20, p.y - 138, 42, 26);
+    ctx.fillStyle = '#ffeb3b';
+    ctx.beginPath();
+    ctx.arc(p.x + f * 96, p.y - 128, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 三条支撑腿
+    ctx.fillStyle = cDark;
+    ctx.fillRect(p.x - 56, p.y - 50, 16, 50);
+    ctx.fillStyle = cMain;
+    ctx.fillRect(p.x - 32, p.y - 50, 16, 50);
+    ctx.fillStyle = cDark;
+    ctx.fillRect(p.x + 26, p.y - 50, 16, 50);
+
+    // 右前爪：平时踩地，按 C 键时抬起挥击
+    if (isClawing) {
+        const pawPos = {
+            x: p.x + f * (55 + Math.sin(prog * Math.PI) * 55.0),
+            y: p.y - 85 + prog * 35.0
+        };
+        ctx.strokeStyle = cMain;
+        ctx.lineWidth = 16;
+        ctx.beginPath();
+        ctx.moveTo(p.x + f * 45, p.y - 72);
+        ctx.lineTo(pawPos.x, pawPos.y);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3;
+        for (let cIdx = -1; cIdx <= 1; cIdx++) {
+            ctx.beginPath();
+            ctx.moveTo(pawPos.x, pawPos.y + cIdx * 6);
+            ctx.lineTo(pawPos.x + f * 18, pawPos.y + cIdx * 8 + 4);
+            ctx.stroke();
+        }
+
+        // 月牙爪痕气浪
+        const slashX = p.x + f * (95 + prog * 65.0);
+        ctx.strokeStyle = `rgba(128, 240, 255, ${1.0 - prog * 0.6})`;
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        const startAng = (f === 1) ? -0.9 : Math.PI - 0.9;
+        const endAng = (f === 1) ? 0.9 : Math.PI + 0.9;
+        ctx.arc(slashX, p.y - 60, 42.0, startAng, endAng);
+        ctx.stroke();
+    } else {
+        ctx.fillStyle = cMain;
+        ctx.fillRect(p.x + 48, p.y - 50, 16, 50);
+    }
+    ctx.restore();
+}
+
+function drawSoldierWithHp(s) {
+    const sx = s.pos.x;
+    const sy = s.pos.y;
+    const isHit = s.hit_flash_timer > 0.0;
+    const lean = isHit ? -8.0 : 0.0;
+
+    // 优先使用贴图
+    const recoilKey = `soldier_${s.type.toLowerCase()}_recoil`;
+    const spr = sprites[recoilKey];
+
+    if (isHit && spr && spr.complete && spr.naturalWidth > 0) {
+        ctx.save();
+        ctx.translate(sx, sy);
+        const scale = 1.05;
+        const dw = spr.naturalWidth * scale;
+        const dh = spr.naturalHeight * scale;
+        ctx.drawImage(spr, -dw * 0.5 + lean, -dh, dw, dh);
+        
+        // 闪白覆盖层
+        ctx.globalCompositeOperation = 'source-atop';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.fillRect(-dw * 0.5 + lean, -dh, dw, dh);
+        ctx.restore();
+    } else {
+        // 矢量绘制（完全对应 Godot 代码）
+        ctx.save();
+        let suitCol = isHit ? '#ff5959' : '#384252';
+        let hatCol = isHit ? '#ffffff' : '#3380ff';
+        if (!isHit) {
+            if (s.type === 'GRAY') hatCol = '#808080';
+            else if (s.type === 'ORANGE') hatCol = '#ff661a';
+            else if (s.type === 'BLACK') {
+                suitCol = '#1a1a1f';
+                hatCol = '#14141a';
+            }
+        }
+
+        ctx.fillStyle = suitCol;
+        ctx.fillRect(sx - 10, sy - 24, 8, 24);
+        ctx.fillRect(sx + 2, sy - 24, 8, 24);
+        ctx.fillRect(sx - 12 + lean, sy - 54, 24, 30);
+
+        ctx.fillStyle = isHit ? '#ffffff' : '#e0bd99';
+        ctx.beginPath();
+        ctx.arc(sx + lean, sy - 63, 10.0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = hatCol;
+        ctx.fillRect(sx - 13 + lean, sy - 74, 26, 12);
+        ctx.restore();
+    }
+
+    // 绘制 5 格血条 (绿色剩余，深灰扣除)
+    const barW = 44.0;
+    const barX = sx - barW * 0.5;
+    const barY = sy - 88.0;
+
+    ctx.save();
+    ctx.fillStyle = '#0a0d14';
+    ctx.fillRect(barX - 2, barY - 2, barW + 4, 10);
+    ctx.strokeStyle = '#223047';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX - 2, barY - 2, barW + 4, 10);
+
+    const segW = (barW - 8) / SOLDIER_MAX_HP;
+    for (let seg = 0; seg < s.max_hp; seg++) {
+        const segCol = (seg < s.hp) ? '#33e659' : '#374151';
+        ctx.fillStyle = segCol;
+        ctx.fillRect(barX + seg * (segW + 2) + 1, barY, segW, 6.0);
+    }
+    ctx.restore();
+}
+
+// 主游戏循环
+let lastTime = performance.now();
+function loop(now) {
+    const delta = Math.min(0.1, (now - lastTime) / 1000.0);
+    lastTime = now;
+
+    update(delta);
+    render();
+
+    requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>

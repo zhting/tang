@@ -289,22 +289,6 @@ func render_dragon_pixel_frame() -> void:
 	draw_pixel_ellipse(belly_center_x, belly_center_y + 2, max(2, rx - 2), max(2, ry - 2), C_BELLY_DARK.lerp(C_EXPLODE_GLOW, clamp(explode_flash, 0.0, 1.0)), false)
 	draw_pixel_ellipse(belly_center_x, belly_center_y - 1, max(1, rx - 3), max(1, ry - 3), belly_fill, false)
 
-	# 绘制肚皮被吞入的人撑起的立体轮廓凸起（连续平滑呼吸游动）
-	var num_bumps = int(ceil(current_belly_size))
-	if num_bumps > 0:
-		for k in range(num_bumps):
-			var angle = k * 1.25 + idle_time * 1.4 + sin(idle_time * 0.8 + k) * 0.4
-			var bx = belly_center_x + int(cos(angle) * (rx * 0.55))
-			var by = belly_center_y + int(sin(angle) * (ry * 0.45))
-			var bump_alpha = 1.0
-			if k == num_bumps - 1:
-				bump_alpha = fposmod(current_belly_size, 1.0)
-				if bump_alpha <= 0.01 and current_belly_size >= 1.0:
-					bump_alpha = 1.0
-			if bump_alpha > 0.15:
-				draw_pixel_circle(bx, by, 3, C_BELLY_DARK, false)
-				draw_pixel_circle(bx - 1, by - 1, 2, C_SCALE_LIGHT, false)
-
 	# --------------------------------------------------------------------------
 	# 5. 绘制近侧（外侧）前后粗壮四肢与龙爪（真实迈步交替与抓地）
 	# --------------------------------------------------------------------------

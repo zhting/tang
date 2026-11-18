@@ -274,8 +274,7 @@
         }
 
         .belly-info-text {
-            font-size: 11px;
-            color: #90caf9;
+            display: none !important;
         }
 
         /* 3. 终点逃生距离进度 (LEVEL EXIT) */
@@ -356,11 +355,7 @@
 
         /* 底部动态指示提示 */
         .hud-bottom-bar {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
+            display: none !important;
         }
 
         .hint-banner {
@@ -607,6 +602,7 @@
                     <button class="touch-btn" id="btnTouchRight">▶</button>
                 </div>
                 <div class="touch-dpad">
+                    <button class="touch-btn claw" id="btnTouchClaw" style="background: rgba(25, 118, 210, 0.75); border-color: #40c4ff;">挥爪</button>
                     <button class="touch-btn" id="btnTouchJump">跳跃</button>
                     <button class="touch-btn swallow" id="btnTouchSwallow">吞噬</button>
                 </div>
@@ -639,7 +635,13 @@
 // ==========================================
 const labSprites = {};
 const labSpriteList = [
-    'dragon_walk_0', 'dragon_walk_1', 'dragon_walk_2', 'dragon_walk_3', 'dragon_walk_4', 'dragon_walk_5',
+    'dragon_walk_0', 'dragon_walk_1', 'dragon_walk_2', 'dragon_walk_3', 'dragon_walk_4',
+    'dragon_walk_5', 'dragon_walk_6', 'dragon_walk_7', 'dragon_walk_8', 'dragon_walk_9',
+    'dragon_swallow_0', 'dragon_swallow_1', 'dragon_swallow_2', 'dragon_swallow_3',
+    'dragon_swallow_4', 'dragon_swallow_5', 'dragon_swallow_6',
+    'dragon_claw_0', 'dragon_claw_1', 'dragon_claw_2', 'dragon_claw_3',
+    'claw_slash_fx', 'claw_impact_fx',
+    'soldier_blue_recoil', 'soldier_gray_recoil', 'soldier_orange_recoil', 'soldier_black_recoil',
     'dragon_heavy_0', 'dragon_heavy_1', 'dragon_heavy_2', 'dragon_heavy_3',
     'dragon_feed_0', 'dragon_feed_1', 'dragon_explode',
     'blue_cap_0', 'blue_cap_1', 'blue_cap_2', 'blue_cap_3',
@@ -647,6 +649,41 @@ const labSpriteList = [
     'red_orange_cap_0', 'red_orange_cap_1',
     'black_specops_0', 'black_specops_1', 'black_specops_2', 'black_specops_3'
 ];
+const DRAGON_ANCHORS = {
+    dragon_walk_0: 121,
+    dragon_walk_1: 120,
+    dragon_walk_2: 118,
+    dragon_walk_3: 119,
+    dragon_walk_4: 119,
+    dragon_walk_5: 120,
+    dragon_walk_6: 118,
+    dragon_walk_7: 118,
+    dragon_walk_8: 138,
+    dragon_walk_9: 161,
+
+    dragon_claw_0: 120,
+    dragon_claw_1: 120,
+    dragon_claw_2: 120,
+    dragon_claw_3: 120,
+
+    dragon_swallow_0: 118,
+    dragon_swallow_1: 118,
+    dragon_swallow_2: 113,
+    dragon_swallow_3: 119,
+    dragon_swallow_4: 114,
+    dragon_swallow_5: 122,
+    dragon_swallow_6: 125,
+
+    dragon_heavy_0: 77,
+    dragon_heavy_1: 77,
+    dragon_heavy_2: 76,
+    dragon_heavy_3: 83,
+
+    dragon_feed_0: 110,
+    dragon_feed_1: 87,
+
+    dragon_explode: 102
+};
 let labSpritesLoaded = false;
 let labSpritesLoadedCount = 0;
 labSpriteList.forEach(name => {
@@ -814,13 +851,23 @@ let dragon = {
     moveSpeed: 320.0,
     jumpVelocity: -460.0,
     bellyBulgeAnim: 0.0, // 手雷闷爆肚子突鼓
-    aerialSwallow: null, // 蓝龙自主跳跃咬人升空吞噬动作对象
+    swallowAction: null, // 蓝龙 7 步原版纯正地表吞咽动作流对象
     swallowAnimTimer: 0.0, // 吞噬咬合动作计时
     swallowTarget: null, // 当前被挑起抛空的士兵
+    isClawing: false,
+    clawAnimTimer: 0.0,
+    clawCdTimer: 0.0,
     stepCount: 0,
     feedingGrenadeTimer: 0.0, // 低头吃手雷动作计时
     tossedSoldier: null // 吞噬抛空动效士兵对象
 };
+
+const SOLDIER_MAX_HP = 5;
+const CLAW_BASE_DAMAGE = 1;
+const CLAW_COOLDOWN = 0.45;
+
+const damagePopups = [];
+const hitSparks = [];
 
 // 牢笼对象
 let cage = {
@@ -918,6 +965,13 @@ window.addEventListener('keydown', e => {
             keys.jump = true;
         }
     }
+    if (e.key === 'c' || e.key === 'C') {
+        if (currentState === GameState.TRAPPED_IN_CAGE) {
+            breakOutOfCage();
+        } else {
+            performDragonClaw();
+        }
+    }
     if (e.key === 'j' || e.key === 'J') {
         if (currentState === GameState.TRAPPED_IN_CAGE) {
             breakOutOfCage();
@@ -951,6 +1005,15 @@ const btnTouchLeft = document.getElementById('btnTouchLeft');
 const btnTouchRight = document.getElementById('btnTouchRight');
 const btnTouchJump = document.getElementById('btnTouchJump');
 const btnTouchSwallow = document.getElementById('btnTouchSwallow');
+const btnTouchClaw = document.getElementById('btnTouchClaw');
+
+if (btnTouchClaw) {
+    btnTouchClaw.addEventListener('touchstart', e => {
+        e.preventDefault();
+        if (currentState === GameState.TRAPPED_IN_CAGE) breakOutOfCage();
+        else performDragonClaw();
+    }, { passive: false });
+}
 
 btnTouchLeft.addEventListener('touchstart', e => { e.preventDefault(); keys.left = true; }, { passive: false });
 btnTouchLeft.addEventListener('touchend', e => { e.preventDefault(); keys.left = false; });
@@ -1056,7 +1119,7 @@ function breakOutOfCage() {
     }
 
     currentState = GameState.LEVEL_1_ACTIVE;
-    hintBanner.textContent = "破笼而出！一路往前冲！按 [J键] 挑起吃人，有手雷时低头直接吃掉！";
+    hintBanner.textContent = "破笼而出！一路往前冲！按 [C 键] 挥爪攻击 (伤害 1，士兵 5 血) | [J 键] 挑起吞食，低头吃手雷！";
 }
 
 // ==========================================
@@ -1073,8 +1136,14 @@ function setupLevel1Entities() {
     electricTicksLeft = 0;
     electricTickTimer = 0.0;
     cage.broken = false;
+    dragon.swallowAction = null;
     dragon.tossedSoldier = null;
     dragon.feedingGrenadeTimer = 0.0;
+    dragon.isClawing = false;
+    dragon.clawAnimTimer = 0.0;
+    dragon.clawCdTimer = 0.0;
+    damagePopups.length = 0;
+    hitSparks.length = 0;
     activeEnemies = [];
     activeFireballs = [];
     activeGrenades = [];
@@ -1098,10 +1167,24 @@ function setupLevel1Entities() {
     ];
 
     spawnPlan.forEach(sp => {
+        let det = 380.0;
+        if (sp.type === EnemyType.GRAY_HAT) det = 550.0;
+        else if (sp.type === EnemyType.RED_ORANGE) det = 480.0;
+        else if (sp.type === EnemyType.BLACK_SPECOPS) det = 580.0;
+
         activeEnemies.push({
             type: sp.type,
             x: sp.x,
             y: 540.0,
+            homeX: sp.x,
+            hp: SOLDIER_MAX_HP,
+            maxHp: SOLDIER_MAX_HP,
+            hitFlashTimer: 0.0,
+            knockbackVx: 0.0,
+            state: 'PATROL',
+            dir: -1,
+            patrolTimer: 1.0 + Math.random() * 1.5,
+            detectRange: det,
             width: 36.0,
             height: 72.0,
             timer: sp.type === EnemyType.BLACK_SPECOPS ? 7.0 : 1.5,
@@ -1115,8 +1198,58 @@ function setupLevel1Entities() {
 }
 
 // ==========================================
-// 3. 巨龙吞噬核心机制 (优先吃手雷 / 挑起吃人)
+// 3. 巨龙挥爪基础攻击 (C 键，伤害 1，士兵 5 血) 与吞噬机制
 // ==========================================
+function performDragonClaw() {
+    if (currentState !== GameState.LEVEL_1_ACTIVE) return;
+    if (dragon.clawCdTimer > 0.0) return;
+
+    dragon.isClawing = true;
+    dragon.clawAnimTimer = 0.28;
+    dragon.clawCdTimer = CLAW_COOLDOWN;
+    playSound('claw');
+
+    // 攻击判定范围：龙嘴/前爪前方 170 像素
+    const reachMinX = (dragon.facing === 1) ? dragon.x : (dragon.x - 170.0);
+    const reachMaxX = (dragon.facing === 1) ? (dragon.x + 170.0) : dragon.x;
+
+    let hitAny = false;
+    for (let i = activeEnemies.length - 1; i >= 0; i--) {
+        const e = activeEnemies[i];
+        if (e.x >= reachMinX && e.x <= reachMaxX) {
+            applyClawDamageToSoldier(e, i);
+            hitAny = true;
+        }
+    }
+    if (hitAny) {
+        hintBanner.textContent = "蓝龙挥爪命中！士兵生命 -1，触发闪烁硬直与击退！";
+    }
+}
+
+function applyClawDamageToSoldier(e, index) {
+    e.hp = Math.max(0, (e.hp !== undefined ? e.hp : SOLDIER_MAX_HP) - CLAW_BASE_DAMAGE);
+    e.hitFlashTimer = 0.18;
+    e.knockbackVx = dragon.facing * 240.0;
+
+    damagePopups.push({
+        x: e.x,
+        y: e.y - 92,
+        text: `-${CLAW_BASE_DAMAGE}`,
+        timer: 0.65
+    });
+
+    hitSparks.push({
+        x: e.x,
+        y: e.y - 50,
+        timer: 0.25
+    });
+
+    if (e.hp <= 0) {
+        activeEnemies.splice(index, 1);
+        hintBanner.textContent = "士兵血量归零倒地移除！";
+    }
+}
+
 function performDragonSwallow() {
     if (currentState !== GameState.LEVEL_1_ACTIVE) return;
 
@@ -1135,21 +1268,19 @@ function performDragonSwallow() {
         }
     }
 
-    // 2. 没有手雷时，自主跳起咬住士兵带到空中再吃（上限 10 人）
+    // 2. 没有手雷时，原版地表 7 步吞噬前方士兵（上限 10 人）
     if (swallowedHumans >= MAX_BELLY_CAPACITY) {
         hintBanner.textContent = "肚子已经装满 10 个人了！快吃颗手雷炸掉消化！";
         return;
     }
 
-    // 如果正在执行空中跃起咬人吞咽动作，不重复触发
-    if (dragon.aerialSwallow) return;
+    if (dragon.swallowAction) return;
 
     for (let i = activeEnemies.length - 1; i >= 0; i--) {
         const e = activeEnemies[i];
         const dist = Math.hypot(e.x - mouthX, e.y - mouthY);
-        // 判定在巨龙前方
         const inFront = (e.x - dragon.x) * dragon.facing >= -20;
-        if (dist <= 300.0 && inFront) {
+        if (dist <= 280.0 && inFront) {
             const capturedEnemy = {
                 type: e.type,
                 x: e.x,
@@ -1157,30 +1288,34 @@ function performDragonSwallow() {
                 facing: e.facing || (dragon.facing === 1 ? -1 : 1)
             };
 
-            // 从常规敌人列表移除，由空中吞咽动力学接管
+            // 从敌人列表移除，融入蓝龙原版 7 步吞噬序列
             activeEnemies.splice(i, 1);
 
-            // 触发蓝龙自主腾空飞扑、空中咬住带到天空、仰头大口吞咽入腹动力学全套动效
-            dragon.aerialSwallow = {
+            // 触发 7 步地表完整吞噬动作流（叼起 -> 抛空 -> 张嘴迎击 -> 叼入 -> 咬住 -> 仰头 -> 下咽）
+            dragon.swallowAction = {
                 timer: 0.0,
-                duration: 1.25,
-                startX: dragon.x,
-                startY: dragon.y,
-                targetX: capturedEnemy.x - dragon.facing * 40,
-                apexY: Math.max(260.0, dragon.y - 180.0), // 跃起至空中高点
+                duration: 1.26, // 1.26s 总时长，每帧约 0.18s
                 enemy: capturedEnemy,
-                jawOpen: 0.0,
-                swallowLumpT: -1.0,
-                biteSoundTriggered: false,
-                eatenTriggered: false
+                biteSoundPlayed: false,
+                catchSoundPlayed: false,
+                swallowSoundPlayed: false
             };
 
-            dragon.isOnFloor = false;
-            playSound('jump');
-            hintBanner.textContent = "蓝龙猛然跃起腾空，咬住士兵带到空中吞咽！";
+            playSound('bite');
             return;
         }
     }
+
+    // 周围无敌人时按 J，播放短动作咬合试探
+    dragon.swallowAction = {
+        timer: 0.0,
+        duration: 0.38,
+        enemy: null,
+        biteSoundPlayed: false,
+        catchSoundPlayed: false,
+        swallowSoundPlayed: false
+    };
+    playSound('bite');
 }
 
 // 手雷在肚子内闷爆引爆
@@ -1240,98 +1375,54 @@ function restartLevel() {
 let lastTime = performance.now();
 
 // ==========================================
-// 🚀 蓝龙自主跳跃咬人带到空中大口吞咽动力学
+// 🍖 蓝龙原版 7 步完整地表吞咽动作逻辑
+// 严格按照原图序列：1.叼起 -> 2.抛空 -> 3.张嘴迎击 -> 4.叼入 -> 5.咬住 -> 6.仰头 -> 7.吞咽入腹
 // ==========================================
-function updateAerialSwallow(dt) {
-    const asw = dragon.aerialSwallow;
-    asw.timer += dt;
-    const p = Math.min(1.0, asw.timer / asw.duration);
+function updateSwallowAction(dt) {
+    const sw = dragon.swallowAction;
+    sw.timer += dt;
+    const p = Math.min(1.0, sw.timer / sw.duration);
+    const fIdx = Math.min(6, Math.floor(p * 7));
 
-    // 阶段 0: 蓝龙俯冲起跳扑击地面士兵 (0.00 ~ 0.32)
-    if (p < 0.32) {
-        const t0 = p / 0.32;
-        const easeT0 = t0 * t0 * (3.0 - 2.0 * t0);
-        dragon.x = asw.startX + (asw.targetX - asw.startX) * easeT0;
-        // 向上跃起前抛弧线
-        dragon.y = asw.startY - Math.sin(t0 * Math.PI * 0.5) * (asw.startY - asw.apexY * 0.7);
-        asw.jawOpen = Math.min(1.0, t0 * 1.35); // 飞扑大张嘴
+    // 音效分步触发
+    if (fIdx === 0 && !sw.biteSoundPlayed) {
+        playSound('bite');
+        sw.biteSoundPlayed = true;
     }
-    // 阶段 1: 咬住士兵，带到空中最高点 (0.32 ~ 0.60)
-    else if (p < 0.60) {
-        const t1 = (p - 0.32) / 0.28;
-        if (!asw.biteSoundTriggered) {
-            asw.biteSoundTriggered = true;
-            playSound('swallow');
-            // 产生咬住士兵的受击火花
-            for (let i = 0; i < 6; i++) {
-                activeParticles.push({
-                    x: dragon.x + dragon.facing * 70,
-                    y: dragon.y - 45,
-                    vx: (Math.random() - 0.5) * 120,
-                    vy: -Math.random() * 80,
-                    size: Math.random() * 4 + 2,
-                    color: '#60a5fa',
-                    life: 0.25
-                });
-            }
-        }
-        asw.jawOpen = 0.22; // 紧咬住士兵身体
-        dragon.x = asw.targetX + dragon.facing * 45 * t1;
-        dragon.y = (asw.startY - (asw.startY - asw.apexY * 0.7)) - Math.sin(t1 * Math.PI * 0.5) * (asw.apexY * 0.3);
+    if (fIdx === 3 && !sw.catchSoundPlayed) {
+        playSound('bite');
+        sw.catchSoundPlayed = true;
     }
-    // 阶段 2: 空中昂首大口吞咽，喉部鼓包入腹 (0.60 ~ 0.85)
-    else if (p < 0.85) {
-        const t2 = (p - 0.60) / 0.25;
-        dragon.x += dragon.facing * 22.0 * dt; // 空中微幅向前滑翔
-        dragon.y = asw.apexY + Math.pow(t2, 2.0) * 35.0; // 在空中最高点悬浮
-        asw.swallowLumpT = t2; // 鼓包连续滑移
-        if (t2 < 0.45) {
-            asw.jawOpen = 0.65; // 张嘴将士兵顺入口腔
-        } else {
-            asw.jawOpen = 0.0;
-        }
-
-        // 入腹完成瞬间 (+1 人数、弹性果冻震颤)
-        if (t2 >= 0.80 && !asw.eatenTriggered) {
-            asw.eatenTriggered = true;
-            swallowedHumans = Math.min(MAX_BELLY_CAPACITY, swallowedHumans + 1);
-            dragon.bellyBulgeAnim = 1.0;
+    if (fIdx === 6 && !sw.swallowSoundPlayed) {
+        playSound('swallow');
+        sw.swallowSoundPlayed = true;
+        if (sw.enemy && swallowedHumans < MAX_BELLY_CAPACITY) {
+            swallowedHumans++;
+            naturalDigestTimer = 0.0;
             updateHud();
-            playSound('belly_bomb');
-            hintBanner.textContent = `在空中咬住并成功吞下士兵！（腹中人数：${swallowedHumans}/10）`;
         }
     }
-    // 阶段 3: 霸气着陆缓冲 (0.85 ~ 1.00)
-    else {
-        const t3 = (p - 0.85) / 0.15;
-        dragon.y = (asw.apexY + 35.0) + (540.0 - (asw.apexY + 35.0)) * Math.pow(t3, 2.0);
-        if (p >= 1.0) {
-            dragon.y = 540.0;
-            dragon.vy = 0;
-            dragon.isOnFloor = true;
-            dragon.aerialSwallow = null;
-            // 着地巨龙踏地烟尘
-            for (let k = 0; k < 12; k++) {
-                activeParticles.push({
-                    x: dragon.x + (Math.random() - 0.5) * 140,
-                    y: 538,
-                    vx: (Math.random() - 0.5) * 200,
-                    vy: -Math.random() * 80 - 20,
-                    size: Math.random() * 5 + 3,
-                    color: 'rgba(160, 185, 210, 0.7)',
-                    life: 0.45
-                });
-            }
-            playSound('step');
-        }
+
+    if (p >= 1.0) {
+        dragon.swallowAction = null;
     }
 }
 
 function updateGame(dt) {
     if (currentState === GameState.LEVEL_1_ACTIVE) {
-        // --- A. 蓝龙飞跃咬人吞噬动力学 OR 常规移动与重力 ---
-        if (dragon.aerialSwallow) {
-            updateAerialSwallow(dt);
+        // --- A. 蓝龙吞咽动作流 OR 常规移动与重力 ---
+        if (dragon.swallowAction) {
+            updateSwallowAction(dt);
+            dragon.vx = 0;
+            if (!dragon.isOnFloor) {
+                dragon.vy += gravity * dt;
+                dragon.y += dragon.vy * dt;
+                if (dragon.y >= 540.0) {
+                    dragon.y = 540.0;
+                    dragon.vy = 0;
+                    dragon.isOnFloor = true;
+                }
+            }
         } else {
             let dir = 0;
             if (keys.right || keys.autoRun) dir += 1;
@@ -1394,6 +1485,24 @@ function updateGame(dt) {
         if (dragon.feedingGrenadeTimer > 0) dragon.feedingGrenadeTimer -= dt;
         if (dragon.bellyBulgeAnim > 0) dragon.bellyBulgeAnim = Math.max(0, dragon.bellyBulgeAnim - dt * 2.8);
 
+        // 挥爪基础攻击冷却与动画
+        if (dragon.clawCdTimer > 0) dragon.clawCdTimer -= dt;
+        if (dragon.isClawing) {
+            dragon.clawAnimTimer -= dt;
+            if (dragon.clawAnimTimer <= 0) dragon.isClawing = false;
+        }
+
+        // 伤害飘字与击打星爆更新
+        for (let i = damagePopups.length - 1; i >= 0; i--) {
+            damagePopups[i].y -= 45.0 * dt;
+            damagePopups[i].timer -= dt;
+            if (damagePopups[i].timer <= 0) damagePopups.splice(i, 1);
+        }
+        for (let i = hitSparks.length - 1; i >= 0; i--) {
+            hitSparks[i].timer -= dt;
+            if (hitSparks[i].timer <= 0) hitSparks.splice(i, 1);
+        }
+
         // 挑起吞食士兵物理轨迹
         if (dragon.tossedSoldier) {
             const ts = dragon.tossedSoldier;
@@ -1430,71 +1539,99 @@ function updateGame(dt) {
             naturalDigestTimer = 0.0;
         }
 
-        // --- C. 沿途士兵 AI 与跑动步频 ---
+        // --- C. 沿途士兵 AI 与跑动步频（双阶段：离远巡逻左右漫步 -> 靠近切换战斗形态） ---
         activeEnemies.forEach(e => {
-            const dist = Math.hypot(dragon.x - e.x, dragon.y - e.y);
-            const dirX = Math.sign(dragon.x - e.x);
-            e.facing = dirX !== 0 ? dirX : -1;
+            // 受击硬直闪烁与击退位移
+            if (e.hitFlashTimer > 0) e.hitFlashTimer = Math.max(0, e.hitFlashTimer - dt);
+            if (Math.abs(e.knockbackVx || 0) > 1.0) {
+                e.x = Math.max(80.0, Math.min(FINISH_LINE_X + 200, e.x + e.knockbackVx * dt));
+                e.knockbackVx = (e.knockbackVx > 0) ? Math.max(0, e.knockbackVx - 950.0 * dt) : Math.min(0, e.knockbackVx + 950.0 * dt);
+            }
 
-            if (e.type === EnemyType.BLUE_HAT) {
-                // 蓝帽：巡逻走动并用电击枪射击
-                e.walkCycle += dt * 5.0;
-                if (dist < 420.0) {
+            const dist = Math.abs(dragon.x - e.x);
+            const dirX = dragon.x < e.x ? -1 : 1;
+
+            if (dist <= e.detectRange) {
+                if (e.state !== 'COMBAT') {
+                    e.state = 'COMBAT';
+                }
+                e.facing = dirX;
+                e.dir = dirX;
+            } else {
+                e.state = 'PATROL';
+            }
+
+            if (e.state === 'PATROL') {
+                e.patrolTimer -= dt;
+                if (e.patrolTimer <= 0) {
+                    e.patrolTimer = 1.2 + Math.random() * 1.6;
+                    const choices = [-1, 1, -1, 1, 0];
+                    e.dir = choices[Math.floor(Math.random() * choices.length)];
+                    if (e.dir !== 0) e.facing = e.dir;
+                }
+
+                if (e.dir !== 0) {
+                    e.x += e.dir * 48.0 * dt;
+                    e.walkCycle += dt * 6.5;
+                    if (Math.abs(e.x - e.homeX) > 95.0) {
+                        e.dir = e.x > e.homeX ? -1 : 1;
+                        e.facing = e.dir;
+                    }
+                } else {
+                    e.walkCycle = 0;
+                }
+            } else if (e.state === 'COMBAT') {
+                if (e.type === EnemyType.BLUE_HAT) {
+                    // 蓝帽：平举电击枪瞄准放电
+                    e.walkCycle = 0;
                     e.isFiring = true;
                     e.timer += dt;
-                    if (e.timer >= 3.0) {
+                    if (e.timer >= 3.2) {
                         e.timer = 0.0;
                         applyDamageToDragon(0.5, "被蓝帽电击枪击中！(-0.5，进入5秒感电)");
                         electricTicksLeft = 5;
                         electricTickTimer = 0.0;
                         playSound('shock');
                     }
-                } else {
-                    e.isFiring = false;
-                }
-            } else if (e.type === EnemyType.GRAY_HAT) {
-                // 灰帽：冲锋奔跑 (距离 < 600 加速冲向龙)
-                if (dist < 600.0) {
-                    e.x += dirX * 350.0 * dt;
-                    e.walkCycle += dt * 14.0; // 快速跑动腿频
-                    // 产生跑动扬尘微粒
-                    e.dustTimer = (e.dustTimer || 0) + dt;
-                    if (e.dustTimer >= 0.08) {
-                        e.dustTimer = 0;
-                        activeParticles.push({
-                            x: e.x - e.facing * 14,
-                            y: e.y - 2,
-                            vx: -e.facing * (Math.random() * 80 + 30),
-                            vy: -Math.random() * 35,
-                            size: Math.random() * 5 + 3,
-                            color: 'rgba(180, 205, 230, 0.55)',
-                            life: 0.35
-                        });
+                } else if (e.type === EnemyType.GRAY_HAT) {
+                    // 灰帽：高速冲锋扑向龙
+                    if (dist > 50.0) {
+                        e.x += dirX * 350.0 * dt;
+                        e.walkCycle += dt * 16.0;
+                        e.dustTimer = (e.dustTimer || 0) + dt;
+                        if (e.dustTimer >= 0.08) {
+                            e.dustTimer = 0;
+                            activeParticles.push({
+                                x: e.x - e.facing * 14,
+                                y: e.y - 2,
+                                vx: -e.facing * (Math.random() * 80 + 30),
+                                vy: -Math.random() * 35,
+                                size: Math.random() * 5 + 3,
+                                color: 'rgba(180, 205, 230, 0.55)',
+                                life: 0.35
+                            });
+                        }
+                    } else {
+                        e.walkCycle = 0;
                     }
-                } else {
-                    e.walkCycle += dt * 4.0;
-                }
-            } else if (e.type === EnemyType.RED_ORANGE) {
-                // 红/橘帽：战术走动与喷火枪
-                e.walkCycle += dt * 5.5;
-                if (e.flameTimer > 0) e.flameTimer -= dt;
-                if (dist < 550.0) {
+                } else if (e.type === EnemyType.RED_ORANGE) {
+                    // 红/橘帽：双手端平喷火枪蓄力
+                    e.walkCycle = 0;
+                    if (e.flameTimer > 0) e.flameTimer -= dt;
                     e.timer += dt;
                     if (e.timer >= 3.0) {
                         e.timer = 0.0;
-                        e.flameTimer = 0.35;
+                        e.flameTimer = 0.4;
                         playSound('fire');
                         activeFireballs.push({
-                            x: e.x + e.facing * 20,
+                            x: e.x + e.facing * 24,
                             y: e.y - 42,
                             vx: dirX * 380.0
                         });
                     }
-                }
-            } else if (e.type === EnemyType.BLACK_SPECOPS) {
-                // 黑色特种兵：10秒蓄力抛掷高爆手雷
-                e.walkCycle += dt * 4.5;
-                if (dist < 650.0) {
+                } else if (e.type === EnemyType.BLACK_SPECOPS) {
+                    // 黑色特种兵：高举手雷蓄力抛掷
+                    e.walkCycle = 0;
                     e.timer += dt;
                     if (e.timer >= 10.0) {
                         e.timer = 0.0;
@@ -1618,7 +1755,43 @@ function renderGame() {
     // 8. 粒子微粒绘制
     drawParticles();
 
+    // 9. 战斗击打星爆与受击伤害飘字 (-1)
+    drawCombatEffects();
+
     ctx.restore();
+}
+
+function drawCombatEffects() {
+    // 击打星爆
+    for (let sp of hitSparks) {
+        const sparkImg = labSprites['claw_impact_fx'];
+        if (sparkImg && sparkImg.complete && sparkImg.naturalWidth > 0) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, sp.timer / 0.25);
+            ctx.drawImage(sparkImg, sp.x - 22, sp.y - 22, 44, 44);
+            ctx.restore();
+        } else {
+            ctx.save();
+            ctx.fillStyle = '#ff5722';
+            ctx.beginPath();
+            ctx.arc(sp.x, sp.y, 16 * (sp.timer / 0.25), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    // 伤害飘字 (-1)
+    for (let pop of damagePopups) {
+        const alpha = Math.max(0, Math.min(1.0, pop.timer / 0.65));
+        ctx.save();
+        ctx.font = 'bold 24px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = `rgba(255, 60, 60, ${alpha})`;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+        ctx.shadowBlur = 6;
+        ctx.fillText(pop.text, pop.x, pop.y);
+        ctx.restore();
+    }
 }
 
 // ==========================================
@@ -2153,495 +2326,10 @@ function drawFinishLine() {
 // ==========================================
 
 // ==========================================
-// 🎨 纯手绘动态四足蓝龙空中扑击咬人与吞咽渲染器 (100% 动态，无任何截屏切片)
+// 🎨 蓝龙原版动作序列帧渲染引擎 (Pristine Sprite Sheet Engine)
+// 包含：10 帧四足行走步态循环 + 7 步地表完整吞咽动作流
 // ==========================================
-function drawAerialDragon(ctx, asw) {
-    ctx.save();
-    ctx.translate(dragon.x, dragon.y);
-    ctx.scale(dragon.facing, 1);
-
-    const p = Math.min(1.0, asw.timer / asw.duration);
-    const nowMs = performance.now();
-    const wingFlap = Math.sin(asw.timer * 24.0) * 28.0;
-    const tailWag = Math.sin(asw.timer * 14.0) * 18.0;
-
-    let pitch = 0.0;
-    if (p < 0.32) {
-        pitch = -0.15 * (p / 0.32);
-    } else if (p < 0.60) {
-        const t1 = (p - 0.32) / 0.28;
-        pitch = -0.15 + 0.30 * t1; // 升空抬头
-    } else if (p < 0.85) {
-        pitch = 0.10;
-    } else {
-        const t3 = (p - 0.85) / 0.15;
-        pitch = 0.10 * (1.0 - t3);
-    }
-    ctx.rotate(pitch);
-
-    // 调色板
-    const cOutline = '#0b1329';
-    const cScaleDark = '#172554';
-    const cScaleMain = '#1d4ed8';
-    const cScaleLight = '#3b82f6';
-    const cBellyMain = '#60a5fa';
-    const cBellyDark = '#2563eb';
-    const cHorn = '#bae6fd';
-    const cEye = '#facc15';
-    const cMouth = '#881337';
-
-    // 1. 远侧（里侧）龙翼
-    ctx.save();
-    ctx.beginPath();
-    const fWingRoot = { x: -10, y: -90 };
-    const fWingElbow = { x: -65, y: -180 + wingFlap };
-    const fWingTip = { x: -145, y: -150 + wingFlap * 1.3 };
-    ctx.moveTo(fWingRoot.x, fWingRoot.y);
-    ctx.lineTo(fWingElbow.x, fWingElbow.y);
-    ctx.lineTo(fWingTip.x, fWingTip.y);
-    ctx.quadraticCurveTo(fWingElbow.x - 20, fWingElbow.y + 45, fWingRoot.x - 25, fWingRoot.y + 20);
-    ctx.closePath();
-    ctx.fillStyle = cScaleDark;
-    ctx.fill();
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = cOutline;
-    ctx.stroke();
-    // 翼骨
-    ctx.beginPath();
-    ctx.moveTo(fWingRoot.x, fWingRoot.y);
-    ctx.lineTo(fWingElbow.x, fWingElbow.y);
-    ctx.lineTo(fWingTip.x, fWingTip.y);
-    ctx.lineWidth = 6;
-    ctx.strokeStyle = cScaleMain;
-    ctx.stroke();
-    ctx.restore();
-
-    // 2. 远侧（里侧）双腿
-    ctx.save();
-    ctx.lineWidth = 10;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = cScaleDark;
-    const isLanding = p >= 0.85;
-    const landT = isLanding ? (p - 0.85) / 0.15 : 0.0;
-    // 远侧后腿
-    const fHindJoint = { x: -50, y: -80 };
-    const fHindFootY = isLanding ? (-35 + 33 * landT) : -45;
-    const fHindFootX = isLanding ? -55 : -75;
-    ctx.beginPath();
-    ctx.moveTo(fHindJoint.x, fHindJoint.y);
-    ctx.lineTo(fHindJoint.x - 15, (fHindJoint.y + fHindFootY) * 0.5);
-    ctx.lineTo(fHindFootX, fHindFootY);
-    ctx.stroke();
-    // 远侧前腿
-    const fForeJoint = { x: 35, y: -80 };
-    const fForeFootY = isLanding ? (-35 + 33 * landT) : -45;
-    const fForeFootX = isLanding ? 35 : 15;
-    ctx.beginPath();
-    ctx.moveTo(fForeJoint.x, fForeJoint.y);
-    ctx.lineTo(fForeJoint.x + 10, (fForeJoint.y + fForeFootY) * 0.5);
-    ctx.lineTo(fForeFootX, fForeFootY);
-    ctx.stroke();
-    ctx.restore();
-
-    // 3. 长尾巴与背部尖刺
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(-75, -88);
-    const tailTipX = -195;
-    const tailTipY = -115 + tailWag;
-    ctx.quadraticCurveTo(-140, -80 + tailWag * 0.4, tailTipX, tailTipY);
-    ctx.lineWidth = 16;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = cScaleMain;
-    ctx.stroke();
-    // 尾部背刺
-    for (let i = 1; i <= 4; i++) {
-        const tt = i / 5.0;
-        const tx = -75 + (tailTipX - (-75)) * tt;
-        const ty = -88 + (tailTipY - (-88)) * tt - 6;
-        ctx.fillStyle = cHorn;
-        ctx.beginPath();
-        ctx.moveTo(tx - 4, ty);
-        ctx.lineTo(tx, ty - 12);
-        ctx.lineTo(tx + 4, ty);
-        ctx.closePath();
-        ctx.fill();
-    }
-    ctx.restore();
-
-    // 4. 躯干主龙身
-    ctx.save();
-    ctx.beginPath();
-    ctx.ellipse(0, -92, 85, 46, 0, 0, Math.PI * 2);
-    ctx.fillStyle = cScaleMain;
-    ctx.fill();
-    ctx.lineWidth = 3.5;
-    ctx.strokeStyle = cOutline;
-    ctx.stroke();
-    // 背脊高光
-    ctx.beginPath();
-    ctx.ellipse(0, -112, 70, 16, 0, 0, Math.PI * 2);
-    ctx.fillStyle = cScaleLight;
-    ctx.fill();
-    // 背脊尖刺
-    for (let x = -50; x <= 40; x += 18) {
-        ctx.fillStyle = cHorn;
-        ctx.beginPath();
-        ctx.moveTo(x - 5, -125);
-        ctx.lineTo(x, -142);
-        ctx.lineTo(x + 5, -125);
-        ctx.closePath();
-        ctx.fill();
-    }
-    ctx.restore();
-
-    // 5. 身下悬垂膨胀的肚子
-    const bellyBonus = (swallowedHumans * 3.6) + (dragon.bellyBulgeAnim * 24.0);
-    const bellyR = 36.0 + bellyBonus;
-    const bellyCenter = { x: 5, y: -72 + (swallowedHumans * 1.5) };
-    ctx.save();
-    ctx.beginPath();
-    ctx.ellipse(bellyCenter.x, bellyCenter.y, bellyR * 1.25, bellyR * 0.96, 0, 0, Math.PI * 2);
-    ctx.fillStyle = cBellyMain;
-    ctx.fill();
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = cBellyDark;
-    ctx.stroke();
-    // 肚内士兵微动凸起
-    if (swallowedHumans > 0) {
-        for (let k = 0; k < Math.min(10, swallowedHumans); k++) {
-            const ang = k * 1.25 + asw.timer * 2.0;
-            const bx = bellyCenter.x + Math.cos(ang) * (bellyR * 0.55);
-            const by = bellyCenter.y + Math.sin(ang) * (bellyR * 0.45);
-            ctx.fillStyle = cBellyDark;
-            ctx.beginPath();
-            ctx.arc(bx, by, 7.0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = cScaleLight;
-            ctx.beginPath();
-            ctx.arc(bx - 2, by - 2, 4.0, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    }
-    // 爆炸透光
-    if (dragon.bellyBulgeAnim > 0.05) {
-        ctx.beginPath();
-        ctx.ellipse(bellyCenter.x, bellyCenter.y, bellyR * 1.15, bellyR * 0.88, 0, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 140, 0, ${0.65 * dragon.bellyBulgeAnim})`;
-        ctx.fill();
-    }
-    ctx.restore();
-
-    // 6. 近侧粗壮双腿与爪子
-    ctx.save();
-    ctx.lineWidth = 12;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = cScaleMain;
-    // 近侧后腿
-    const nHindJoint = { x: -40, y: -78 };
-    const nHindFootY = isLanding ? (-30 + 30 * landT) : -40;
-    const nHindFootX = isLanding ? -40 : -60;
-    ctx.beginPath();
-    ctx.moveTo(nHindJoint.x, nHindJoint.y);
-    ctx.lineTo(nHindJoint.x - 12, (nHindJoint.y + nHindFootY) * 0.5);
-    ctx.lineTo(nHindFootX, nHindFootY);
-    ctx.stroke();
-    ctx.fillStyle = cHorn;
-    ctx.beginPath();
-    ctx.ellipse(nHindFootX + 3, nHindFootY, 8, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // 近侧前腿
-    const nForeJoint = { x: 45, y: -78 };
-    const nForeFootY = isLanding ? (-30 + 30 * landT) : -38;
-    const nForeFootX = isLanding ? 45 : 25;
-    ctx.beginPath();
-    ctx.moveTo(nForeJoint.x, nForeJoint.y);
-    ctx.lineTo(nForeJoint.x + 10, (nForeJoint.y + nForeFootY) * 0.5);
-    ctx.lineTo(nForeFootX, nForeFootY);
-    ctx.stroke();
-    ctx.fillStyle = cHorn;
-    ctx.beginPath();
-    ctx.ellipse(nForeFootX + 3, nForeFootY, 8, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // 7. 近侧长龙翼
-    ctx.save();
-    ctx.beginPath();
-    const nWingRoot = { x: 10, y: -105 };
-    const nWingElbow = { x: -45, y: -195 + wingFlap * 1.1 };
-    const nWingTip = { x: -140, y: -175 + wingFlap * 1.4 };
-    ctx.moveTo(nWingRoot.x, nWingRoot.y);
-    ctx.lineTo(nWingElbow.x, nWingElbow.y);
-    ctx.lineTo(nWingTip.x, nWingTip.y);
-    ctx.quadraticCurveTo(nWingElbow.x - 15, nWingElbow.y + 55, nWingRoot.x - 20, nWingRoot.y + 25);
-    ctx.closePath();
-    ctx.fillStyle = cScaleMain;
-    ctx.fill();
-    ctx.lineWidth = 3.5;
-    ctx.strokeStyle = cOutline;
-    ctx.stroke();
-    // 翼骨与爪
-    ctx.beginPath();
-    ctx.moveTo(nWingRoot.x, nWingRoot.y);
-    ctx.lineTo(nWingElbow.x, nWingElbow.y);
-    ctx.lineTo(nWingTip.x, nWingTip.y);
-    ctx.lineWidth = 8;
-    ctx.strokeStyle = cScaleLight;
-    ctx.stroke();
-    ctx.fillStyle = cHorn;
-    ctx.beginPath();
-    ctx.moveTo(nWingElbow.x - 4, nWingElbow.y);
-    ctx.lineTo(nWingElbow.x, nWingElbow.y - 12);
-    ctx.lineTo(nWingElbow.x + 4, nWingElbow.y);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-
-    // 8. 龙头位置计算与颈部
-    const neckBase = { x: 50, y: -95 };
-    let headX = 120;
-    let headY = -85;
-    let headAngle = 0.0;
-    let jawOpen = asw.jawOpen || 0.0;
-
-    if (p < 0.32) {
-        // 扑咬地面士兵
-        const t0 = p / 0.32;
-        headX = 105 + (128 - 105) * t0;
-        headY = -85 + (-45 - (-85)) * t0;
-        headAngle = 0.20;
-    } else if (p < 0.60) {
-        // 咬住士兵带向空中高点
-        headX = 128;
-        headY = -85;
-        headAngle = -0.10;
-    } else if (p < 0.85) {
-        // 空中昂首大口吞咽
-        const t2 = (p - 0.60) / 0.25;
-        headX = 128 + (85 - 128) * t2;
-        headY = -85 + (-145 - (-85)) * t2;
-        headAngle = -0.10 + (-0.65 - (-0.10)) * t2;
-    } else {
-        // 落地复位
-        const t3 = (p - 0.85) / 0.15;
-        headX = 85 + (110 - 85) * t3;
-        headY = -145 + (-90 - (-145)) * t3;
-        headAngle = -0.65 + (0.0 - (-0.65)) * t3;
-    }
-
-    // 绘制龙颈
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(neckBase.x, neckBase.y);
-    ctx.quadraticCurveTo((neckBase.x + headX) * 0.5, (neckBase.y + headY) * 0.5 - 12, headX, headY);
-    ctx.lineWidth = 26;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = cScaleMain;
-    ctx.stroke();
-    // 浅蓝咽喉腹甲
-    ctx.beginPath();
-    ctx.moveTo(neckBase.x + 2, neckBase.y + 6);
-    ctx.quadraticCurveTo((neckBase.x + headX) * 0.5 + 2, (neckBase.y + headY) * 0.5 - 6, headX - 2, headY + 8);
-    ctx.lineWidth = 14;
-    ctx.strokeStyle = cBellyMain;
-    ctx.stroke();
-
-    // 吞咽鼓包在龙颈上滑移入腹
-    if (asw.swallowLumpT >= 0.0) {
-        const lt = asw.swallowLumpT;
-        let lx, ly;
-        if (lt < 0.7) {
-            const u = lt / 0.7;
-            lx = headX + (neckBase.x - headX) * u;
-            ly = (headY + 6) + (neckBase.y - (headY + 6)) * u;
-        } else {
-            const u = (lt - 0.7) / 0.3;
-            lx = neckBase.x + (bellyCenter.x - neckBase.x) * u;
-            ly = neckBase.y + ((bellyCenter.y - 10) - neckBase.y) * u;
-        }
-        ctx.fillStyle = cBellyDark;
-        ctx.beginPath();
-        ctx.arc(lx, ly, 14, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = cScaleLight;
-        ctx.beginPath();
-        ctx.arc(lx - 2, ly - 2, 8, 0, Math.PI * 2);
-        ctx.fill();
-    }
-    ctx.restore();
-
-    // 9. 龙头、龙角、锐利龙眼与大张/咬合之嘴
-    ctx.save();
-    ctx.translate(headX, headY);
-    ctx.rotate(headAngle);
-
-    // 双龙角向后延伸
-    ctx.fillStyle = cHorn;
-    ctx.beginPath();
-    ctx.moveTo(-10, -8);
-    ctx.lineTo(-48, -26);
-    ctx.lineTo(-12, -18);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = cOutline;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(-5, -4);
-    ctx.lineTo(-38, -14);
-    ctx.lineTo(-8, -10);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // 上颌与鼻吻
-    ctx.fillStyle = cScaleMain;
-    ctx.beginPath();
-    ctx.ellipse(14, -6, 26, 14, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(26, -3, 15, 9, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 锐利龙眼与黑色坚瞳
-    ctx.fillStyle = cEye;
-    ctx.beginPath();
-    ctx.arc(8, -10, 5.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#000000';
-    ctx.beginPath();
-    ctx.ellipse(8, -10, 1.8, 4.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = cOutline;
-    ctx.beginPath();
-    ctx.moveTo(0, -14);
-    ctx.lineTo(15, -12);
-    ctx.stroke();
-
-    // 上牙
-    ctx.fillStyle = '#ffffff';
-    for (let tx = 10; tx <= 34; tx += 6) {
-        ctx.beginPath();
-        ctx.moveTo(tx - 3, 2);
-        ctx.lineTo(tx, 9);
-        ctx.lineTo(tx + 3, 2);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    // 下颌与暗红口腔
-    const jawDrop = jawOpen * 24.0;
-    if (jawOpen > 0.08) {
-        ctx.fillStyle = cMouth;
-        ctx.beginPath();
-        ctx.ellipse(20, 4 + jawDrop * 0.5, 18, jawDrop * 0.5 + 2, 0, 0, Math.PI * 2);
-        ctx.fill();
-    }
-    // 下颌骨
-    ctx.fillStyle = cBellyMain;
-    ctx.beginPath();
-    ctx.ellipse(18, 4 + jawDrop, 22, 6, 0.05, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = cOutline;
-    ctx.stroke();
-    // 下牙
-    if (jawOpen > 0.15) {
-        ctx.fillStyle = '#ffffff';
-        for (let tx = 8; tx <= 30; tx += 6) {
-            ctx.beginPath();
-            ctx.moveTo(tx - 2, 4 + jawDrop);
-            ctx.lineTo(tx, 4 + jawDrop - 6);
-            ctx.lineTo(tx + 2, 4 + jawDrop);
-            ctx.closePath();
-            ctx.fill();
-        }
-    }
-
-    // 10. 咬在口中的士兵（纯代码手绘动态士兵，四肢空中惊恐挣扎）
-    if (p >= 0.32 && p < 0.78) {
-        ctx.save();
-        ctx.translate(22, 6 + jawDrop * 0.4);
-        
-        let uniformColor = '#1d4ed8';
-        let capColor = '#1e40af';
-        if (asw.enemy.type === EnemyType.GRAY_HAT) {
-            uniformColor = '#94a3b8'; capColor = '#64748b';
-        } else if (asw.enemy.type === EnemyType.RED_ORANGE) {
-            uniformColor = '#ea580c'; capColor = '#ea580c';
-        } else if (asw.enemy.type === EnemyType.BLACK_SPECOPS) {
-            uniformColor = '#1e293b'; capColor = '#0f172a';
-        }
-
-        // 士兵四肢在空中疯狂扑腾
-        const flailLeg = Math.sin(nowMs * 0.04) * 12.0;
-        const flailArm = Math.cos(nowMs * 0.04) * 10.0;
-
-        // 如果在吞咽滑入期 (0.60 ~ 0.78)，士兵往嘴巴深处滑进
-        if (p >= 0.60) {
-            const slideT = (p - 0.60) / 0.18;
-            ctx.translate(-slideT * 22, -slideT * 8);
-            ctx.scale(Math.max(0.2, 1.0 - slideT * 0.8), Math.max(0.2, 1.0 - slideT * 0.8));
-        }
-
-        // 士兵身体
-        ctx.fillStyle = uniformColor;
-        ctx.fillRect(-8, -12, 16, 22);
-        // 双手在空中惊慌乱挥
-        ctx.lineWidth = 3.5;
-        ctx.strokeStyle = uniformColor;
-        ctx.beginPath();
-        ctx.moveTo(-8, -6);
-        ctx.lineTo(-18, -14 + flailArm);
-        ctx.moveTo(8, -6);
-        ctx.lineTo(18, -14 - flailArm);
-        ctx.stroke();
-        // 双腿在空中拼命乱蹬
-        ctx.strokeStyle = '#1e293b';
-        ctx.beginPath();
-        ctx.moveTo(-4, 10);
-        ctx.lineTo(-8, 22 + flailLeg);
-        ctx.moveTo(4, 10);
-        ctx.lineTo(8, 22 - flailLeg);
-        ctx.stroke();
-        // 头部与帽子
-        ctx.fillStyle = '#fed7aa';
-        ctx.beginPath();
-        ctx.arc(0, -18, 7.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = capColor;
-        ctx.fillRect(-8, -25, 16, 8);
-        ctx.fillRect(-10, -18, 20, 3);
-        // 惊恐圆眼
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(-2.5, -17, 2, 0, Math.PI * 2);
-        ctx.arc(2.5, -17, 2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#000000';
-        ctx.beginPath();
-        ctx.arc(-2.5, -17, 1, 0, Math.PI * 2);
-        ctx.arc(2.5, -17, 1, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.restore();
-    }
-
-    ctx.restore(); // 龙头 restore
-    ctx.restore(); // 整体 restore
-}
-
 function drawBlueDragon() {
-    // 蓝龙自主跳跃咬人带到空中吞咽（纯手绘动力学动态，彻底摒弃截屏贴图）
-    if (dragon.aerialSwallow) {
-        drawAerialDragon(ctx, dragon.aerialSwallow);
-        return;
-    }
-
     ctx.save();
     ctx.translate(dragon.x, dragon.y);
     ctx.scale(dragon.facing, 1);
@@ -2652,17 +2340,25 @@ function drawBlueDragon() {
     // 呼吸律动计算 (站立不动时胸腹起伏与微幅摇曳生动动画)
     const breathePhase = nowMs * 0.0035;
     const breatheSin = Math.sin(breathePhase);
-    const idleBob = (!isMoving && dragon.isOnFloor) ? breatheSin * 3.2 : 0;
-    const breatheScaleY = (!isMoving && dragon.isOnFloor) ? (1.0 + breatheSin * 0.025) : 1.0;
-    const breatheScaleX = (!isMoving && dragon.isOnFloor) ? (1.0 - breatheSin * 0.015) : 1.0;
+    const isIdle = !isMoving && dragon.isOnFloor && !dragon.swallowAction && dragon.feedingGrenadeTimer <= 0;
+    const idleBob = isIdle ? breatheSin * 3.2 : 0;
+    const breatheScaleY = isIdle ? (1.0 + breatheSin * 0.025) : 1.0;
+    const breatheScaleX = isIdle ? (1.0 - breatheSin * 0.015) : 1.0;
 
     let spriteKey = null;
     let sScale = 2.4;
     let offsetX = 0;
     let offsetY = 0;
 
+    // 0. 基础挥爪攻击动作 (CLAW ATTACK: 4 帧纯正像素动作流)
+    if (dragon.isClawing) {
+        const prog = 1.0 - (dragon.clawAnimTimer / 0.28);
+        const fIdx = Math.min(3, Math.floor(prog * 4));
+        spriteKey = 'dragon_claw_' + fIdx;
+        sScale = 2.4;
+    }
     // 1. 肚内手雷闷爆 (BELLY EXPLOSION 闪烁震颤与极度膨胀)
-    if (dragon.bellyBulgeAnim > 0.05) {
+    else if (dragon.bellyBulgeAnim > 0.05) {
         spriteKey = 'dragon_explode';
         sScale = 2.15 + dragon.bellyBulgeAnim * 0.2;
         offsetX = (Math.random() - 0.5) * 8 * dragon.bellyBulgeAnim;
@@ -2673,19 +2369,22 @@ function drawBlueDragon() {
         spriteKey = (dragon.feedingGrenadeTimer > 0.22) ? 'dragon_feed_0' : 'dragon_feed_1';
         sScale = 1.65;
     }
-    // 3. 吞人吞咽动作兜底
-    else if (dragon.swallowAnimTimer > 0) {
-        spriteKey = (swallowedHumans >= 5) ? 'dragon_heavy_0' : 'dragon_walk_0';
+    // 3. 原版 7 步地表吞人序列帧 (SWALLOW ACTION: 叼起->抛空->张嘴迎击->叼入->咬住->仰头->下咽)
+    else if (dragon.swallowAction) {
+        const p = Math.min(0.999, dragon.swallowAction.timer / dragon.swallowAction.duration);
+        const fIdx = Math.min(6, Math.floor(p * 7));
+        spriteKey = 'dragon_swallow_' + fIdx;
+        sScale = 2.4;
     }
-    // 4. 腹中吃满/饱腹 (FULL BELLY: 5~10 人, 沉甸下垂饱满巨肚, 严格四足基底不触地，重甲沉重行进)
+    // 4. 腹中吃满/饱腹 (FULL BELLY: 5~10 人, 沉甸下垂饱满巨肚)
     else if (swallowedHumans >= 5) {
         const frameIdx = isMoving ? (Math.floor(dragon.stepCount * 0.8) % 4) : 0;
         spriteKey = 'dragon_heavy_' + frameIdx;
-        sScale = 2.15;
+        sScale = 3.2; // 尺寸与 walk 一致
     }
-    // 5. 正常奔跑行进步态 (NORMAL WALK CYCLE: 6 帧真实手绘动作切换，奔跑带风)
+    // 5. 正常 10 帧纯正四足行进步态循环 (NORMAL WALK CYCLE: 10 帧无缝流畅动作)
     else {
-        const frameIdx = isMoving ? (Math.floor(dragon.stepCount * 1.1) % 6) : 0;
+        const frameIdx = isMoving ? (Math.floor(dragon.stepCount * 1.0) % 10) : 0;
         spriteKey = 'dragon_walk_' + frameIdx;
         sScale = 2.4;
     }
@@ -2694,13 +2393,14 @@ function drawBlueDragon() {
     if (spr && spr.complete && spr.naturalWidth > 0) {
         const sw = spr.naturalWidth * sScale * breatheScaleX;
         const sh = spr.naturalHeight * sScale * breatheScaleY;
+        const anchorX = DRAGON_ANCHORS[spriteKey] || (spr.naturalWidth * 0.5);
 
         // 手雷闷爆时腹部高能电火花与体内强闪光晕
         if (dragon.bellyBulgeAnim > 0.05) {
             ctx.save();
             ctx.beginPath();
             ctx.arc(-20 + offsetX, -sh * 0.45 + offsetY, 65 * dragon.bellyBulgeAnim, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255, 160, 0, ${0.5 * dragon.bellyBulgeAnim})`;
+            ctx.fillStyle = 'rgba(255, 160, 0, ' + (0.5 * dragon.bellyBulgeAnim) + ')';
             ctx.shadowColor = '#ff6d00';
             ctx.shadowBlur = 35 * dragon.bellyBulgeAnim;
             ctx.fill();
@@ -2713,8 +2413,23 @@ function drawBlueDragon() {
             ctx.restore();
         }
 
-        // 绘制巨龙身体，底端精准贴合地面
-        ctx.drawImage(spr, -sw / 2 + offsetX, -sh + idleBob + offsetY, sw, sh);
+        // 绘制巨龙身体，底端精准贴合地面，腹心居中对齐
+        ctx.drawImage(spr, -anchorX * sScale * breatheScaleX + offsetX, -sh + idleBob + offsetY, sw, sh);
+
+        // 挥爪时绘制向前席卷的月牙爪痕气浪
+        if (dragon.isClawing) {
+            const prog = 1.0 - (dragon.clawAnimTimer / 0.28);
+            const fIdx = Math.min(3, Math.floor(prog * 4));
+            if (fIdx === 1 || fIdx === 2) {
+                const slashImg = labSprites['claw_slash_fx'];
+                if (slashImg && slashImg.complete && slashImg.naturalWidth > 0) {
+                    const sScaleArc = 2.4;
+                    const swArc = slashImg.naturalWidth * sScaleArc;
+                    const shArc = slashImg.naturalHeight * sScaleArc;
+                    ctx.drawImage(slashImg, sw * 0.14, -sh * 0.68 + idleBob, swArc, shArc);
+                }
+            }
+        }
     } else {
         // 降级绘制
         drawBlueDragonVector();
@@ -2782,144 +2497,227 @@ function drawTossedSoldierVector(ts) {
 
 // ==========================================
 // 绘制敌兵独立兵种 (蓝帽电击枪、灰帽冲锋、红帽喷火、黑色特种兵)
+// 纯手绘复古像素级渲染引擎，彻底移除漫画截屏切片
 // ==========================================
 function drawBlueCapSoldier(e, ctx) {
-    let spriteKey = 'blue_cap_0';
-    let sScale = 1.12;
-
-    if (e.isFiring) {
-        spriteKey = 'blue_cap_3';
-        sScale = 1.15;
-    } else if (Math.abs(e.vx || 0) > 5 || e.walkCycle > 0) {
-        const frame = Math.floor((e.walkCycle || 0) * 1.4) % 3;
-        spriteKey = 'blue_cap_' + frame;
-    }
-
-    const spr = labSprites[spriteKey];
-    if (spr && spr.complete && spr.naturalWidth > 0) {
-        const sw = spr.naturalWidth * sScale;
-        const sh = spr.naturalHeight * sScale;
-        ctx.drawImage(spr, -sw / 2, -sh, sw, sh);
-    } else {
-        drawBlueCapSoldierVector(e, ctx);
-    }
-}
-
-function drawBlueCapSoldierVector(e, ctx) {
-    ctx.fillStyle = '#1d4ed8'; ctx.fillRect(-12, -58, 24, 34);
-    ctx.fillStyle = '#fed7aa'; ctx.beginPath(); ctx.arc(0, -66, 11, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#1e40af'; ctx.fillRect(-12, -77, 24, 11);
+    drawPixelArtSoldier(e, ctx, EnemyType.BLUE_HAT);
 }
 
 function drawGrayCapRunner(e, ctx) {
-    const frame = Math.floor((e.walkCycle || 0) * 2.6) % 4;
-    const spriteKey = 'gray_cap_' + frame;
-    const sScale = 1.12;
-
-    const spr = labSprites[spriteKey];
-    if (spr && spr.complete && spr.naturalWidth > 0) {
-        const sw = spr.naturalWidth * sScale;
-        const sh = spr.naturalHeight * sScale;
-        ctx.drawImage(spr, -sw / 2, -sh, sw, sh);
-
-        // 奔跑脚后跟烟尘微粒
-        if (Math.random() < 0.35) {
-            activeParticles.push({
-                x: e.x + (e.facing === 1 ? -18 : 18),
-                y: e.y - 4,
-                vx: (e.facing === 1 ? -1 : 1) * (Math.random() * 60 + 20),
-                vy: -Math.random() * 25 - 5,
-                size: Math.random() * 5 + 3,
-                color: 'rgba(180, 195, 210, 0.6)',
-                life: 0.35
-            });
-        }
-    } else {
-        drawGrayCapRunnerVector(e, ctx);
-    }
-}
-
-function drawGrayCapRunnerVector(e, ctx) {
-    ctx.fillStyle = '#94a3b8'; ctx.fillRect(-12, -58, 24, 34);
-    ctx.fillStyle = '#fed7aa'; ctx.beginPath(); ctx.arc(2, -66, 11, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#64748b'; ctx.fillRect(-10, -77, 24, 11);
+    drawPixelArtSoldier(e, ctx, EnemyType.GRAY_HAT);
 }
 
 function drawRedOrangeCapFlamer(e, ctx) {
-    let spriteKey = 'red_orange_cap_0';
-    let sScale = 1.12;
-
-    if (e.isFiring || (e.flameTimer && e.flameTimer > 0)) {
-        spriteKey = 'red_orange_cap_1';
-        sScale = 1.15;
-    }
-
-    const spr = labSprites[spriteKey];
-    if (spr && spr.complete && spr.naturalWidth > 0) {
-        const sw = spr.naturalWidth * sScale;
-        const sh = spr.naturalHeight * sScale;
-        ctx.drawImage(spr, -sw / 2, -sh, sw, sh);
-    } else {
-        drawRedOrangeCapFlamerVector(e, ctx);
-    }
-}
-
-function drawRedOrangeCapFlamerVector(e, ctx) {
-    ctx.fillStyle = '#ea580c'; ctx.fillRect(-12, -58, 24, 34);
-    ctx.fillStyle = '#fed7aa'; ctx.beginPath(); ctx.arc(0, -66, 11, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ea580c'; ctx.fillRect(-12, -77, 24, 11);
+    drawPixelArtSoldier(e, ctx, EnemyType.RED_ORANGE);
 }
 
 function drawBlackSpecopsGrenadier(e, ctx) {
-    let spriteKey = 'black_specops_0';
-    let sScale = 1.12;
-
-    if (e.timer >= 8.2) {
-        if (e.timer < 8.8) {
-            spriteKey = 'black_specops_1';
-        } else if (e.timer < 9.4) {
-            spriteKey = 'black_specops_2';
-        } else {
-            spriteKey = 'black_specops_3';
-            sScale = 1.18;
-        }
-    }
-
-    const spr = labSprites[spriteKey];
-    if (spr && spr.complete && spr.naturalWidth > 0) {
-        const sw = spr.naturalWidth * sScale;
-        const sh = spr.naturalHeight * sScale;
-        ctx.drawImage(spr, -sw / 2, -sh, sw, sh);
-    } else {
-        drawBlackSpecopsGrenadierVector(e, ctx);
-    }
+    drawPixelArtSoldier(e, ctx, EnemyType.BLACK_SPECOPS);
 }
 
-function drawBlackSpecopsGrenadierVector(e, ctx) {
-    ctx.fillStyle = '#1e293b'; ctx.fillRect(-13, -58, 26, 34);
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(-13, -78, 26, 18);
-    ctx.fillStyle = '#22c55e'; ctx.fillRect(3, -69, 12, 4.5);
+function drawPixelArtSoldier(e, ctx, type) {
+    const isCombat = e.state === 'COMBAT';
+    const isRunning = (isCombat && type === EnemyType.GRAY_HAT);
+    const phase = e.walkCycle || 0.0;
+    const bob = phase > 0 ? Math.floor(Math.abs(Math.sin(phase)) * (isRunning ? 6 : 3)) : 0;
+    const bodyLean = isRunning ? 6 : 0;
+
+    const suitMain = type === EnemyType.BLACK_SPECOPS ? '#1a1c24' : '#333d4d';
+    const suitDark = type === EnemyType.BLACK_SPECOPS ? '#101218' : '#1f2633';
+    let hatCol = '#2e80ff';
+    if (type === EnemyType.GRAY_HAT) hatCol = '#8c949e';
+    else if (type === EnemyType.RED_ORANGE) hatCol = '#ff6b14';
+    else if (type === EnemyType.BLACK_SPECOPS) hatCol = '#14171f';
+
+    // 1. 双腿步态
+    const stride = phase > 0 ? (isRunning ? 21.0 : 12.0) : 0.0;
+    const legL = Math.sin(phase) * stride;
+    const legR = -legL;
+    const liftL = phase > 0 ? Math.max(0.0, -Math.cos(phase)) * (isRunning ? 12.0 : 6.0) : 0.0;
+    const liftR = phase > 0 ? Math.max(0.0, Math.cos(phase)) * (isRunning ? 12.0 : 6.0) : 0.0;
+
+    // 内侧腿 (深色)
+    ctx.strokeStyle = suitDark;
+    ctx.lineWidth = 9;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-3 + bodyLean, -26 - bob);
+    ctx.lineTo(-3 + bodyLean + legL, -liftL);
+    ctx.stroke();
+
+    // 外侧腿 (主色)
+    ctx.strokeStyle = suitMain;
+    ctx.beginPath();
+    ctx.moveTo(3 + bodyLean, -26 - bob);
+    ctx.lineTo(3 + bodyLean + legR, -liftR);
+    ctx.stroke();
+
+    // 2. 橘帽背后红色燃料罐
+    if (type === EnemyType.RED_ORANGE) {
+        ctx.fillStyle = '#d92e1f';
+        ctx.fillRect(-24 + bodyLean, -55 - bob, 14, 30);
+        ctx.strokeStyle = '#0d0f1a';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-24 + bodyLean, -55 - bob, 14, 30);
+        ctx.fillStyle = '#ff8c33';
+        ctx.fillRect(-21 + bodyLean, -50 - bob, 5, 20);
+    }
+
+    // 3. 躯干
+    ctx.fillStyle = suitMain;
+    ctx.fillRect(-15 + bodyLean, -58 - bob, 30, 36);
+    ctx.strokeStyle = '#0d0f1a';
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(-15 + bodyLean, -58 - bob, 30, 36);
+    if (type === EnemyType.BLACK_SPECOPS) {
+        ctx.fillStyle = '#383d47';
+        ctx.fillRect(-9 + bodyLean, -52 - bob, 18, 20);
+    }
+
+    // 4. 头部与遮眼压低战术帽子
+    const headX = bodyLean;
+    const headY = -68 - bob;
+    // 下半脸肤色
+    ctx.fillStyle = '#e6bd9e';
+    ctx.beginPath();
+    ctx.arc(headX, headY, 13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#0d0f1a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 帽冠
+    ctx.fillStyle = hatCol;
+    ctx.fillRect(headX - 16, headY - 17, 32, 17);
+    ctx.strokeRect(headX - 16, headY - 17, 32, 17);
+    // 压低向前突出的帽檐 (彻底遮眼)
+    ctx.fillRect(headX - 14, headY - 3, 36, 8);
+    ctx.strokeRect(headX - 14, headY - 3, 36, 8);
+    // 阴影线
+    ctx.strokeStyle = '#0d0f1a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(headX - 8, headY + 5);
+    ctx.lineTo(headX + 16, headY + 5);
+    ctx.stroke();
+
+    // 5. 手臂与武器
+    const shoulderX = headX + 4;
+    const shoulderY = -48 - bob;
+
+    if (!isCombat) {
+        // 巡逻慢步
+        const swing = phase > 0 ? Math.sin(phase) * 8.0 : 0.0;
+        const handX = shoulderX - swing;
+        const handY = shoulderY + 26;
+        ctx.strokeStyle = suitMain;
+        ctx.lineWidth = 7;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(shoulderX, shoulderY);
+        ctx.lineTo(handX, handY);
+        ctx.stroke();
+
+        if (type === EnemyType.BLUE_HAT) {
+            ctx.fillStyle = '#4cb2ff';
+            ctx.fillRect(handX - 4, handY - 3, 14, 7);
+            ctx.strokeRect(handX - 4, handY - 3, 14, 7);
+        } else if (type === EnemyType.RED_ORANGE) {
+            ctx.fillStyle = '#595966';
+            ctx.fillRect(handX - 6, handY - 3, 22, 7);
+            ctx.strokeRect(handX - 6, handY - 3, 22, 7);
+        }
+    } else {
+        // 战斗姿态
+        switch (type) {
+            case EnemyType.BLUE_HAT:
+                // 双臂平举电击枪
+                ctx.strokeStyle = suitMain;
+                ctx.lineWidth = 7;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(shoulderX, shoulderY);
+                ctx.lineTo(shoulderX + 24, shoulderY);
+                ctx.stroke();
+                // 枪身
+                ctx.fillStyle = '#408cf2';
+                ctx.fillRect(shoulderX + 18, shoulderY - 6, 24, 11);
+                ctx.strokeRect(shoulderX + 18, shoulderY - 6, 24, 11);
+                // 枪口电火花
+                const sparkR = 4 + (Math.floor((e.timer || 0) * 18.0) % 4);
+                ctx.fillStyle = '#80f2ff';
+                ctx.beginPath();
+                ctx.arc(shoulderX + 46, shoulderY, sparkR, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(shoulderX + 48, shoulderY - 4, 3, 3);
+                ctx.fillRect(shoulderX + 46, shoulderY + 3, 3, 3);
+                break;
+
+            case EnemyType.GRAY_HAT:
+                // 冲锋大步摆臂
+                const runArm = Math.sin(phase) * 16.0;
+                ctx.strokeStyle = suitMain;
+                ctx.lineWidth = 7;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(shoulderX, shoulderY);
+                ctx.lineTo(shoulderX + runArm, shoulderY + 18);
+                ctx.stroke();
+                break;
+
+            case EnemyType.RED_ORANGE:
+                // 双手平端厚重喷火枪
+                ctx.strokeStyle = suitMain;
+                ctx.lineWidth = 7;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(shoulderX, shoulderY);
+                ctx.lineTo(shoulderX + 20, shoulderY + 5);
+                ctx.stroke();
+                // 枪管与枪口
+                ctx.fillStyle = '#4c525c';
+                ctx.fillRect(shoulderX + 14, shoulderY, 32, 10);
+                ctx.strokeRect(shoulderX + 14, shoulderY, 32, 10);
+                ctx.fillStyle = '#d94019';
+                ctx.fillRect(shoulderX + 38, shoulderY - 2, 8, 14);
+                // 枪口点火苗
+                const flameR = (e.flameTimer > 0 || (e.timer > 2.5)) ? 7 : 4;
+                ctx.fillStyle = '#ff730d';
+                ctx.beginPath();
+                ctx.arc(shoulderX + 48, shoulderY + 5, flameR, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffff00';
+                ctx.fillRect(shoulderX + 47, shoulderY + 4, 4, 4);
+                break;
+
+            case EnemyType.BLACK_SPECOPS:
+                // 高举右手握住手雷准备抛投
+                const throwBob = Math.sin((e.timer || 0) * 6.0) * 4.0;
+                const handX = shoulderX + 10;
+                const handY = shoulderY - 32 + throwBob;
+                ctx.strokeStyle = suitMain;
+                ctx.lineWidth = 7;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(shoulderX, shoulderY);
+                ctx.lineTo(handX, handY);
+                ctx.stroke();
+                // 绿色菠萝手雷
+                ctx.fillStyle = '#2ea640';
+                ctx.beginPath();
+                ctx.arc(handX + 2, handY - 8, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                // 拉环引信黄光
+                ctx.fillStyle = '#ffff00';
+                ctx.fillRect(handX + 3, handY - 17, 3, 5);
+                break;
+        }
+    }
 }
 
 function drawEnemies() {
-    // 如果蓝龙正在飞扑起跳前段 (p < 0.32)，绘制地面上即将被咬的士兵
-    if (dragon.aerialSwallow && (dragon.aerialSwallow.timer / dragon.aerialSwallow.duration) < 0.32) {
-        const ce = dragon.aerialSwallow.enemy;
-        ctx.save();
-        ctx.translate(ce.x, ce.y);
-        ctx.scale(ce.facing || -dragon.facing, 1);
-        if (ce.type === EnemyType.BLUE_CAP) drawBlueCapSoldier(ce, ctx);
-        else if (ce.type === EnemyType.GRAY_HAT) drawGrayCapRunner(ce, ctx);
-        else if (ce.type === EnemyType.RED_ORANGE) drawRedOrangeCapFlamer(ce, ctx);
-        else if (ce.type === EnemyType.BLACK_SPECOPS) drawBlackSpecopsGrenadier(ce, ctx);
-        // 士兵头顶惊恐冷汗微粒
-        ctx.fillStyle = '#60a5fa';
-        ctx.beginPath();
-        ctx.arc(6, -82, 3.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-    }
-
     activeEnemies.forEach(e => {
         ctx.save();
         ctx.translate(e.x, e.y);
@@ -2935,6 +2733,34 @@ function drawEnemies() {
             drawBlackSpecopsGrenadier(e, ctx);
         }
 
+        // 受击硬直闪白
+        if (e.hitFlashTimer > 0) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+            ctx.fillRect(-22, -80, 44, 80);
+        }
+
+        ctx.restore();
+
+        // 绘制头顶 5 格血条 (每格代表 1 点生命，绿色为剩余，深灰为扣减)
+        const curHp = (e.hp !== undefined) ? e.hp : 5;
+        const maxHp = (e.maxHp !== undefined) ? e.maxHp : 5;
+        const barW = 44.0;
+        const barX = e.x - barW * 0.5;
+        const barY = e.y - 94.0;
+
+        ctx.save();
+        ctx.fillStyle = '#0a0d14';
+        ctx.fillRect(barX - 2, barY - 2, barW + 4, 10);
+        ctx.strokeStyle = '#223047';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX - 2, barY - 2, barW + 4, 10);
+
+        const segW = (barW - 8) / maxHp;
+        for (let seg = 0; seg < maxHp; seg++) {
+            const segCol = (seg < curHp) ? '#33e659' : '#374151';
+            ctx.fillStyle = segCol;
+            ctx.fillRect(barX + seg * (segW + 2) + 1, barY, segW, 6.0);
+        }
         ctx.restore();
     });
 }
@@ -3079,6 +2905,7 @@ window.getDragonHp = () => dragonHp;
 window.getSwallowedHumans = () => swallowedHumans;
 window.setSwallowedHumans = n => { swallowedHumans = Math.max(0, Math.min(MAX_BELLY_CAPACITY, n)); updateHud(); };
 window.performDragonSwallow = performDragonSwallow;
+window.performDragonClaw = performDragonClaw;
 window.breakOutOfCage = breakOutOfCage;
 window.skipCutscene = skipCutscene;
 window.restartLevel = restartLevel;

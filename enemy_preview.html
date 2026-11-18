@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>四种敌方士兵像素外形与双阶段 AI 动作渲染器 (Godot 1:1 Web 对照版)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            background: #090e17;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: #dbeafe;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif;
+            overflow: hidden;
+        }
+        #stage-wrapper {
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.25);
+            border: 2px solid #0284c7;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #0f172a;
+        }
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+        }
+        .hud-bar {
+            margin-top: 12px;
+            font-size: 13px;
+            color: #94a3b8;
+            letter-spacing: 0.5px;
+        }
+        .hud-bar b {
+            color: #38bdf8;
+        }
+    </style>
+</head>
+<body>
+    <div id="stage-wrapper">
+        <canvas id="gameCanvas" width="1152" height="648"></canvas>
+    </div>
+    <div class="hud-bar">
+        按 <b>[A / D]</b> 或 <b>[左右方向键]</b> 移动蓝龙警戒标记点靠近/远离士兵 | 按 <b>[R]</b> 重置初始位置
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        const SPRITE_W = 44;
+        const SPRITE_H = 56;
+        const PIXEL_SCALE = 3.0;
+
+        const EnemyType = {
+            BLUE_CAP: 0,
+            GRAY_CAP: 1,
+            ORANGE_CAP: 2,
+            BLACK_SPECOPS: 3
+        };
+
+        const AIState = {
+            PATROL: 0,
+            COMBAT: 1
+        };
+
+        // 严格对照 GDScript 调色板
+        const C_CLEAR       = [0, 0, 0, 0];
+        const C_OUTLINE     = [13, 15, 26, 255];     // 深黑像素描边
+        const C_SKIN        = [230, 189, 158, 255];  // 下半张脸肤色
+        const C_UNIFORM     = [51, 61, 77, 255];     // 常规深灰蓝制服
+        const C_UNIFORM_DK  = [31, 38, 51, 255];     // 制服阴影与长裤
+        const C_SPECOPS     = [26, 28, 36, 255];     // 黑色特种兵战甲
+        const C_SPECOPS_LT  = [56, 61, 71, 255];     // 特种兵护甲高光
+
+        let target_dragon_x = 200.0;
+        let enemies = [];
+
+        function spawnFourEnemies() {
+            enemies = [];
+            const configs = [
+                { type: EnemyType.BLUE_CAP,      x: 560.0, detect_range: 260.0, name: "蓝帽(电击枪)" },
+                { type: EnemyType.GRAY_CAP,      x: 720.0, detect_range: 290.0, name: "灰帽(冲锋)" },
+                { type: EnemyType.ORANGE_CAP,    x: 880.0, detect_range: 270.0, name: "橘帽(喷火枪)" },
+                { type: EnemyType.BLACK_SPECOPS, x: 1030.0, detect_range: 310.0, name: "黑衣特种兵(手雷)" }
+            ];
+
+            configs.forEach(cfg => {
+                const offscreen = document.createElement('canvas');
+                offscreen.width = SPRITE_W;
+                offscreen.height = SPRITE_H;
+                const offCtx = offscreen.getContext('2d');
+                offCtx.imageSmoothingEnabled = false;
+
+                enemies.push({
+                    type: cfg.type,
+                    name: cfg.name,
+                    state: AIState.PATROL,
+                    x: cfg.x,
+                    y: 490.0,
+                    home_x: cfg.x,
+                    dir: -1,
+                    facing: -1,
+                    patrol_timer: Math.random() * 2.0,
+                    walk_phase: Math.random() * 6.0,
+                    detect_range: cfg.detect_range,
+                    action_timer: 0.0,
+                    offscreen: offscreen,
+                    offCtx: offCtx
+                });
+            });
+        }
+
+        spawnFourEnemies();
+
+        // 键盘监听
+        const keys = {};
+        window.addEventListener('keydown', e => {
+            keys[e.key.toLowerCase()] = true;
+            keys[e.code] = true;
+            if (e.key.toLowerCase() === 'r') {
+                spawnFourEnemies();
+            }
+        });
+        window.addEventListener('keyup', e => {
+            keys[e.key.toLowerCase()] = false;
+            keys[e.code] = false;
+        });
+
+        // 像素缓冲区辅助类 (模拟 Godot Image)
+        class PixelBuffer {
+            constructor(w, h) {
+                this.w = w;
+                this.h = h;
+                this.data = new Uint8ClampedArray(w * h * 4);
+            }
+            clear() {
+                this.data.fill(0);
+            }
+            setPx(x, y, rgba) {
+                if (x >= 0 && x < this.w && y >= 0 && y < this.h) {
+                    const idx = (y * this.w + x) * 4;
+                    this.data[idx] = rgba[0];
+                    this.data[idx + 1] = rgba[1];
+                    this.data[idx + 2] = rgba[2];
+                    this.data[idx + 3] = rgba[3] !== undefined ? rgba[3] : 255;
+                }
+            }
+            getPxAlpha(x, y) {
+                if (x < 0 || x >= this.w || y < 0 || y >= this.h) return 0;
+                return this.data[(y * this.w + x) * 4 + 3];
+            }
+            drawRect(x, y, w, h, rgba, outline) {
+                if (outline) {
+                    for (let py = y - 1; py <= y + h; py++) {
+                        for (let px = x - 1; px <= x + w; px++) {
+                            if (px >= 0 && px < this.w && py >= 0 && py < this.h) {
+                                if (this.getPxAlpha(px, py) === 0) {
+                                    this.setPx(px, py, C_OUTLINE);
+                                }
+                            }
+                        }
+                    }
+                }
+                for (let py = y; py < y + h; py++) {
+                    for (let px = x; px < x + w; px++) {
+                        this.setPx(px, py, rgba);
+                    }
+                }
+            }
+            drawCircle(cx, cy, r, rgba, outline) {
+                if (outline) {
+                    for (let dy = -r - 1; dy <= r + 1; dy++) {
+                        for (let dx = -r - 1; dx <= r + 1; dx++) {
+                            if (dx * dx + dy * dy <= (r + 1) * (r + 1)) {
+                                const px = cx + dx;
+                                const py = cy + dy;
+                                if (px >= 0 && px < this.w && py >= 0 && py < this.h) {
+                                    if (this.getPxAlpha(px, py) === 0) {
+                                        this.setPx(px, py, C_OUTLINE);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                for (let dy = -r; dy <= r; dy++) {
+                    for (let dx = -r; dx <= r; dx++) {
+                        if (dx * dx + dy * dy <= r * r) {
+                            this.setPx(cx + dx, cy + dy, rgba);
+                        }
+                    }
+                }
+            }
+            drawLimb(ax, ay, bx, by, r, rgba) {
+                const dist = Math.hypot(bx - ax, by - ay);
+                const steps = Math.floor(dist) + 1;
+                for (let i = 0; i <= steps; i++) {
+                    const t = steps > 0 ? (i / steps) : 0;
+                    const x = Math.round(ax + (bx - ax) * t);
+                    const y = Math.round(ay + (by - ay) * t);
+                    this.drawCircle(x, y, r, rgba, true);
+                }
+            }
+        }
+
+        const pxBuf = new PixelBuffer(SPRITE_W, SPRITE_H);
+
+        // 主循环
+        let lastTime = performance.now();
+        function loop(now) {
+            const dt = Math.min((now - lastTime) / 1000.0, 0.1);
+            lastTime = now;
+
+            // 控制蓝龙标靶左右移动
+            let move = 0.0;
+            if (keys['d'] || keys['arrowright']) move += 1.0;
+            if (keys['a'] || keys['arrowleft']) move -= 1.0;
+            target_dragon_x = Math.max(80.0, Math.min(1080.0, target_dragon_x + move * 340.0 * dt));
+
+            // 更新士兵 AI
+            enemies.forEach(e => {
+                updateEnemyAI(e, dt);
+                renderEnemyPixelArt(e);
+            });
+
+            // 绘制整个世界
+            drawWorld();
+
+            requestAnimationFrame(loop);
+        }
+
+        function updateEnemyAI(e, dt) {
+            const dist_to_dragon = Math.abs(e.x - target_dragon_x);
+            const dir_to_dragon = target_dragon_x < e.x ? -1 : 1;
+
+            if (dist_to_dragon <= e.detect_range) {
+                if (e.state !== AIState.COMBAT) {
+                    e.state = AIState.COMBAT;
+                    e.action_timer = 0.0;
+                }
+                e.dir = dir_to_dragon;
+                e.facing = dir_to_dragon;
+            } else {
+                e.state = AIState.PATROL;
+            }
+
+            if (e.state === AIState.PATROL) {
+                e.patrol_timer -= dt;
+                if (e.patrol_timer <= 0.0) {
+                    e.patrol_timer = 1.2 + Math.random() * 1.6;
+                    const choices = [-1, 1, -1, 1, 0];
+                    e.dir = choices[Math.floor(Math.random() * choices.length)];
+                    if (e.dir !== 0) e.facing = e.dir;
+                }
+
+                if (e.dir !== 0) {
+                    e.x += e.dir * 48.0 * dt;
+                    e.walk_phase += dt * 6.5;
+                    if (Math.abs(e.x - e.home_x) > 95.0) {
+                        e.dir = e.x > e.home_x ? -1 : 1;
+                        e.facing = e.dir;
+                    }
+                } else {
+                    e.walk_phase = 0.0;
+                }
+            } else if (e.state === AIState.COMBAT) {
+                e.action_timer += dt;
+                switch (e.type) {
+                    case EnemyType.BLUE_CAP:
+                        e.walk_phase = 0.0;
+                        break;
+                    case EnemyType.GRAY_CAP:
+                        if (dist_to_dragon > 45.0) {
+                            e.x += e.dir * 250.0 * dt;
+                            e.walk_phase += dt * 18.0;
+                        } else {
+                            e.walk_phase = 0.0;
+                        }
+                        break;
+                    case EnemyType.ORANGE_CAP:
+                        e.walk_phase = 0.0;
+                        if (e.action_timer >= 3.0) e.action_timer = 0.0;
+                        break;
+                    case EnemyType.BLACK_SPECOPS:
+                        e.walk_phase = 0.0;
+                        if (e.action_timer >= 10.0) e.action_timer = 0.0;
+                        break;
+                }
+            }
+        }
+
+        function renderEnemyPixelArt(e) {
+            pxBuf.clear();
+
+            const t = e.type;
+            const st = e.state;
+            const phase = e.walk_phase;
+            const is_running = (st === AIState.COMBAT && t === EnemyType.GRAY_CAP);
+
+            const cx = 22;
+            const foot_y = 53;
+            const body_lean = is_running ? 2 : 0;
+            const bob = phase > 0 ? Math.floor(Math.abs(Math.sin(phase)) * (is_running ? 2 : 1)) : 0;
+
+            const suit_main = t === EnemyType.BLACK_SPECOPS ? C_SPECOPS : C_UNIFORM;
+            const suit_dark = t === EnemyType.BLACK_SPECOPS ? C_SPECOPS : C_UNIFORM_DK;
+
+            let hat_color = [46, 128, 255, 255]; // 默认蓝帽
+            if (t === EnemyType.GRAY_CAP) hat_color = [140, 148, 158, 255];
+            else if (t === EnemyType.ORANGE_CAP) hat_color = [255, 107, 20, 255];
+            else if (t === EnemyType.BLACK_SPECOPS) hat_color = [20, 23, 31, 255];
+
+            // 1. 双腿动作
+            const stride = phase > 0 ? (is_running ? 7.0 : 4.0) : 0.0;
+            const leg_l_offset = Math.floor(Math.sin(phase) * stride);
+            const leg_r_offset = -leg_l_offset;
+            const lift_l = phase > 0 ? Math.floor(Math.max(0.0, -Math.cos(phase)) * (is_running ? 4.0 : 2.0)) : 0;
+            const lift_r = phase > 0 ? Math.floor(Math.max(0.0, Math.cos(phase)) * (is_running ? 4.0 : 2.0)) : 0;
+
+            // 里侧腿
+            pxBuf.drawLimb(cx - 1, 38 + bob, cx - 1 + leg_l_offset, foot_y - lift_l, 3, suit_dark);
+            // 外侧腿
+            pxBuf.drawLimb(cx + 1, 38 + bob, cx + 1 + leg_r_offset, foot_y - lift_r, 3, suit_main);
+
+            // 灰帽冲锋尘土粒子
+            if (is_running && Math.floor(phase * 2.0) % 2 === 0) {
+                pxBuf.drawCircle(cx - 10, foot_y - 2, 2, [190, 190, 190, 255], false);
+                pxBuf.drawCircle(cx - 14, foot_y - 4, 1, [165, 165, 165, 255], false);
+            }
+
+            // 2. 橘帽背部红色燃料罐
+            if (t === EnemyType.ORANGE_CAP) {
+                pxBuf.drawRect(cx - 8 + body_lean, 23 + bob, 5, 13, [217, 46, 31, 255], true);
+                pxBuf.drawRect(cx - 7 + body_lean, 25 + bob, 2, 9, [255, 140, 51, 255], false);
+            }
+
+            // 3. 躯干与胸甲
+            const torso_x = cx - 5 + body_lean;
+            const torso_y = 22 + bob;
+            pxBuf.drawRect(torso_x, torso_y, 10, 16, suit_main, true);
+            if (t === EnemyType.BLACK_SPECOPS) {
+                pxBuf.drawRect(torso_x + 2, torso_y + 2, 6, 8, C_SPECOPS_LT, false);
+            }
+
+            // 4. 头部与遮眼压低帽子
+            const head_x = cx + body_lean;
+            const head_y = 15 + bob;
+            pxBuf.drawCircle(head_x, head_y, 5, C_SKIN, true);
+            pxBuf.drawRect(head_x - 6, head_y - 6, 12, 6, hat_color, true); // 帽冠
+            pxBuf.drawRect(head_x - 5, head_y - 1, 14, 3, hat_color, true); // 压低长帽檐遮眼
+            pxBuf.drawRect(head_x - 3, head_y + 1, 8, 1, C_OUTLINE, false);   // 帽檐下阴影线
+
+            // 5. 手臂与战斗形态变换
+            const shoulder_x = cx + 1 + body_lean;
+            const shoulder_y = 25 + bob;
+
+            if (st === AIState.PATROL) {
+                const arm_swing = phase > 0 ? Math.floor(Math.sin(phase) * 3.0) : 0;
+                pxBuf.drawLimb(shoulder_x, shoulder_y, shoulder_x - arm_swing, shoulder_y + 11, 2, suit_main);
+                if (t === EnemyType.BLUE_CAP) {
+                    pxBuf.drawRect(shoulder_x - arm_swing, shoulder_y + 10, 6, 3, [76, 178, 255, 255], true);
+                } else if (t === EnemyType.ORANGE_CAP) {
+                    pxBuf.drawRect(shoulder_x - arm_swing - 2, shoulder_y + 10, 10, 3, [89, 89, 102, 255], true);
+                }
+            } else if (st === AIState.COMBAT) {
+                switch (t) {
+                    case EnemyType.BLUE_CAP:
+                        // 双臂平举电击枪，枪口噼啪冒出高频蓝白电流
+                        pxBuf.drawLimb(shoulder_x, shoulder_y, shoulder_x + 9, shoulder_y, 2, suit_main);
+                        pxBuf.drawRect(shoulder_x + 7, shoulder_y - 2, 9, 4, [64, 140, 242, 255], true);
+                        const spark_r = 2 + (Math.floor(e.action_timer * 18.0) % 3);
+                        pxBuf.drawCircle(shoulder_x + 18, shoulder_y, spark_r, [128, 242, 255, 255], false);
+                        pxBuf.setPx(shoulder_x + 20, shoulder_y - 2, [255, 255, 255, 255]);
+                        pxBuf.setPx(shoulder_x + 19, shoulder_y + 3, [255, 255, 255, 255]);
+                        break;
+
+                    case EnemyType.GRAY_CAP:
+                        // 全力冲刺大步摆臂
+                        const run_arm = Math.floor(Math.sin(phase) * 6.0);
+                        pxBuf.drawLimb(shoulder_x, shoulder_y, shoulder_x + run_arm, shoulder_y + 7, 2, suit_main);
+                        break;
+
+                    case EnemyType.ORANGE_CAP:
+                        // 双手端起厚重喷火枪，枪口火苗蓄力
+                        pxBuf.drawLimb(shoulder_x, shoulder_y, shoulder_x + 8, shoulder_y + 2, 2, suit_main);
+                        pxBuf.drawRect(shoulder_x + 5, shoulder_y, 13, 4, [76, 82, 92, 255], true);
+                        pxBuf.drawRect(shoulder_x + 15, shoulder_y - 1, 3, 6, [217, 64, 25, 255], true);
+                        const flame_size = e.action_timer > 2.5 ? 3 : 2;
+                        pxBuf.drawCircle(shoulder_x + 20, shoulder_y + 1, flame_size, [255, 115, 13, 255], false);
+                        pxBuf.setPx(shoulder_x + 20, shoulder_y + 1, [255, 255, 0, 255]);
+                        break;
+
+                    case EnemyType.BLACK_SPECOPS:
+                        // 高举右手握住手雷准备抛投
+                        const throw_bob = Math.floor(Math.sin(e.action_timer * 6.0) * 1.5);
+                        const hand_x = shoulder_x + 4;
+                        const hand_y = shoulder_y - 12 + throw_bob;
+                        pxBuf.drawLimb(shoulder_x, shoulder_y, hand_x, hand_y, 2, C_SPECOPS);
+                        pxBuf.drawCircle(hand_x + 1, hand_y - 3, 3, [46, 166, 64, 255], true);
+                        pxBuf.setPx(hand_x + 2, hand_y - 6, [255, 255, 0, 255]);
+                        break;
+                }
+            }
+
+            // 将像素数据写入 offscreen canvas
+            const imgData = e.offCtx.createImageData(SPRITE_W, SPRITE_H);
+            imgData.data.set(pxBuf.data);
+            e.offCtx.putImageData(imgData, 0, 0);
+        }
+
+        function drawWorld() {
+            // 背景与地面
+            ctx.fillStyle = '#242b38';
+            ctx.fillRect(0, 0, 1152, 490);
+            ctx.fillStyle = '#3d4552';
+            ctx.fillRect(0, 490, 1152, 158);
+
+            // 地面分界线
+            ctx.strokeStyle = '#738ca6';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, 490);
+            ctx.lineTo(1152, 490);
+            ctx.stroke();
+
+            // 士兵警戒范围标记线
+            enemies.forEach(e => {
+                const rx = e.detect_range;
+                ctx.strokeStyle = 'rgba(255, 209, 51, 0.35)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(e.x - rx, 488);
+                ctx.lineTo(e.x + rx, 488);
+                ctx.stroke();
+
+                ctx.strokeStyle = 'rgba(255, 209, 51, 0.6)';
+                ctx.beginPath();
+                ctx.moveTo(e.x - rx, 480);
+                ctx.lineTo(e.x - rx, 492);
+                ctx.moveTo(e.x + rx, 480);
+                ctx.lineTo(e.x + rx, 492);
+                ctx.stroke();
+            });
+
+            // 蓝龙警戒触发标记线
+            ctx.strokeStyle = 'rgba(51, 153, 255, 0.65)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(target_dragon_x, 260);
+            ctx.lineTo(target_dragon_x, 490);
+            ctx.stroke();
+
+            ctx.fillStyle = '#4da6ff';
+            ctx.beginPath();
+            ctx.arc(target_dragon_x, 490, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#66d9ff';
+            ctx.font = '16px "Microsoft YaHei", sans-serif';
+            ctx.fillText("蓝龙触发点", target_dragon_x - 40, 250);
+
+            // 绘制每个士兵的像素贴图 (以 3 倍像素缩放)
+            enemies.forEach(e => {
+                ctx.save();
+                ctx.translate(e.x, e.y - 75); // 75px 偏移使脚底完美贴地
+                ctx.scale(e.facing === -1 ? -1 : 1, 1);
+                ctx.drawImage(
+                    e.offscreen,
+                    0, 0, SPRITE_W, SPRITE_H,
+                    -SPRITE_W * PIXEL_SCALE * 0.5,
+                    -SPRITE_H * PIXEL_SCALE * 0.5,
+                    SPRITE_W * PIXEL_SCALE,
+                    SPRITE_H * PIXEL_SCALE
+                );
+                ctx.restore();
+
+                // 绘制士兵名称与形态状态标签
+                const is_combat = (e.state === AIState.COMBAT);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 15px "Microsoft YaHei", sans-serif';
+                ctx.fillText(e.name, e.x - 52, 310);
+
+                ctx.fillStyle = is_combat ? '#ff664d' : '#bfd9e6';
+                ctx.font = '14px "Microsoft YaHei", sans-serif';
+                const state_txt = is_combat ? "【战斗形态】" : "巡逻乱走中...";
+                ctx.fillText(state_txt, e.x - 48, 332);
+            });
+
+            // 顶部操作说明面板
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
+            ctx.fillRect(20, 20, 780, 92);
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(20, 20, 780, 92);
+
+            ctx.fillStyle = '#66e5ff';
+            ctx.font = 'bold 17px "Microsoft YaHei", sans-serif';
+            ctx.fillText("四种人类外形与双阶段动作演示（离远慢慢左右乱走 -> 靠近瞬间切换战斗形态）", 36, 48);
+
+            ctx.fillStyle = '#facc15';
+            ctx.font = '15px "Microsoft YaHei", sans-serif';
+            ctx.fillText("按 [A / D 或 左右方向键] 移动蓝色触发线靠近/远离他们   |   按 [R 键] 重置位置", 36, 76);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px "Microsoft YaHei", sans-serif';
+            ctx.fillText("警戒范围：黄色底线标记各兵种警戒感知距离，进入该范围立刻进入战斗状态", 36, 98);
+        }
+
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
