@@ -3328,7 +3328,7 @@
         function connectSocket() {
             if (socket) return;
             try {
-                const socketUrl = window.location.hostname.includes('tangletang.top') ? 'https://api.tangletang.top' : window.location.origin;
+                const socketUrl = window.location.hostname.includes('tangletang.top') ? 'https://games-api.tangletang.top' : window.location.origin;
                 socket = io(socketUrl);
                 
                 socket.on('connect', () => {
