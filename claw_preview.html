@@ -495,51 +495,37 @@ function drawSoldierWithHp(s) {
     const isHit = s.hit_flash_timer > 0.0;
     const lean = isHit ? -8.0 : 0.0;
 
-    // 优先使用贴图
-    const recoilKey = `soldier_${s.type.toLowerCase()}_recoil`;
-    const spr = sprites[recoilKey];
-
-    if (isHit && spr && spr.complete && spr.naturalWidth > 0) {
-        ctx.save();
-        ctx.translate(sx, sy);
-        const scale = 1.05;
-        const dw = spr.naturalWidth * scale;
-        const dh = spr.naturalHeight * scale;
-        ctx.drawImage(spr, -dw * 0.5 + lean, -dh, dw, dh);
-        
-        // 闪白覆盖层
-        ctx.globalCompositeOperation = 'source-atop';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-        ctx.fillRect(-dw * 0.5 + lean, -dh, dw, dh);
-        ctx.restore();
-    } else {
-        // 矢量绘制（完全对应 Godot 代码）
-        ctx.save();
-        let suitCol = isHit ? '#ff5959' : '#384252';
-        let hatCol = isHit ? '#ffffff' : '#3380ff';
-        if (!isHit) {
-            if (s.type === 'GRAY') hatCol = '#808080';
-            else if (s.type === 'ORANGE') hatCol = '#ff661a';
-            else if (s.type === 'BLACK') {
-                suitCol = '#1a1a1f';
-                hatCol = '#14141a';
-            }
+    // 严格保持 1:1 尺寸绘制，受击时绝不放大变形
+    ctx.save();
+    let suitCol = isHit ? '#ff5959' : '#384252';
+    let hatCol = isHit ? '#ffffff' : '#3380ff';
+    if (!isHit) {
+        if (s.type === 'GRAY') hatCol = '#808080';
+        else if (s.type === 'ORANGE') hatCol = '#ff661a';
+        else if (s.type === 'BLACK') {
+            suitCol = '#1a1a1f';
+            hatCol = '#14141a';
         }
-
-        ctx.fillStyle = suitCol;
-        ctx.fillRect(sx - 10, sy - 24, 8, 24);
-        ctx.fillRect(sx + 2, sy - 24, 8, 24);
-        ctx.fillRect(sx - 12 + lean, sy - 54, 24, 30);
-
-        ctx.fillStyle = isHit ? '#ffffff' : '#e0bd99';
-        ctx.beginPath();
-        ctx.arc(sx + lean, sy - 63, 10.0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = hatCol;
-        ctx.fillRect(sx - 13 + lean, sy - 74, 26, 12);
-        ctx.restore();
     }
+
+    // 绘制双腿（尺寸与未受击时完全一致）
+    ctx.fillStyle = suitCol;
+    ctx.fillRect(sx - 10, sy - 24, 8, 24);
+    ctx.fillRect(sx + 2, sy - 24, 8, 24);
+
+    // 绘制躯干（受击时自然向后硬直后仰，宽度高度严禁变大）
+    ctx.fillRect(sx - 12 + lean, sy - 54, 24, 30);
+
+    // 头部（受击闪白）
+    ctx.fillStyle = isHit ? '#ffffff' : '#e0bd99';
+    ctx.beginPath();
+    ctx.arc(sx + lean, sy - 63, 10.0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 帽子
+    ctx.fillStyle = hatCol;
+    ctx.fillRect(sx - 13 + lean, sy - 74, 26, 12);
+    ctx.restore();
 
     // 绘制 5 格血条 (绿色剩余，深灰扣除)
     const barW = 44.0;

@@ -2516,18 +2516,27 @@ function drawBlackSpecopsGrenadier(e, ctx) {
 }
 
 function drawPixelArtSoldier(e, ctx, type) {
+    const isHit = (e.hitFlashTimer || 0) > 0;
+    const hitLean = isHit ? -8 : 0;
     const isCombat = e.state === 'COMBAT';
-    const isRunning = (isCombat && type === EnemyType.GRAY_HAT);
-    const phase = e.walkCycle || 0.0;
+    const isRunning = (isCombat && type === EnemyType.GRAY_HAT && !isHit);
+    const phase = isHit ? 0.0 : (e.walkCycle || 0.0);
     const bob = phase > 0 ? Math.floor(Math.abs(Math.sin(phase)) * (isRunning ? 6 : 3)) : 0;
-    const bodyLean = isRunning ? 6 : 0;
+    const bodyLean = (isRunning ? 6 : 0) + hitLean;
 
-    const suitMain = type === EnemyType.BLACK_SPECOPS ? '#1a1c24' : '#333d4d';
-    const suitDark = type === EnemyType.BLACK_SPECOPS ? '#101218' : '#1f2633';
+    let suitMain = type === EnemyType.BLACK_SPECOPS ? '#1a1c24' : '#333d4d';
+    let suitDark = type === EnemyType.BLACK_SPECOPS ? '#101218' : '#1f2633';
     let hatCol = '#2e80ff';
     if (type === EnemyType.GRAY_HAT) hatCol = '#8c949e';
     else if (type === EnemyType.RED_ORANGE) hatCol = '#ff6b14';
     else if (type === EnemyType.BLACK_SPECOPS) hatCol = '#14171f';
+
+    // 受击视觉反馈：红白闪烁+硬直后仰，尺寸与原尺寸严格 1:1 保持完全一致，绝不放大变形
+    if (isHit) {
+        suitMain = '#ff5959';
+        suitDark = '#d93b3b';
+        hatCol = '#ffffff';
+    }
 
     // 1. 双腿步态
     const stride = phase > 0 ? (isRunning ? 21.0 : 12.0) : 0.0;
@@ -2577,8 +2586,8 @@ function drawPixelArtSoldier(e, ctx, type) {
     // 4. 头部与遮眼压低战术帽子
     const headX = bodyLean;
     const headY = -68 - bob;
-    // 下半脸肤色
-    ctx.fillStyle = '#e6bd9e';
+    // 下半脸肤色（受击闪白）
+    ctx.fillStyle = isHit ? '#ffffff' : '#e6bd9e';
     ctx.beginPath();
     ctx.arc(headX, headY, 13, 0, Math.PI * 2);
     ctx.fill();
@@ -2733,12 +2742,7 @@ function drawEnemies() {
             drawBlackSpecopsGrenadier(e, ctx);
         }
 
-        // 受击硬直闪白
-        if (e.hitFlashTimer > 0) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-            ctx.fillRect(-22, -80, 44, 80);
-        }
-
+        // 受击硬直已在 drawPixelArtSoldier 内通过像素本体红白变色与身体后仰自然呈现，严禁绘制扩大外框
         ctx.restore();
 
         // 绘制头顶 5 格血条 (每格代表 1 点生命，绿色为剩余，深灰为扣减)

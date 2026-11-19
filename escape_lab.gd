@@ -568,9 +568,8 @@ func draw_hat_soldier(e: Dictionary, cam_x: float) -> void:
 	var is_running = (is_combat and e["type"] == "GRAY")
 	var phase = e["walk_t"]
 	var bob = abs(sin(phase)) * (5.0 if is_running else 2.5) if phase > 0.0 else 0.0
-	var lean = (6.0 * f) if is_running else 0.0
-
 	var is_hit = e.get("hit_flash_timer", 0.0) > 0.0
+	var lean = -8.0 * f if is_hit else ((6.0 * f) if is_running else 0.0)
 	var suit_main = Color(1.0, 0.35, 0.35) if is_hit else (Color(0.10, 0.11, 0.14) if e["type"] == "BLACK" else Color(0.20, 0.24, 0.30))
 	var suit_dark = Color(0.85, 0.25, 0.25) if is_hit else (Color(0.06, 0.07, 0.09) if e["type"] == "BLACK" else Color(0.12, 0.15, 0.20))
 	var hat_col = Color.WHITE if is_hit else Color(0.18, 0.50, 1.00) # BLUE
@@ -606,7 +605,7 @@ func draw_hat_soldier(e: Dictionary, cam_x: float) -> void:
 	# 4. 头部与遮眼压低战术帽子
 	var head_y = sy - 68 - bob
 	var head_x = sx + lean
-	draw_circle(Vector2(head_x, head_y), 11.0, Color(0.90, 0.74, 0.62)) # 肤色下巴
+	draw_circle(Vector2(head_x, head_y), 11.0, Color.WHITE if is_hit else Color(0.90, 0.74, 0.62)) # 肤色下巴（受击闪白）
 	# 压低帽子
 	draw_rect(Rect2(head_x - 14, head_y - 14, 28, 14), hat_col) # 帽冠
 	draw_rect(Rect2(head_x - 14, head_y - 14, 28, 14), Color(0.05, 0.06, 0.10), false, 2.0)
