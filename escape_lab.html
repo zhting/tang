@@ -2470,29 +2470,29 @@ function drawBlueDragon() {
         offsetX = (Math.random() - 0.5) * 8 * dragon.bellyBulgeAnim;
         offsetY = (Math.random() - 0.5) * 8 * dragon.bellyBulgeAnim;
     }
-    // 2. 贴地吃手雷 (GRENADE FEEDING 动作：低头铲地、大口咬下)
-    else if (dragon.feedingGrenadeTimer > 0) {
-        spriteKey = (dragon.feedingGrenadeTimer > 0.22) ? 'dragon_feed_0' : 'dragon_feed_1';
-        sScale = 1.65;
-    }
-    // 3. 原版 7 步地表吞人序列帧 (SWALLOW ACTION: 叼起->抛空->张嘴迎击->叼入->咬住->仰头->下咽)
+    // 3. 原版 7 步地表吞人序列帧 (SWALLOW ACTION: 严格保持体型比例，锁死高度基准，绝不忽大忽小)
     else if (dragon.swallowAction) {
         const p = Math.min(0.999, dragon.swallowAction.timer / dragon.swallowAction.duration);
         const fIdx = Math.min(6, Math.floor(p * 7));
         spriteKey = 'dragon_swallow_' + fIdx;
-        sScale = 2.4;
+        sScale = 1.55; // 吞咽高仰头图集高度为 212px，按 1.55 缩放精准等于 328px，与行走步态 1:1 绝对一致
     }
     // 4. 腹中吃满/饱腹 (FULL BELLY: 5~10 人, 沉甸下垂饱满巨肚)
     else if (swallowedHumans >= 5) {
         const frameIdx = isMoving ? (Math.floor(dragon.stepCount * 0.8) % 4) : 0;
         spriteKey = 'dragon_heavy_' + frameIdx;
-        sScale = 3.2; // 尺寸与 walk 一致
+        sScale = 3.43; // heavy 图集高度为 95px，按 3.43 缩放精准等于 326px，与行走步态 1:1 绝对一致
     }
-    // 5. 正常 10 帧纯正四足行进步态循环 (NORMAL WALK CYCLE: 10 帧无缝流畅动作)
+    // 5. 贴地吃手雷 (GRENADE FEEDING 动作：低头铲地、大口咬下)
+    else if (dragon.feedingGrenadeTimer > 0) {
+        spriteKey = (dragon.feedingGrenadeTimer > 0.22) ? 'dragon_feed_0' : 'dragon_feed_1';
+        sScale = 2.32; // feed 图集高度为 141px，按 2.32 缩放精准等于 327px，与行走步态 1:1 绝对一致
+    }
+    // 6. 正常 10 帧纯正四足行进步态循环 (NORMAL WALK CYCLE: 10 帧无缝流畅动作)
     else {
         const frameIdx = isMoving ? (Math.floor(dragon.stepCount * 1.0) % 10) : 0;
         spriteKey = 'dragon_walk_' + frameIdx;
-        sScale = 2.4;
+        sScale = 2.4; // walk 图集高度为 136px，按 2.4 缩放精准等于 326.4px
     }
 
     const spr = labSprites[spriteKey];

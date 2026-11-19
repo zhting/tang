@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>连贯版蓝龙吞食动画引擎（8阶段平滑插值）</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #0b0f19;
+            color: #e0e6ed;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 1152px;
+            background: rgba(18, 24, 38, 0.92);
+            border: 1px solid #1f3352;
+            border-radius: 8px;
+            padding: 10px 18px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #40c4ff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .badge {
+            background: #00e676;
+            color: #003314;
+            font-size: 11px;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-weight: 800;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+        button {
+            background: #1e3a5f;
+            color: #fff;
+            border: 1px solid #3b82f6;
+            padding: 6px 14px;
+            border-radius: 5px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        button:hover {
+            background: #2563eb;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+        button.btn-j {
+            background: #16a34a;
+            border-color: #4ade80;
+        }
+        .canvas-box {
+            position: relative;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+            border-radius: 6px;
+            overflow: hidden;
+            border: 2px solid #1f3352;
+        }
+        canvas {
+            display: block;
+            background: #121622;
+        }
+        .bottom-bar {
+            width: 1152px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #8da4c4;
+            padding: 2px 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="top-bar">
+        <div class="title">
+            <span>🐉 连贯版蓝龙吞食动画引擎（8阶段平滑插值）</span>
+            <span class="badge">STABLE SCALE</span>
+        </div>
+        <div class="btn-group">
+            <button class="btn-j" onclick="triggerSwallow()">吞食动画 [J / 空格]</button>
+            <button onclick="resetSoldier()">重新生成士兵 [R]</button>
+            <button onclick="window.location.href='escape_lab.html'">进入主关卡</button>
+        </div>
+    </div>
+
+    <div class="canvas-box">
+        <canvas id="gameCanvas" width="1152" height="648"></canvas>
+    </div>
+
+    <div class="bottom-bar">
+        <span>严格恒定体型比例（严禁忽大忽小），四足稳稳踩地，贝塞尔弯曲龙颈与下巴食道人形鼓包传导</span>
+        <span>动作流：1.俯身叼起 → 2.甩头抛空 → 3.张嘴迎击 → 4.精准咬住迸发气浪 → 5.仰头吞咽 → 6.喉部下滑 → 7.胸腔过渡 → 8.腹下渐胀</span>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const TOTAL_SWALLOW_DURATION = 1.15; // 完整吞食过程总时长（秒）
+
+const dragonPos = { x: 360, y: 480 };
+let dragonFacing = 1;
+let bellyCount = 0;
+let visualBellyLevel = 0.0;
+
+let isSwallowing = false;
+let swallowTime = 0.0;
+
+let targetSoldier = {
+    exists: true,
+    pos: { x: 535, y: 480 },
+    rotation: 0.0
+};
+
+// Web Audio API 音效合成器
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playBeep(freq, type, duration, gainVal = 0.15) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+}
+
+function playSound(name) {
+    if (name === 'bite') playBeep(260, 'square', 0.12, 0.22);
+    else if (name === 'toss') playBeep(380, 'sine', 0.18, 0.2);
+    else if (name === 'snap') playBeep(190, 'sawtooth', 0.14, 0.25);
+    else if (name === 'swallow') playBeep(160, 'sine', 0.26, 0.25);
+}
+
+function resetSoldier() {
+    if (bellyCount >= 10) {
+        bellyCount = 0;
+        visualBellyLevel = 0.0;
+    }
+    targetSoldier = {
+        exists: true,
+        pos: { x: 535, y: 480 },
+        rotation: 0.0
+    };
+}
+
+function triggerSwallow() {
+    if (isSwallowing) return;
+    if (targetSoldier.exists && bellyCount < 10) {
+        isSwallowing = true;
+        swallowTime = 0.0;
+        playSound('bite');
+    }
+}
+
+// 缓动平滑函数
+function smoothstep(min, max, value) {
+    const x = Math.max(0, Math.min(1, (value - min) / (max - min)));
+    return x * x * (3 - 2 * x);
+}
+
+function lerp(a, b, t) {
+    return a + (b - a) * t;
+}
+
+window.addEventListener('keydown', e => {
+    if (e.key === 'j' || e.key === 'J' || e.key === ' ') {
+        e.preventDefault();
+        triggerSwallow();
+    }
+    if (e.key === 'r' || e.key === 'R') {
+        resetSoldier();
+    }
+});
+
+let snapSoundPlayed = false;
+let swallowSoundPlayed = false;
+
+function update(delta) {
+    if (isSwallowing) {
+        swallowTime += delta;
+        const t = Math.min(1.0, swallowTime / TOTAL_SWALLOW_DURATION);
+
+        if (t >= 0.55 && !snapSoundPlayed) {
+            playSound('snap');
+            snapSoundPlayed = true;
+        }
+        if (t >= 0.75 && !swallowSoundPlayed) {
+            playSound('swallow');
+            swallowSoundPlayed = true;
+        }
+
+        if (swallowTime >= TOTAL_SWALLOW_DURATION) {
+            isSwallowing = false;
+            snapSoundPlayed = false;
+            swallowSoundPlayed = false;
+            bellyCount = Math.min(10, bellyCount + 1);
+            resetSoldier(); // 自动补充下一名士兵
+        }
+    }
+
+    // 肚子膨胀平滑插值，避免突变
+    visualBellyLevel = lerp(visualBellyLevel, bellyCount, delta * 10.0);
+}
+
+function render() {
+    ctx.clearRect(0, 0, 1152, 648);
+
+    // 背景与地面
+    ctx.fillStyle = '#212938';
+    ctx.fillRect(0, 0, 1152, 480);
+
+    // 实验室科技墙面线条
+    ctx.strokeStyle = 'rgba(70, 95, 130, 0.22)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < 1152; x += 120) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0); ctx.lineTo(x, 480);
+        ctx.stroke();
+    }
+
+    ctx.fillStyle = '#3d4654';
+    ctx.fillRect(0, 480, 1152, 168);
+    ctx.strokeStyle = '#738fae';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, 480); ctx.lineTo(1152, 480);
+    ctx.stroke();
+
+    const p = dragonPos;
+    const f = dragonFacing;
+    const neckBase = { x: p.x + f * 58, y: p.y - 78 };
+    let headPos = { x: p.x + f * 95, y: p.y - 122 };
+    let jawOpen = 0.0;
+    let headTilt = 0.0;
+    let throatLumpProgress = -1.0;
+    let biteSpark = 0.0;
+
+    let soldierPos = { ...targetSoldier.pos };
+    let soldierRot = 0.0;
+    let showSoldier = targetSoldier.exists;
+
+    if (isSwallowing) {
+        const t = Math.min(1.0, Math.max(0.0, swallowTime / TOTAL_SWALLOW_DURATION));
+
+        // 阶段 1 (0.00 ~ 0.18)：俯身探颈，张嘴叼起地上的士兵
+        if (t < 0.18) {
+            const k = smoothstep(0.0, 0.18, t);
+            headPos = {
+                x: lerp(p.x + f * 95, p.x + f * 135, k),
+                y: lerp(p.y - 122, p.y - 52, k)
+            };
+            jawOpen = Math.sin(k * Math.PI) * 0.75;
+            headTilt = k * 0.35;
+            soldierPos = { x: 535, y: 480 };
+        }
+        // 阶段 2 (0.18 ~ 0.42)：猛地甩头将人挑起，士兵呈抛物线飞向半空
+        else if (t < 0.42) {
+            const k = (t - 0.18) / 0.24;
+            const easeK = smoothstep(0.0, 1.0, k);
+            headPos = {
+                x: lerp(p.x + f * 135, p.x + f * 102, easeK),
+                y: lerp(p.y - 52, p.y - 145, easeK)
+            };
+            headTilt = lerp(0.35, -0.45, easeK);
+            jawOpen = lerp(0.2, 0.85, easeK);
+
+            const startS = { x: 535, y: 470 };
+            const apexS = { x: p.x + f * 155, y: p.y - 245 };
+            soldierPos = {
+                x: lerp(startS.x, apexS.x, easeK),
+                y: lerp(startS.y, apexS.y, easeK) - Math.sin(k * Math.PI) * 35.0
+            };
+            soldierRot = k * Math.PI * 1.3;
+        }
+        // 阶段 3 (0.42 ~ 0.62)：士兵下落，龙头前伸精准咬住
+        else if (t < 0.62) {
+            const k = (t - 0.42) / 0.20;
+            const apexS = { x: p.x + f * 155, y: p.y - 245 };
+            const mouthTarget = { x: p.x + f * 128, y: p.y - 138 };
+            if (k < 0.65) {
+                const subK = k / 0.65;
+                headPos = {
+                    x: lerp(p.x + f * 102, mouthTarget.x, subK),
+                    y: lerp(p.y - 145, mouthTarget.y, subK)
+                };
+                headTilt = -0.45;
+                jawOpen = 1.0;
+                soldierPos = {
+                    x: lerp(apexS.x, mouthTarget.x + f * 16, subK * subK),
+                    y: lerp(apexS.y, mouthTarget.y - 6, subK * subK)
+                };
+                soldierRot = 1.3 * Math.PI + subK * 0.5;
+            } else {
+                const snapK = (k - 0.65) / 0.35;
+                headPos = {
+                    x: mouthTarget.x + f * (1.0 - snapK) * 8.0,
+                    y: mouthTarget.y
+                };
+                headTilt = lerp(-0.45, -0.65, snapK);
+                jawOpen = lerp(1.0, 0.15, snapK);
+                biteSpark = 1.0 - snapK;
+                soldierPos = {
+                    x: headPos.x + f * 14 * (1.0 - snapK),
+                    y: headPos.y
+                };
+                soldierRot = 1.8 * Math.PI;
+            }
+        }
+        // 阶段 4 (0.62 ~ 0.88)：仰头吞咽，清晰看到人形鼓包顺着下巴喉咙滑进胸腔
+        else if (t < 0.88) {
+            const k = (t - 0.62) / 0.26;
+            showSoldier = false;
+            headPos = { x: p.x + f * 82, y: p.y - 168 };
+            headTilt = -0.85;
+            jawOpen = 0.0;
+            throatLumpProgress = smoothstep(0.0, 1.0, k);
+
+            if (k > 0.65) {
+                visualBellyLevel = bellyCount + ((k - 0.65) / 0.35);
+            }
+        }
+        // 阶段 5 (0.88 ~ 1.00)：龙头顺滑回落归位，肚子完成膨胀
+        else {
+            const k = smoothstep(0.88, 1.0, t);
+            showSoldier = false;
+            headPos = {
+                x: lerp(p.x + f * 82, p.x + f * 95, k),
+                y: lerp(p.y - 168, p.y - 122, k)
+            };
+            headTilt = lerp(-0.85, 0.0, k);
+            visualBellyLevel = bellyCount + 1.0;
+        }
+    }
+
+    // 绘制蓝龙完整身体（严格锁定躯干尺寸，严禁忽大忽小）
+    drawSmoothDragonBody(p, f, neckBase, headPos, headTilt, jawOpen, throatLumpProgress, biteSpark);
+
+    // 绘制士兵
+    if (showSoldier) {
+        drawRotatingSoldier(soldierPos, soldierRot);
+    }
+
+    // 顶部操作提示
+    ctx.fillStyle = 'rgba(10, 14, 22, 0.75)';
+    ctx.fillRect(16, 16, 780, 82);
+    ctx.strokeStyle = '#223854';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(16, 16, 780, 82);
+
+    ctx.font = 'bold 20px "PingFang SC", sans-serif';
+    ctx.fillStyle = '#64d8cb';
+    ctx.fillText(`连贯吞食动画演示（当前腹中：${bellyCount} / 10 人）`, 32, 46);
+
+    ctx.font = '15px "PingFang SC", sans-serif';
+    ctx.fillStyle = '#ffeb3b';
+    ctx.fillText("按 [J 键] 或 [空格键] 播放完整 8 阶段丝滑吞食动画   |   按 [R 键] 重置", 32, 76);
+}
+
+function drawSmoothDragonBody(p, f, neckBase, headPos, tilt, jaw, lumpT, spark) {
+    const cMain = '#236be0';
+    const cDark = '#14409e';
+    const cBelly = '#59a9fa';
+
+    // 1. 长尾巴与加长龙翼
+    ctx.fillStyle = cMain;
+    ctx.beginPath();
+    ctx.moveTo(p.x - f * 68, p.y - 68);
+    ctx.lineTo(p.x - f * 195, p.y - 112);
+    ctx.lineTo(p.x - f * 145, p.y - 60);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = cDark;
+    ctx.beginPath();
+    ctx.moveTo(p.x - f * 12, p.y - 88);
+    ctx.lineTo(p.x - f * 125, p.y - 195);
+    ctx.lineTo(p.x - f * 168, p.y - 132);
+    ctx.lineTo(p.x - f * 80, p.y - 102);
+    ctx.closePath();
+    ctx.fill();
+
+    // 2. 躯干与身下平滑膨胀肚子（严格保持 140x44 恒定躯干，在前后腿之间自然垂坠）
+    ctx.fillStyle = cMain;
+    ctx.fillRect(p.x - 70, p.y - 92, 140, 44);
+
+    const bellyR = 21.0 + visualBellyLevel * 3.5;
+    const bellyCenter = { x: p.x, y: p.y - 52 + visualBellyLevel * 1.5 };
+    ctx.fillStyle = cBelly;
+    ctx.beginPath();
+    ctx.arc(bellyCenter.x, bellyCenter.y, bellyR, 0, Math.PI * 2);
+    ctx.fill();
+
+    const roundedBelly = Math.round(visualBellyLevel);
+    for (let i = 0; i < roundedBelly; i++) {
+        const bumpX = bellyCenter.x + Math.cos(i * 1.35) * bellyR * 0.52;
+        const bumpY = bellyCenter.y + Math.sin(i * 1.35) * bellyR * 0.42;
+        ctx.fillStyle = cMain;
+        ctx.beginPath();
+        ctx.arc(bumpX, bumpY, 6.0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // 3. 严格四脚着地（全程稳踩地面，绝无悬空或伸缩跳变）
+    ctx.fillStyle = cDark;
+    ctx.fillRect(p.x - 58, p.y - 50, 16, 50);
+    ctx.fillStyle = cMain;
+    ctx.fillRect(p.x - 34, p.y - 50, 16, 50);
+    ctx.fillStyle = cDark;
+    ctx.fillRect(p.x + 28, p.y - 50, 16, 50);
+    ctx.fillStyle = cMain;
+    ctx.fillRect(p.x + 50, p.y - 50, 16, 50);
+
+    // 4. 弯曲龙颈（二次贝塞尔曲线连接肩部与龙头）
+    const ctrlPt = {
+        x: lerp(neckBase.x, headPos.x, 0.5) + f * 14,
+        y: lerp(neckBase.y, headPos.y, 0.5) + 12
+    };
+
+    let prevPt = neckBase;
+    ctx.lineCap = 'round';
+    for (let s = 1; s <= 12; s++) {
+        const st = s / 12.0;
+        const q0 = { x: lerp(neckBase.x, ctrlPt.x, st), y: lerp(neckBase.y, ctrlPt.y, st) };
+        const q1 = { x: lerp(ctrlPt.x, headPos.x, st), y: lerp(ctrlPt.y, headPos.y, st) };
+        const currPt = { x: lerp(q0.x, q1.x, st), y: lerp(q0.y, q1.y, st) };
+        const thickness = lerp(24.0, 18.0, st);
+
+        ctx.strokeStyle = cMain;
+        ctx.lineWidth = thickness;
+        ctx.beginPath();
+        ctx.moveTo(prevPt.x, prevPt.y);
+        ctx.lineTo(currPt.x, currPt.y);
+        ctx.stroke();
+
+        prevPt = currPt;
+    }
+
+    // 5. 喉咙吞咽鼓包（顺着弯曲龙颈向下滑动）
+    if (lumpT >= 0.0) {
+        const lt = Math.max(0.0, Math.min(1.0, lumpT));
+        const q0 = { x: lerp(headPos.x, ctrlPt.x, lt), y: lerp(headPos.y, ctrlPt.y, lt) };
+        const q1 = { x: lerp(ctrlPt.x, neckBase.x, lt), y: lerp(ctrlPt.y, neckBase.y, lt) };
+        const lumpPos = { x: lerp(q0.x, q1.x, lt), y: lerp(q0.y, q1.y, lt) };
+
+        ctx.fillStyle = cBelly;
+        ctx.beginPath();
+        ctx.arc(lumpPos.x, lumpPos.y, 15.0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = cMain;
+        ctx.beginPath();
+        ctx.arc(lumpPos.x, lumpPos.y, 10.0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // 6. 龙头与旋转开合下颌
+    ctx.save();
+    ctx.translate(headPos.x, headPos.y);
+    ctx.rotate(tilt * f);
+    ctx.scale(f, 1);
+
+    // 上颌与龙角
+    ctx.fillStyle = cMain;
+    ctx.fillRect(-18, -16, 44, 16);
+
+    ctx.strokeStyle = cBelly;
+    ctx.lineWidth = 4.5;
+    ctx.beginPath();
+    ctx.moveTo(-10, -14);
+    ctx.lineTo(-32, -32);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffea00';
+    ctx.beginPath();
+    ctx.arc(8, -7, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 张嘴口腔与尖牙
+    if (jaw > 0.05) {
+        ctx.fillStyle = '#a62438';
+        ctx.fillRect(-10, 0, 34, jaw * 18);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(20, 0);
+        ctx.lineTo(17, 6);
+        ctx.stroke();
+    }
+
+    // 下颌
+    ctx.save();
+    ctx.rotate(jaw * 0.55);
+    ctx.fillStyle = cBelly;
+    ctx.fillRect(-14, 0, 38, 9);
+    ctx.restore();
+
+    ctx.restore();
+
+    // 7. 咬住瞬间的气浪环
+    if (spark > 0.05) {
+        ctx.strokeStyle = `rgba(180, 240, 255, ${spark})`;
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.arc(headPos.x + f * 26, headPos.y, 28.0 * (1.2 - spark * 0.4), -1.2, 1.2);
+        ctx.stroke();
+    }
+}
+
+function drawRotatingSoldier(pos, rot) {
+    ctx.save();
+    ctx.translate(pos.x, pos.y);
+    ctx.rotate(rot);
+
+    const suit = '#38475c';
+    ctx.fillStyle = suit;
+    ctx.fillRect(-8, -22, 7, 22);
+    ctx.fillRect(1, -22, 7, 22);
+    ctx.fillRect(-11, -50, 22, 28);
+
+    ctx.fillStyle = '#e0bd99';
+    ctx.beginPath();
+    ctx.arc(0, -59, 9.0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#3b82f6';
+    ctx.fillRect(-12, -70, 24, 11);
+
+    ctx.restore();
+}
+
+let lastTime = performance.now();
+function gameLoop(now) {
+    const delta = Math.min(0.1, (now - lastTime) / 1000.0);
+    lastTime = now;
+
+    update(delta);
+    render();
+
+    requestAnimationFrame(gameLoop);
+}
+
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
