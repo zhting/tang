@@ -12,7 +12,7 @@ const MAX_BELLY: int = 10           # 最多吞 10 个人
 const DIGEST_TIME: float = 10.0     # 每 10 秒自然消化 1 个人
 
 # 基础攻击与士兵血量机制
-const SOLDIER_MAX_HP: int = 5       # 每个士兵总血量为 5
+const SOLDIER_MAX_HP: int = 10      # 每个士兵总血量为 10
 const CLAW_BASE_DAMAGE: int = 1     # 一次基础攻击伤害为 1
 const CLAW_COOLDOWN: float = 0.45   # 挥爪动作冷却时间
 
@@ -24,6 +24,15 @@ var damage_popups: Array[Dictionary] = []
 var hp: float = 20.0
 var belly_count: int = 0
 var digest_timer: float = 0.0
+var belly_list: Array[Dictionary] = [] # 存储腹中士兵数据（含血量、挣扎计时、是否判定吐出）
+var spitting_soldier_data: Dictionary = {} # 正在被吐出的士兵数据
+
+# 核心概率算法：10血 70%，每少1血降5%，0血倒下严格为 0%
+func calculate_spit_chance(current_hp: int) -> float:
+	if current_hp <= 0:
+		return 0.0
+	var chance = 0.20 + (float(current_hp) * 0.05)
+	return clamp(chance, 0.0, 1.0)
 
 # 感电持续伤害（蓝帽电击枪：命中0.5 + 持续5秒每秒0.5）
 var shock_seconds_left: int = 0
@@ -101,6 +110,8 @@ func reset_level_data() -> void:
 			"home_x": item["x"],
 			"hp": SOLDIER_MAX_HP,
 			"max_hp": SOLDIER_MAX_HP,
+			"is_downed": false,
+			"stun_timer": 0.0,
 			"hit_flash_timer": 0.0,
 			"knockback_vx": 0.0,
 			"state": "PATROL", # PATROL 漫步左右乱走 vs COMBAT 靠近切换战斗形态
@@ -166,6 +177,13 @@ func update_dragon(delta: float) -> void:
 	if action_timer > 0.0:
 		action_timer -= delta
 		if action_timer <= 0.0:
+			if action_anim == "SPIT_OUT" and not spitting_soldier_data.is_empty():
+				var land_x = clamp(dragon_pos.x + dragon_facing * 175.0, 80.0, finish_x + 200.0)
+				spitting_soldier_data["pos"] = Vector2(land_x, 480.0)
+				spitting_soldier_data["stun_timer"] = 1.6
+				spitting_soldier_data["knockback_vx"] = 0.0
+				enemies.append(spitting_soldier_data)
+				spitting_soldier_data = {}
 			action_anim = "IDLE"
 	if belly_bulge_extra > 0.0:
 		belly_bulge_extra = max(0.0, belly_bulge_extra - 120.0 * delta)
@@ -233,7 +251,10 @@ func trigger_claw_attack() -> void:
 func apply_claw_damage_to_soldier(s: Dictionary, index: int) -> void:
 	s["hit_flash_timer"] = 0.18
 	s["knockback_vx"] = dragon_facing * 240.0
-	enemies.remove_at(index)
+	var cur_hp: int = s.get("hp", SOLDIER_MAX_HP)
+	s["hp"] = max(0, cur_hp - 1)
+	if s["hp"] <= 0:
+		s["is_downed"] = true
 
 func update_damage_popups(delta: float) -> void:
 	for i in range(damage_popups.size() - 1, -1, -1):
@@ -254,13 +275,21 @@ func try_swallow() -> void:
 			return
 
 	# 【优先级 2】挑起吞吃士兵（上限 10 人）
-	if belly_count >= MAX_BELLY:
+	if belly_list.size() >= MAX_BELLY:
 		return
 	for i in range(enemies.size() - 1, -1, -1):
 		var e = enemies[i]
 		if abs(e["pos"].x - mouth_x) < 115.0:
 			enemies.remove_at(i)
-			belly_count += 1
+			var spit_prob = calculate_spit_chance(e.get("hp", SOLDIER_MAX_HP))
+			var roll = randf()
+			var will_escape = (roll < spit_prob)
+			belly_list.append({
+				"soldier": e,
+				"will_spit_out": will_escape,
+				"struggle_timer": 1.2
+			})
+			belly_count = belly_list.size()
 			action_anim = "EAT_HUMAN"
 			action_timer = 0.55
 			return
@@ -275,13 +304,28 @@ func update_status_timers(delta: float) -> void:
 			damage_dragon(0.5)
 
 	# 2. 自然消化：存的人每 10 秒消化 1 个
-	if belly_count > 0:
+	if belly_list.size() > 0:
 		digest_timer += delta
 		if digest_timer >= DIGEST_TIME:
 			digest_timer = 0.0
-			belly_count -= 1
+			belly_list.pop_front()
+			belly_count = belly_list.size()
 	else:
 		digest_timer = 0.0
+
+	# 3. 腹中挣扎判定与吐出
+	if action_anim != "SPIT_OUT":
+		for i in range(belly_list.size() - 1, -1, -1):
+			var entry = belly_list[i]
+			if entry["will_spit_out"]:
+				entry["struggle_timer"] -= delta
+				if entry["struggle_timer"] <= 0.0:
+					belly_list.remove_at(i)
+					belly_count = belly_list.size()
+					spitting_soldier_data = entry["soldier"]
+					action_anim = "SPIT_OUT"
+					action_timer = 0.85
+					break
 
 # ==============================================================================
 # 第四部分：士兵 AI 与投掷物（电击枪、火焰弹、10秒抛手雷、5秒肚内炸雷）
@@ -299,6 +343,15 @@ func update_enemies(delta: float) -> void:
 		var dir_to_dragon = -1.0 if dragon_pos.x < e["pos"].x else 1.0
 
 		if dist_to_dragon > 1100.0:
+			continue
+
+		# 晕眩硬直计时
+		if e.get("stun_timer", 0.0) > 0.0:
+			e["stun_timer"] = max(0.0, e["stun_timer"] - delta)
+			continue
+
+		# 0血倒下形态：失去行动能力，等待被吞下
+		if e.get("is_downed", false):
 			continue
 
 		# 靠近警戒线切换战斗形态，远离恢复巡逻漫步
@@ -642,6 +695,17 @@ func draw_hat_soldier(e: Dictionary, cam_x: float) -> void:
 				draw_line(shoulder, hand, suit_main, 6.0)
 				draw_circle(hand + Vector2(0, -6), 7.0, Color(0.18, 0.65, 0.25))
 				draw_circle(hand + Vector2(0, -12), 2.5, Color.YELLOW)
+
+	# 6. 头顶状态与吐出概率显示
+	if e.get("is_downed", false):
+		draw_string(ThemeDB.fallback_font, Vector2(sx - 42, sy - 28), "0血倒下(吐出0%)", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.3, 1.0, 0.4))
+	else:
+		if e.get("stun_timer", 0.0) > 0.0:
+			var star_x = sin(Time.get_ticks_msec() * 0.015) * 12.0
+			draw_string(ThemeDB.fallback_font, Vector2(sx + star_x - 6, sy - 82), "★", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.YELLOW)
+		var hp_val: int = e.get("hp", SOLDIER_MAX_HP)
+		var prob_pct: int = int(round(calculate_spit_chance(hp_val) * 100))
+		draw_string(ThemeDB.fallback_font, Vector2(sx - 38, sy - 86), "%d血 (吐出%d%%)" % [hp_val, prob_pct], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
 
 func draw_hud_overlay() -> void:
 	# 左上角状态栏（20颗心血量 + 10人肚子容量）

@@ -862,9 +862,18 @@ let dragon = {
     tossedSoldier: null // 吞噬抛空动效士兵对象
 };
 
-const SOLDIER_MAX_HP = 5;
+const SOLDIER_MAX_HP = 10;
 const CLAW_BASE_DAMAGE = 1;
 const CLAW_COOLDOWN = 0.45;
+
+const dragonBellyList = []; // 存储腹中士兵数据（含血量、挣扎计时、是否判定吐出）
+
+// 核心概率算法：10血 70%，每少1血降5%，0血倒下严格为 0%
+function calculateSpitChance(currentHp) {
+    if (currentHp <= 0) return 0.0;
+    const chance = 0.20 + (currentHp * 0.05);
+    return Math.min(1.0, Math.max(0.0, chance));
+}
 
 const damagePopups = [];
 const hitSparks = [];
@@ -1179,6 +1188,8 @@ function setupLevel1Entities() {
             homeX: sp.x,
             hp: SOLDIER_MAX_HP,
             maxHp: SOLDIER_MAX_HP,
+            isDowned: false,
+            stunTimer: 0.0,
             hitFlashTimer: 0.0,
             knockbackVx: 0.0,
             state: 'PATROL',
@@ -1233,8 +1244,17 @@ function applyClawDamageToSoldier(e, index) {
         timer: 0.25
     });
 
-    activeEnemies.splice(index, 1);
-    hintBanner.textContent = "蓝龙猛烈挥爪！将士兵瞬间击飞击败！";
+    e.hitFlashTimer = 0.18;
+    e.knockbackVx = dragon.facing * 240.0;
+    e.hp = Math.max(0, (e.hp !== undefined ? e.hp : SOLDIER_MAX_HP) - 1);
+
+    if (e.hp === 0) {
+        e.isDowned = true;
+        hintBanner.textContent = "士兵生命值降至 0 已倒下！现在吞下他被吐出的概率为 0%！";
+    } else {
+        const nextProb = Math.round(calculateSpitChance(e.hp) * 100);
+        hintBanner.textContent = `挥爪命中！士兵剩余 ${e.hp} 滴血（此时吞下有 ${nextProb}% 概率被吐出）`;
+    }
 }
 
 function performDragonSwallow() {
@@ -1272,6 +1292,7 @@ function performDragonSwallow() {
                 type: e.type,
                 x: e.x,
                 y: e.y,
+                hp: (e.hp !== undefined ? e.hp : SOLDIER_MAX_HP),
                 facing: e.facing || (dragon.facing === 1 ? -1 : 1)
             };
 
@@ -1308,6 +1329,7 @@ function performDragonSwallow() {
 // 手雷在肚子内闷爆引爆
 function triggerBellyGrenadeExplosion() {
     playSound('belly_bomb');
+    dragonBellyList.length = 0;
     const count = swallowedHumans;
     swallowedHumans = 0;
     naturalDigestTimer = 0.0;
@@ -1386,6 +1408,26 @@ function updateSwallowAction(dt) {
         if (sw.enemy && swallowedHumans < MAX_BELLY_CAPACITY) {
             swallowedHumans++;
             naturalDigestTimer = 0.0;
+
+            const enemyHp = (sw.enemy.hp !== undefined ? sw.enemy.hp : SOLDIER_MAX_HP);
+            const spitProb = calculateSpitChance(enemyHp);
+            const willEscape = (Math.random() < spitProb);
+
+            dragonBellyList.push({
+                enemy: sw.enemy,
+                willSpitOut: willEscape,
+                struggleTimer: 1.2
+            });
+
+            const pct = Math.round(spitProb * 100);
+            if (enemyHp <= 0) {
+                hintBanner.textContent = "吞下了 0 血倒下的士兵！吐出概率为 0%，稳稳留在腹中！";
+            } else if (willEscape) {
+                hintBanner.textContent = `吞下了 ${enemyHp} 血士兵（吐出概率 ${pct}%）—— 判定触发！在肚中剧烈挣扎，即将被吐出！`;
+            } else {
+                hintBanner.textContent = `吞下了 ${enemyHp} 血士兵（吐出概率 ${pct}%）—— 压制成功！留在腹中消化！`;
+            }
+
             updateHud();
         }
     }
@@ -1526,6 +1568,60 @@ function updateGame(dt) {
             naturalDigestTimer = 0.0;
         }
 
+        // 腹中挣扎判定与反刍吐出
+        if (!dragon.spitOutAction) {
+            for (let i = dragonBellyList.length - 1; i >= 0; i--) {
+                const entry = dragonBellyList[i];
+                if (entry.willSpitOut) {
+                    entry.struggleTimer -= dt;
+                    if (entry.struggleTimer <= 0) {
+                        dragonBellyList.splice(i, 1);
+                        swallowedHumans = Math.max(0, swallowedHumans - 1);
+                        updateHud();
+                        dragon.spitOutAction = {
+                            timer: 0.0,
+                            duration: 0.85,
+                            enemy: entry.enemy
+                        };
+                        playSound('roar');
+                        hintBanner.textContent = `咳呕！！蓝龙反刍张大龙嘴，将 ${entry.enemy.hp} 血士兵吐了出来！`;
+                        break;
+                    }
+                }
+            }
+        } else {
+            dragon.spitOutAction.timer += dt;
+            if (dragon.spitOutAction.timer >= dragon.spitOutAction.duration) {
+                const spEnemy = dragon.spitOutAction.enemy;
+                const landX = Math.max(80, Math.min(FINISH_LINE_X + 200, dragon.x + dragon.facing * 175.0));
+                activeEnemies.push({
+                    type: spEnemy.type,
+                    x: landX,
+                    y: 540.0,
+                    homeX: landX,
+                    hp: spEnemy.hp,
+                    maxHp: SOLDIER_MAX_HP,
+                    isDowned: spEnemy.hp <= 0,
+                    stunTimer: 1.6,
+                    hitFlashTimer: 0.0,
+                    knockbackVx: 0.0,
+                    state: 'PATROL',
+                    dir: -1,
+                    patrolTimer: 1.5,
+                    detectRange: 450.0,
+                    width: 36.0,
+                    height: 72.0,
+                    timer: 2.0,
+                    walkCycle: 0.0,
+                    facing: -dragon.facing,
+                    isFiring: false,
+                    flameTimer: 0.0,
+                    dustTimer: 0.0
+                });
+                dragon.spitOutAction = null;
+            }
+        }
+
         // --- C. 沿途士兵 AI 与跑动步频（双阶段：离远巡逻左右漫步 -> 靠近切换战斗形态） ---
         activeEnemies.forEach(e => {
             // 受击硬直闪烁与击退位移
@@ -1533,6 +1629,17 @@ function updateGame(dt) {
             if (Math.abs(e.knockbackVx || 0) > 1.0) {
                 e.x = Math.max(80.0, Math.min(FINISH_LINE_X + 200, e.x + e.knockbackVx * dt));
                 e.knockbackVx = (e.knockbackVx > 0) ? Math.max(0, e.knockbackVx - 950.0 * dt) : Math.min(0, e.knockbackVx + 950.0 * dt);
+            }
+
+            // 晕眩硬直计时
+            if (e.stunTimer > 0) {
+                e.stunTimer = Math.max(0, e.stunTimer - dt);
+                return;
+            }
+
+            // 0血倒下形态：失去行动能力，等待被吞下
+            if (e.isDowned) {
+                return;
             }
 
             const dist = Math.abs(dragon.x - e.x);
@@ -2344,6 +2451,18 @@ function drawBlueDragon() {
         spriteKey = 'dragon_claw_' + fIdx;
         sScale = 2.4;
     }
+    // 0.5. 反刍喷吐动作 (SPIT OUT 动作)
+    else if (dragon.spitOutAction) {
+        const p = Math.min(1.0, dragon.spitOutAction.timer / dragon.spitOutAction.duration);
+        if (p < 0.3) {
+            spriteKey = 'dragon_swallow_5';
+        } else if (p < 0.65) {
+            spriteKey = 'dragon_feed_1';
+        } else {
+            spriteKey = 'dragon_walk_0';
+        }
+        sScale = 2.4;
+    }
     // 1. 肚内手雷闷爆 (BELLY EXPLOSION 闪烁震颤与极度膨胀)
     else if (dragon.bellyBulgeAnim > 0.05) {
         spriteKey = 'dragon_explode';
@@ -2420,6 +2539,40 @@ function drawBlueDragon() {
     } else {
         // 降级绘制
         drawBlueDragonVector();
+    }
+
+    // 吐出动作视觉细节（喉咙鼓包涌动与半空抛射士兵）
+    if (dragon.spitOutAction) {
+        const p = Math.min(1.0, dragon.spitOutAction.timer / dragon.spitOutAction.duration);
+        if (p < 0.3) {
+            const t1 = p / 0.3;
+            const lumpX = 40 + t1 * 60;
+            const lumpY = -70 - t1 * 30;
+            ctx.fillStyle = '#59a9fa';
+            ctx.beginPath();
+            ctx.arc(lumpX, lumpY, 14.0, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (p < 0.65) {
+            const t2 = (p - 0.3) / 0.35;
+            ctx.strokeStyle = 'rgba(200, 245, 255, 0.85)';
+            ctx.lineWidth = 3.0;
+            ctx.beginPath();
+            ctx.moveTo(110, -96);
+            ctx.lineTo(190, -84);
+            ctx.stroke();
+
+            const flyX = 110 + (175 - 110) * t2;
+            const flyY = -96 + (0 - (-96)) * t2 - Math.sin(t2 * Math.PI) * 45.0;
+            ctx.save();
+            ctx.translate(flyX, flyY);
+            ctx.fillStyle = '#38475c';
+            ctx.fillRect(-10, -18, 20, 22);
+            ctx.fillStyle = '#e5be9e';
+            ctx.beginPath(); ctx.arc(0, -25, 9, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#3b82f6';
+            ctx.fillRect(-11, -34, 22, 9);
+            ctx.restore();
+        }
     }
 
     ctx.restore();
@@ -2657,6 +2810,11 @@ function drawEnemies() {
         ctx.translate(e.x, e.y);
         ctx.scale(e.facing, 1);
 
+        if (e.isDowned) {
+            ctx.translate(10, -14);
+            ctx.rotate(-Math.PI / 2);
+        }
+
         if (e.type === EnemyType.BLUE_HAT) {
             drawBlueCapSoldier(e, ctx);
         } else if (e.type === EnemyType.GRAY_HAT) {
@@ -2667,6 +2825,30 @@ function drawEnemies() {
             drawBlackSpecopsGrenadier(e, ctx);
         }
 
+        ctx.restore();
+
+        // 头顶状态与吐出概率显示
+        const curHp = (e.hp !== undefined) ? e.hp : SOLDIER_MAX_HP;
+        const probPct = Math.round(calculateSpitChance(curHp) * 100);
+
+        ctx.save();
+        ctx.textAlign = 'center';
+        if (e.isDowned) {
+            ctx.font = 'bold 13px -apple-system, sans-serif';
+            ctx.fillStyle = '#4ade80';
+            ctx.fillText("0血倒下(吐出0%)", e.x, e.y - 28);
+        } else {
+            const crouch = e.stunTimer > 0 ? 8.0 : 0.0;
+            if (e.stunTimer > 0) {
+                const starX = Math.sin(Date.now() * 0.015) * 12.0;
+                ctx.font = 'bold 18px -apple-system, sans-serif';
+                ctx.fillStyle = '#ffea00';
+                ctx.fillText("★", e.x + starX, e.y - 82 + crouch);
+            }
+            ctx.font = 'bold 13px -apple-system, sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(`${curHp}血 (吐出${probPct}%)`, e.x, e.y - 86 + crouch);
+        }
         ctx.restore();
     });
 }
