@@ -122,7 +122,7 @@
     </div>
 
     <div class="bottom-bar">
-        <span>设定指标：士兵 HP 5，挥爪伤害 1，攻击距离 170px，受击闪白硬直 0.18s，击退初速 240px/s</span>
+        <span>设定指标：已移除人物血条与伤害数字，还原纯正像素序列帧动作；攻击距离 170px，受击闪白 0.18s，击退初速 240px/s</span>
         <span>资源模式：原生 4 帧像素动作 (Wind-up / Slash / Impact / Recovery) + 月牙气浪 + 闪光星爆</span>
     </div>
 </div>
@@ -145,12 +145,15 @@ let soldiers = [];
 let damagePopups = [];
 let hitSparks = [];
 
-// 载入切出的动作帧贴图
+// 载入动作帧贴图
 const sprites = {};
 const spriteNames = [
     'dragon_claw_0', 'dragon_claw_1', 'dragon_claw_2', 'dragon_claw_3',
     'claw_slash_fx', 'claw_impact_fx',
-    'soldier_blue_recoil', 'soldier_gray_recoil', 'soldier_orange_recoil', 'soldier_black_recoil'
+    'blue_cap_0', 'blue_cap_1', 'blue_cap_2', 'blue_cap_3',
+    'gray_cap_0', 'gray_cap_1', 'gray_cap_2', 'gray_cap_3',
+    'red_orange_cap_0', 'red_orange_cap_1',
+    'black_specops_0', 'black_specops_1', 'black_specops_2', 'black_specops_3'
 ];
 let loadedCount = 0;
 spriteNames.forEach(name => {
@@ -212,26 +215,18 @@ function triggerClawAttack() {
 }
 
 function applyClawDamageToSoldier(s, index) {
-    s.hp = Math.max(0, s.hp - CLAW_BASE_DAMAGE);
     s.hit_flash_timer = 0.18;
     s.knockback_vx = dragonFacing * 240.0;
-
-    damagePopups.push({
-        pos: { x: s.pos.x, y: s.pos.y - 92 },
-        text: `-${CLAW_BASE_DAMAGE}`,
-        timer: 0.65
-    });
 
     // 产生星爆击打特效
     hitSparks.push({
         x: s.pos.x,
-        y: s.pos.y - 50,
+        y: s.pos.y - 45,
         timer: 0.25
     });
 
-    if (s.hp <= 0) {
-        soldiers.splice(index, 1);
-    }
+    // 挥爪击退并直接击倒移除
+    soldiers.splice(index, 1);
 }
 
 function update(delta) {
@@ -359,11 +354,11 @@ function render() {
 
     ctx.font = 'bold 18px "PingFang SC", sans-serif';
     ctx.fillStyle = '#64d8cb';
-    ctx.fillText("基础攻击测试：按 [C 键] 抬爪向前挥舞（伤害 1，士兵血量 5）", 36, 52);
+    ctx.fillText("基础攻击测试：按 [C 键] 抬爪向前挥舞（击退击败，已移除人物血条）", 36, 52);
 
     ctx.font = '15px "PingFang SC", sans-serif';
     ctx.fillStyle = '#ffeb3b';
-    ctx.fillText("按 [A / D] 移动蓝龙靠近士兵   |   按 [R 键] 刷新满血士兵", 36, 82);
+    ctx.fillText("按 [A / D] 移动蓝龙靠近士兵   |   按 [R 键] 重新生成士兵", 36, 82);
     ctx.restore();
 }
 
@@ -495,57 +490,61 @@ function drawSoldierWithHp(s) {
     const isHit = s.hit_flash_timer > 0.0;
     const lean = isHit ? -8.0 : 0.0;
 
-    // 严格保持 1:1 尺寸绘制，受击时绝不放大变形
-    ctx.save();
-    let suitCol = isHit ? '#ff5959' : '#384252';
-    let hatCol = isHit ? '#ffffff' : '#3380ff';
-    if (!isHit) {
-        if (s.type === 'GRAY') hatCol = '#808080';
-        else if (s.type === 'ORANGE') hatCol = '#ff661a';
-        else if (s.type === 'BLACK') {
-            suitCol = '#1a1a1f';
-            hatCol = '#14141a';
+    let spriteKey = 'blue_cap_0';
+    if (s.type === 'GRAY') spriteKey = 'gray_cap_0';
+    else if (s.type === 'ORANGE') spriteKey = 'red_orange_cap_0';
+    else if (s.type === 'BLACK') spriteKey = 'black_specops_0';
+
+    const spr = sprites[spriteKey];
+    const sScale = 1.15;
+
+    if (spr && spr.complete && spr.naturalWidth > 0) {
+        ctx.save();
+        ctx.translate(sx + lean, sy);
+
+        const isHeaderFrame = (spriteKey === 'black_specops_0');
+        const cropY = isHeaderFrame ? 24 : 0;
+        const srcH = spr.naturalHeight - cropY;
+        const sw = spr.naturalWidth * sScale;
+        const sh = srcH * sScale;
+
+        ctx.drawImage(spr, 0, cropY, spr.naturalWidth, srcH, -sw * 0.5, -sh, sw, sh);
+
+        // 受击闪白反馈（严格保持 1:1 轮廓，不放大变形）
+        if (isHit) {
+            ctx.globalCompositeOperation = 'source-atop';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.fillRect(-sw * 0.5, -sh, sw, sh);
         }
+        ctx.restore();
+    } else {
+        // 矢量保底绘制
+        ctx.save();
+        let suitCol = isHit ? '#ff5959' : '#384252';
+        let hatCol = isHit ? '#ffffff' : '#3380ff';
+        if (!isHit) {
+            if (s.type === 'GRAY') hatCol = '#808080';
+            else if (s.type === 'ORANGE') hatCol = '#ff661a';
+            else if (s.type === 'BLACK') {
+                suitCol = '#1a1a1f';
+                hatCol = '#14141a';
+            }
+        }
+
+        ctx.fillStyle = suitCol;
+        ctx.fillRect(sx - 10, sy - 24, 8, 24);
+        ctx.fillRect(sx + 2, sy - 24, 8, 24);
+        ctx.fillRect(sx - 12 + lean, sy - 54, 24, 30);
+
+        ctx.fillStyle = isHit ? '#ffffff' : '#e0bd99';
+        ctx.beginPath();
+        ctx.arc(sx + lean, sy - 63, 10.0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = hatCol;
+        ctx.fillRect(sx - 13 + lean, sy - 74, 26, 12);
+        ctx.restore();
     }
-
-    // 绘制双腿（尺寸与未受击时完全一致）
-    ctx.fillStyle = suitCol;
-    ctx.fillRect(sx - 10, sy - 24, 8, 24);
-    ctx.fillRect(sx + 2, sy - 24, 8, 24);
-
-    // 绘制躯干（受击时自然向后硬直后仰，宽度高度严禁变大）
-    ctx.fillRect(sx - 12 + lean, sy - 54, 24, 30);
-
-    // 头部（受击闪白）
-    ctx.fillStyle = isHit ? '#ffffff' : '#e0bd99';
-    ctx.beginPath();
-    ctx.arc(sx + lean, sy - 63, 10.0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 帽子
-    ctx.fillStyle = hatCol;
-    ctx.fillRect(sx - 13 + lean, sy - 74, 26, 12);
-    ctx.restore();
-
-    // 绘制 5 格血条 (绿色剩余，深灰扣除)
-    const barW = 44.0;
-    const barX = sx - barW * 0.5;
-    const barY = sy - 88.0;
-
-    ctx.save();
-    ctx.fillStyle = '#0a0d14';
-    ctx.fillRect(barX - 2, barY - 2, barW + 4, 10);
-    ctx.strokeStyle = '#223047';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(barX - 2, barY - 2, barW + 4, 10);
-
-    const segW = (barW - 8) / SOLDIER_MAX_HP;
-    for (let seg = 0; seg < s.max_hp; seg++) {
-        const segCol = (seg < s.hp) ? '#33e659' : '#374151';
-        ctx.fillStyle = segCol;
-        ctx.fillRect(barX + seg * (segW + 2) + 1, barY, segW, 6.0);
-    }
-    ctx.restore();
 }
 
 // 主游戏循环

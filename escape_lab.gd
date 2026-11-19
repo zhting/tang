@@ -231,16 +231,9 @@ func trigger_claw_attack() -> void:
 			apply_claw_damage_to_soldier(e, i)
 
 func apply_claw_damage_to_soldier(s: Dictionary, index: int) -> void:
-	s["hp"] = max(0, s.get("hp", SOLDIER_MAX_HP) - CLAW_BASE_DAMAGE)
 	s["hit_flash_timer"] = 0.18
 	s["knockback_vx"] = dragon_facing * 240.0
-	damage_popups.append({
-		"pos": s["pos"] + Vector2(0, -92),
-		"text": "-" + str(CLAW_BASE_DAMAGE),
-		"timer": 0.65
-	})
-	if s["hp"] <= 0:
-		enemies.remove_at(index)
+	enemies.remove_at(index)
 
 func update_damage_popups(delta: float) -> void:
 	for i in range(damage_popups.size() - 1, -1, -1):
@@ -349,10 +342,10 @@ func update_enemies(delta: float) -> void:
 						shock_seconds_left = 5
 						shock_tick_timer = 0.0
 
-				"GRAY": # 灰帽：冲锋奔跑扑向龙
+				"GRAY": # 灰帽：冲锋奔跑扑向龙（速度放慢为 160.0）
 					if dist_to_dragon > 45.0:
-						e["pos"].x += e["dir"] * 240.0 * delta
-						e["walk_t"] += delta * 16.0
+						e["pos"].x += e["dir"] * 160.0 * delta
+						e["walk_t"] += delta * 10.0
 					else:
 						e["walk_t"] = 0.0
 
@@ -650,23 +643,12 @@ func draw_hat_soldier(e: Dictionary, cam_x: float) -> void:
 				draw_circle(hand + Vector2(0, -6), 7.0, Color(0.18, 0.65, 0.25))
 				draw_circle(hand + Vector2(0, -12), 2.5, Color.YELLOW)
 
-	# 6. 绘制头顶 5 格血条（每格代表 1 点血量）
-	var bar_w = 40.0
-	var bar_x = head_x - bar_w * 0.5
-	var bar_y = sy - 88.0 - bob
-	draw_rect(Rect2(bar_x - 1, bar_y - 1, bar_w + 2, 8), Color.BLACK)
-	var max_hp: int = e.get("max_hp", SOLDIER_MAX_HP)
-	var cur_hp: int = e.get("hp", SOLDIER_MAX_HP)
-	for seg in range(max_hp):
-		var seg_col = Color(0.2, 0.9, 0.35) if seg < cur_hp else Color(0.25, 0.25, 0.25)
-		draw_rect(Rect2(bar_x + seg * 8.0 + 1, bar_y, 6.0, 6.0), seg_col)
-
 func draw_hud_overlay() -> void:
 	# 左上角状态栏（20颗心血量 + 10人肚子容量）
 	draw_rect(Rect2(16, 16, 440, 92), Color(0, 0, 0, 0.65))
 	draw_string(ThemeDB.fallback_font, Vector2(28, 44), "巨龙血量：%.1f / 20.0" % hp, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1.0, 0.35, 0.35))
 	draw_string(ThemeDB.fallback_font, Vector2(28, 70), "腹中人数：%d / 10" % belly_count, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(0.4, 0.85, 1.0))
-	draw_string(ThemeDB.fallback_font, Vector2(28, 94), "操作：[D]前冲  [W/空格]跳跃  [C]挥爪(伤害1)  [J]挑吃/吞雷", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.YELLOW)
+	draw_string(ThemeDB.fallback_font, Vector2(28, 94), "操作：[D]前冲  [W/空格]跳跃  [C]挥爪攻击  [J]挑吃/吞雷", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.YELLOW)
 	if state == State.WIN:
 		draw_rect(Rect2(320, 240, 520, 120), Color(0, 0, 0, 0.85))
 		draw_string(ThemeDB.fallback_font, Vector2(360, 295), "第一关通关成功！按 [R] 键重新游玩", HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color.GREEN)

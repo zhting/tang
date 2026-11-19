@@ -1119,7 +1119,7 @@ function breakOutOfCage() {
     }
 
     currentState = GameState.LEVEL_1_ACTIVE;
-    hintBanner.textContent = "破笼而出！一路往前冲！按 [C 键] 挥爪攻击 (伤害 1，士兵 5 血) | [J 键] 挑起吞食，低头吃手雷！";
+    hintBanner.textContent = "破笼而出！一路往前冲！按 [C 键] 挥爪攻击击飞击败 | [J 键] 挑起吞食，低头吃手雷！";
 }
 
 // ==========================================
@@ -1222,32 +1222,19 @@ function performDragonClaw() {
         }
     }
     if (hitAny) {
-        hintBanner.textContent = "蓝龙挥爪命中！士兵生命 -1，触发闪烁硬直与击退！";
+        hintBanner.textContent = "蓝龙猛烈挥爪！将前方士兵瞬间击飞击败！";
     }
 }
 
 function applyClawDamageToSoldier(e, index) {
-    e.hp = Math.max(0, (e.hp !== undefined ? e.hp : SOLDIER_MAX_HP) - CLAW_BASE_DAMAGE);
-    e.hitFlashTimer = 0.18;
-    e.knockbackVx = dragon.facing * 240.0;
-
-    damagePopups.push({
-        x: e.x,
-        y: e.y - 92,
-        text: `-${CLAW_BASE_DAMAGE}`,
-        timer: 0.65
-    });
-
     hitSparks.push({
         x: e.x,
-        y: e.y - 50,
+        y: e.y - 45,
         timer: 0.25
     });
 
-    if (e.hp <= 0) {
-        activeEnemies.splice(index, 1);
-        hintBanner.textContent = "士兵血量归零倒地移除！";
-    }
+    activeEnemies.splice(index, 1);
+    hintBanner.textContent = "蓝龙猛烈挥爪！将士兵瞬间击飞击败！";
 }
 
 function performDragonSwallow() {
@@ -1594,21 +1581,21 @@ function updateGame(dt) {
                         playSound('shock');
                     }
                 } else if (e.type === EnemyType.GRAY_HAT) {
-                    // 灰帽：高速冲锋扑向龙
+                    // 灰帽：冲锋奔跑扑向龙（速度放慢为 165.0 稳定奔跑，步态帧率平滑高刷）
                     if (dist > 50.0) {
-                        e.x += dirX * 350.0 * dt;
-                        e.walkCycle += dt * 16.0;
+                        e.x += dirX * 165.0 * dt;
+                        e.walkCycle += dt * 6.5;
                         e.dustTimer = (e.dustTimer || 0) + dt;
-                        if (e.dustTimer >= 0.08) {
+                        if (e.dustTimer >= 0.1) {
                             e.dustTimer = 0;
                             activeParticles.push({
                                 x: e.x - e.facing * 14,
                                 y: e.y - 2,
-                                vx: -e.facing * (Math.random() * 80 + 30),
-                                vy: -Math.random() * 35,
-                                size: Math.random() * 5 + 3,
+                                vx: -e.facing * (Math.random() * 50 + 20),
+                                vy: -Math.random() * 20 - 4,
+                                size: Math.random() * 4 + 2,
                                 color: 'rgba(180, 205, 230, 0.55)',
-                                life: 0.35
+                                life: 0.3
                             });
                         }
                     } else {
@@ -2500,230 +2487,168 @@ function drawTossedSoldierVector(ts) {
 // 纯手绘复古像素级渲染引擎，彻底移除漫画截屏切片
 // ==========================================
 function drawBlueCapSoldier(e, ctx) {
-    drawPixelArtSoldier(e, ctx, EnemyType.BLUE_HAT);
+    let spriteKey = 'blue_cap_0';
+    const sScale = 1.15;
+
+    if (e.isFiring) {
+        spriteKey = 'blue_cap_3';
+    } else if (Math.abs(e.vx || 0) > 5 || e.walkCycle > 0) {
+        // 高帧率流畅巡逻步态 (8~10 FPS)
+        const frame = Math.floor((e.walkCycle || 0) * 1.5) % 3;
+        spriteKey = 'blue_cap_' + frame;
+    }
+
+    const spr = labSprites[spriteKey];
+    if (spr && spr.complete && spr.naturalWidth > 0) {
+        const sw = spr.naturalWidth * sScale;
+        const sh = spr.naturalHeight * sScale;
+        ctx.drawImage(spr, -sw * 0.5, -sh, sw, sh);
+
+        // 受击闪白反馈（严格保持 1:1 轮廓，绝不放大变形）
+        if (e.hitFlashTimer > 0) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-atop';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+            ctx.fillRect(-sw * 0.5, -sh, sw, sh);
+            ctx.restore();
+        }
+    } else {
+        drawBlueCapSoldierVector(e, ctx);
+    }
+}
+
+function drawBlueCapSoldierVector(e, ctx) {
+    const isHit = (e.hitFlashTimer || 0) > 0;
+    ctx.fillStyle = isHit ? '#ff5959' : '#1d4ed8'; ctx.fillRect(-12, -58, 24, 34);
+    ctx.fillStyle = isHit ? '#ffffff' : '#fed7aa'; ctx.beginPath(); ctx.arc(0, -66, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = isHit ? '#ffffff' : '#1e40af'; ctx.fillRect(-12, -77, 24, 11);
 }
 
 function drawGrayCapRunner(e, ctx) {
-    drawPixelArtSoldier(e, ctx, EnemyType.GRAY_HAT);
+    // 高帧率流畅冲锋步态：4 帧无缝循环 (12 FPS 高刷新)
+    const isRunning = (e.state === 'COMBAT');
+    const runRate = isRunning ? 2.2 : 1.4;
+    const frame = Math.floor((e.walkCycle || 0) * runRate) % 4;
+    const spriteKey = 'gray_cap_' + frame;
+    const sScale = 1.15;
+
+    const spr = labSprites[spriteKey];
+    if (spr && spr.complete && spr.naturalWidth > 0) {
+        const sw = spr.naturalWidth * sScale;
+        const sh = spr.naturalHeight * sScale;
+
+        // 奔跑时微幅纵向脚步律动，生动自然
+        const stepBob = isRunning ? Math.abs(Math.sin((e.walkCycle || 0) * 4.4)) * 2.2 : 0;
+        ctx.drawImage(spr, -sw * 0.5, -sh - stepBob, sw, sh);
+
+        // 奔跑脚后跟烟尘微粒
+        if (isRunning && Math.random() < 0.35) {
+            activeParticles.push({
+                x: e.x - e.facing * 12,
+                y: e.y - 3,
+                vx: -e.facing * (Math.random() * 50 + 20),
+                vy: -Math.random() * 20 - 4,
+                size: Math.random() * 4 + 2,
+                color: 'rgba(180, 200, 220, 0.5)',
+                life: 0.3
+            });
+        }
+
+        // 受击闪白反馈（严格保持 1:1 轮廓）
+        if (e.hitFlashTimer > 0) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-atop';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+            ctx.fillRect(-sw * 0.5, -sh - stepBob, sw, sh);
+            ctx.restore();
+        }
+    } else {
+        drawGrayCapRunnerVector(e, ctx);
+    }
+}
+
+function drawGrayCapRunnerVector(e, ctx) {
+    const isHit = (e.hitFlashTimer || 0) > 0;
+    ctx.fillStyle = isHit ? '#ff5959' : '#94a3b8'; ctx.fillRect(-12, -58, 24, 34);
+    ctx.fillStyle = isHit ? '#ffffff' : '#fed7aa'; ctx.beginPath(); ctx.arc(2, -66, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = isHit ? '#ffffff' : '#64748b'; ctx.fillRect(-10, -77, 24, 11);
 }
 
 function drawRedOrangeCapFlamer(e, ctx) {
-    drawPixelArtSoldier(e, ctx, EnemyType.RED_ORANGE);
+    let spriteKey = 'red_orange_cap_0';
+    const sScale = 1.15;
+
+    if (e.isFiring || (e.flameTimer && e.flameTimer > 0)) {
+        spriteKey = 'red_orange_cap_1';
+    }
+
+    const spr = labSprites[spriteKey];
+    if (spr && spr.complete && spr.naturalWidth > 0) {
+        const sw = spr.naturalWidth * sScale;
+        const sh = spr.naturalHeight * sScale;
+        ctx.drawImage(spr, -sw * 0.5, -sh, sw, sh);
+
+        if (e.hitFlashTimer > 0) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-atop';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+            ctx.fillRect(-sw * 0.5, -sh, sw, sh);
+            ctx.restore();
+        }
+    } else {
+        drawRedOrangeCapFlamerVector(e, ctx);
+    }
+}
+
+function drawRedOrangeCapFlamerVector(e, ctx) {
+    const isHit = (e.hitFlashTimer || 0) > 0;
+    ctx.fillStyle = isHit ? '#ff5959' : '#ea580c'; ctx.fillRect(-12, -58, 24, 34);
+    ctx.fillStyle = isHit ? '#ffffff' : '#fed7aa'; ctx.beginPath(); ctx.arc(0, -66, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = isHit ? '#ffffff' : '#ea580c'; ctx.fillRect(-12, -77, 24, 11);
 }
 
 function drawBlackSpecopsGrenadier(e, ctx) {
-    drawPixelArtSoldier(e, ctx, EnemyType.BLACK_SPECOPS);
-}
+    let spriteKey = 'black_specops_0';
+    const sScale = 1.15;
 
-function drawPixelArtSoldier(e, ctx, type) {
-    const isHit = (e.hitFlashTimer || 0) > 0;
-    const hitLean = isHit ? -8 : 0;
-    const isCombat = e.state === 'COMBAT';
-    const isRunning = (isCombat && type === EnemyType.GRAY_HAT && !isHit);
-    const phase = isHit ? 0.0 : (e.walkCycle || 0.0);
-    const bob = phase > 0 ? Math.floor(Math.abs(Math.sin(phase)) * (isRunning ? 6 : 3)) : 0;
-    const bodyLean = (isRunning ? 6 : 0) + hitLean;
-
-    let suitMain = type === EnemyType.BLACK_SPECOPS ? '#1a1c24' : '#333d4d';
-    let suitDark = type === EnemyType.BLACK_SPECOPS ? '#101218' : '#1f2633';
-    let hatCol = '#2e80ff';
-    if (type === EnemyType.GRAY_HAT) hatCol = '#8c949e';
-    else if (type === EnemyType.RED_ORANGE) hatCol = '#ff6b14';
-    else if (type === EnemyType.BLACK_SPECOPS) hatCol = '#14171f';
-
-    // 受击视觉反馈：红白闪烁+硬直后仰，尺寸与原尺寸严格 1:1 保持完全一致，绝不放大变形
-    if (isHit) {
-        suitMain = '#ff5959';
-        suitDark = '#d93b3b';
-        hatCol = '#ffffff';
+    if (e.timer >= 8.2) {
+        if (e.timer < 8.8) {
+            spriteKey = 'black_specops_1';
+        } else if (e.timer < 9.4) {
+            spriteKey = 'black_specops_2';
+        } else {
+            spriteKey = 'black_specops_3';
+        }
     }
 
-    // 1. 双腿步态
-    const stride = phase > 0 ? (isRunning ? 21.0 : 12.0) : 0.0;
-    const legL = Math.sin(phase) * stride;
-    const legR = -legL;
-    const liftL = phase > 0 ? Math.max(0.0, -Math.cos(phase)) * (isRunning ? 12.0 : 6.0) : 0.0;
-    const liftR = phase > 0 ? Math.max(0.0, Math.cos(phase)) * (isRunning ? 12.0 : 6.0) : 0.0;
+    const spr = labSprites[spriteKey];
+    if (spr && spr.complete && spr.naturalWidth > 0) {
+        // black_specops_0..2 顶部有 24px 图表文字，切除后完美居中贴地
+        const isHeaderFrame = (spriteKey === 'black_specops_0' || spriteKey === 'black_specops_1' || spriteKey === 'black_specops_2');
+        const cropY = isHeaderFrame ? 24 : 0;
+        const srcH = spr.naturalHeight - cropY;
+        const sw = spr.naturalWidth * sScale;
+        const sh = srcH * sScale;
 
-    // 内侧腿 (深色)
-    ctx.strokeStyle = suitDark;
-    ctx.lineWidth = 9;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(-3 + bodyLean, -26 - bob);
-    ctx.lineTo(-3 + bodyLean + legL, -liftL);
-    ctx.stroke();
+        ctx.drawImage(spr, 0, cropY, spr.naturalWidth, srcH, -sw * 0.5, -sh, sw, sh);
 
-    // 外侧腿 (主色)
-    ctx.strokeStyle = suitMain;
-    ctx.beginPath();
-    ctx.moveTo(3 + bodyLean, -26 - bob);
-    ctx.lineTo(3 + bodyLean + legR, -liftR);
-    ctx.stroke();
-
-    // 2. 橘帽背后红色燃料罐
-    if (type === EnemyType.RED_ORANGE) {
-        ctx.fillStyle = '#d92e1f';
-        ctx.fillRect(-24 + bodyLean, -55 - bob, 14, 30);
-        ctx.strokeStyle = '#0d0f1a';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(-24 + bodyLean, -55 - bob, 14, 30);
-        ctx.fillStyle = '#ff8c33';
-        ctx.fillRect(-21 + bodyLean, -50 - bob, 5, 20);
-    }
-
-    // 3. 躯干
-    ctx.fillStyle = suitMain;
-    ctx.fillRect(-15 + bodyLean, -58 - bob, 30, 36);
-    ctx.strokeStyle = '#0d0f1a';
-    ctx.lineWidth = 2.5;
-    ctx.strokeRect(-15 + bodyLean, -58 - bob, 30, 36);
-    if (type === EnemyType.BLACK_SPECOPS) {
-        ctx.fillStyle = '#383d47';
-        ctx.fillRect(-9 + bodyLean, -52 - bob, 18, 20);
-    }
-
-    // 4. 头部与遮眼压低战术帽子
-    const headX = bodyLean;
-    const headY = -68 - bob;
-    // 下半脸肤色（受击闪白）
-    ctx.fillStyle = isHit ? '#ffffff' : '#e6bd9e';
-    ctx.beginPath();
-    ctx.arc(headX, headY, 13, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#0d0f1a';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // 帽冠
-    ctx.fillStyle = hatCol;
-    ctx.fillRect(headX - 16, headY - 17, 32, 17);
-    ctx.strokeRect(headX - 16, headY - 17, 32, 17);
-    // 压低向前突出的帽檐 (彻底遮眼)
-    ctx.fillRect(headX - 14, headY - 3, 36, 8);
-    ctx.strokeRect(headX - 14, headY - 3, 36, 8);
-    // 阴影线
-    ctx.strokeStyle = '#0d0f1a';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(headX - 8, headY + 5);
-    ctx.lineTo(headX + 16, headY + 5);
-    ctx.stroke();
-
-    // 5. 手臂与武器
-    const shoulderX = headX + 4;
-    const shoulderY = -48 - bob;
-
-    if (!isCombat) {
-        // 巡逻慢步
-        const swing = phase > 0 ? Math.sin(phase) * 8.0 : 0.0;
-        const handX = shoulderX - swing;
-        const handY = shoulderY + 26;
-        ctx.strokeStyle = suitMain;
-        ctx.lineWidth = 7;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(shoulderX, shoulderY);
-        ctx.lineTo(handX, handY);
-        ctx.stroke();
-
-        if (type === EnemyType.BLUE_HAT) {
-            ctx.fillStyle = '#4cb2ff';
-            ctx.fillRect(handX - 4, handY - 3, 14, 7);
-            ctx.strokeRect(handX - 4, handY - 3, 14, 7);
-        } else if (type === EnemyType.RED_ORANGE) {
-            ctx.fillStyle = '#595966';
-            ctx.fillRect(handX - 6, handY - 3, 22, 7);
-            ctx.strokeRect(handX - 6, handY - 3, 22, 7);
+        if (e.hitFlashTimer > 0) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-atop';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+            ctx.fillRect(-sw * 0.5, -sh, sw, sh);
+            ctx.restore();
         }
     } else {
-        // 战斗姿态
-        switch (type) {
-            case EnemyType.BLUE_HAT:
-                // 双臂平举电击枪
-                ctx.strokeStyle = suitMain;
-                ctx.lineWidth = 7;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.moveTo(shoulderX, shoulderY);
-                ctx.lineTo(shoulderX + 24, shoulderY);
-                ctx.stroke();
-                // 枪身
-                ctx.fillStyle = '#408cf2';
-                ctx.fillRect(shoulderX + 18, shoulderY - 6, 24, 11);
-                ctx.strokeRect(shoulderX + 18, shoulderY - 6, 24, 11);
-                // 枪口电火花
-                const sparkR = 4 + (Math.floor((e.timer || 0) * 18.0) % 4);
-                ctx.fillStyle = '#80f2ff';
-                ctx.beginPath();
-                ctx.arc(shoulderX + 46, shoulderY, sparkR, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(shoulderX + 48, shoulderY - 4, 3, 3);
-                ctx.fillRect(shoulderX + 46, shoulderY + 3, 3, 3);
-                break;
-
-            case EnemyType.GRAY_HAT:
-                // 冲锋大步摆臂
-                const runArm = Math.sin(phase) * 16.0;
-                ctx.strokeStyle = suitMain;
-                ctx.lineWidth = 7;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.moveTo(shoulderX, shoulderY);
-                ctx.lineTo(shoulderX + runArm, shoulderY + 18);
-                ctx.stroke();
-                break;
-
-            case EnemyType.RED_ORANGE:
-                // 双手平端厚重喷火枪
-                ctx.strokeStyle = suitMain;
-                ctx.lineWidth = 7;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.moveTo(shoulderX, shoulderY);
-                ctx.lineTo(shoulderX + 20, shoulderY + 5);
-                ctx.stroke();
-                // 枪管与枪口
-                ctx.fillStyle = '#4c525c';
-                ctx.fillRect(shoulderX + 14, shoulderY, 32, 10);
-                ctx.strokeRect(shoulderX + 14, shoulderY, 32, 10);
-                ctx.fillStyle = '#d94019';
-                ctx.fillRect(shoulderX + 38, shoulderY - 2, 8, 14);
-                // 枪口点火苗
-                const flameR = (e.flameTimer > 0 || (e.timer > 2.5)) ? 7 : 4;
-                ctx.fillStyle = '#ff730d';
-                ctx.beginPath();
-                ctx.arc(shoulderX + 48, shoulderY + 5, flameR, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#ffff00';
-                ctx.fillRect(shoulderX + 47, shoulderY + 4, 4, 4);
-                break;
-
-            case EnemyType.BLACK_SPECOPS:
-                // 高举右手握住手雷准备抛投
-                const throwBob = Math.sin((e.timer || 0) * 6.0) * 4.0;
-                const handX = shoulderX + 10;
-                const handY = shoulderY - 32 + throwBob;
-                ctx.strokeStyle = suitMain;
-                ctx.lineWidth = 7;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.moveTo(shoulderX, shoulderY);
-                ctx.lineTo(handX, handY);
-                ctx.stroke();
-                // 绿色菠萝手雷
-                ctx.fillStyle = '#2ea640';
-                ctx.beginPath();
-                ctx.arc(handX + 2, handY - 8, 8, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                // 拉环引信黄光
-                ctx.fillStyle = '#ffff00';
-                ctx.fillRect(handX + 3, handY - 17, 3, 5);
-                break;
-        }
+        drawBlackSpecopsGrenadierVector(e, ctx);
     }
+}
+
+function drawBlackSpecopsGrenadierVector(e, ctx) {
+    const isHit = (e.hitFlashTimer || 0) > 0;
+    ctx.fillStyle = isHit ? '#ff5959' : '#1e293b'; ctx.fillRect(-13, -58, 26, 34);
+    ctx.fillStyle = isHit ? '#ffffff' : '#0f172a'; ctx.fillRect(-13, -78, 26, 18);
+    ctx.fillStyle = isHit ? '#ffffff' : '#22c55e'; ctx.fillRect(3, -69, 12, 4.5);
 }
 
 function drawEnemies() {
@@ -2742,29 +2667,6 @@ function drawEnemies() {
             drawBlackSpecopsGrenadier(e, ctx);
         }
 
-        // 受击硬直已在 drawPixelArtSoldier 内通过像素本体红白变色与身体后仰自然呈现，严禁绘制扩大外框
-        ctx.restore();
-
-        // 绘制头顶 5 格血条 (每格代表 1 点生命，绿色为剩余，深灰为扣减)
-        const curHp = (e.hp !== undefined) ? e.hp : 5;
-        const maxHp = (e.maxHp !== undefined) ? e.maxHp : 5;
-        const barW = 44.0;
-        const barX = e.x - barW * 0.5;
-        const barY = e.y - 94.0;
-
-        ctx.save();
-        ctx.fillStyle = '#0a0d14';
-        ctx.fillRect(barX - 2, barY - 2, barW + 4, 10);
-        ctx.strokeStyle = '#223047';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(barX - 2, barY - 2, barW + 4, 10);
-
-        const segW = (barW - 8) / maxHp;
-        for (let seg = 0; seg < maxHp; seg++) {
-            const segCol = (seg < curHp) ? '#33e659' : '#374151';
-            ctx.fillStyle = segCol;
-            ctx.fillRect(barX + seg * (segW + 2) + 1, barY, segW, 6.0);
-        }
         ctx.restore();
     });
 }
